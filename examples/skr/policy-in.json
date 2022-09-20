@@ -1,0 +1,41 @@
+{
+    "version": "1.0",
+    "containers": [
+        {            
+            "containerImage": "<registry-name>/aci-skr:1.1",
+            "environmentVariables": [
+                {
+                    "name": "SkrSideCarArgs",
+                    "value": ".+",
+                    "strategy": "re2"
+                }
+            ],
+            "command": [ "/skr.sh" ],               
+            "allow_elevated": true
+        },        
+        {            
+            "containerImage": "<registry-name>/aci-skr:1.1",
+            "environmentVariables": [
+                {
+                    "name": "((?i)SkrClient).+",
+                    "value": ".+",
+                    "strategy": "re2"
+                }
+            ],            
+            "command": [ "/tests/skr_client.sh" ],
+            "allow_elevated": false
+        },        
+        {            
+            "containerImage": "<registry-name>/aci-skr:1.1",
+            "environmentVariables": [
+                {
+                    "name": "((?i)AttestClient).+",
+                    "value": ".+",
+                    "strategy": "re2"
+                }
+            ],            
+            "command": [ "/tests/attest_client.sh" ],
+            "allow_elevated": false
+        }
+    ]
+}

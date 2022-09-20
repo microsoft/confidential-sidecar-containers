@@ -1,0 +1,119 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerGroupName": {
+      "type": "string",
+      "defaultValue": "aciEncfsSidecarTest",
+      "metadata": {
+        "description": "Encrypted filesystem sidecar example"
+      }
+    }
+  },
+  "resources": [
+    {
+      "name": "[parameters('containerGroupName')]",
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2022-04-01-preview",
+      "location": "[resourceGroup().location]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "<user-assigned-identity-with-access-to-azure-services>": {}
+        }
+      },
+      "properties": {        
+        "containers": [          
+          {
+            "name": "encrypted-filesystem-sidecar-container",
+            "properties": {
+              "command": [
+                "/encfs.sh"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "EncfsSideCarArgs",
+                  "value": "<base64-std-encodes-string-of-sidecar-args>"
+                }
+              ],
+              "image": "<registry-name>/encrypted-filesystem:1.0",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGb": 2
+                }
+              },
+              "volumeMounts": [
+                {
+                  "name": "remotemounts",
+                  "mountPath": "/mnt/remote"
+                }
+              ]
+            }
+          },
+          {
+            "name": "test-encfs-container",
+            "properties": {
+              "command": [
+                "/bin/bash",
+                "-c",
+                "while true; do /usr/bin/top -b -n 1 | /usr/bin/head -n 20; sleep 1; done"
+              ],
+              "image": "docker.io/alpine:3.13",
+              "resources": {
+                "requests": {
+                  "cpu": 0.5,
+                  "memoryInGb": 1
+                }
+              },
+              "volumeMounts": [
+                {
+                  "name": "remotemounts",
+                  "mountPath": "/mnt/remote"
+                }
+              ],
+              "ports": [
+                {
+                  "port": 8000
+                }
+              ]
+            }
+          }
+        ],
+        "imageRegistryCredentials": [
+          {
+            "server": "<registry-name>",
+            "username": "",
+            "password": ""
+          }
+        ],
+        "osType": "Linux",
+        "ipAddress": {          
+          "type": "Public",
+          "ports": [
+            {
+              "protocol": "tcp",
+              "port": 8000
+            }
+          ]
+        },
+        "confidentialComputeProperties": {
+          "ccePolicy": "<base64-std-encoded-string-of-security-policy>",
+          "isolationType": "sevsnp"
+        },
+        "volumes": [
+          {
+            "name": "remotemounts",
+            "emptyDir": {}
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "containerIPv4Address": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups/', parameters('containerGroupName'))).ipAddress.ip]"
+    }
+  }
+}

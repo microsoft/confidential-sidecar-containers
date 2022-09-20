@@ -1,0 +1,159 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerGroupName": {
+      "defaultValue": "aciSKRSidecarTest",
+      "type": "String",
+      "metadata": {
+        "description": "Secure Key Release Sidecar Example"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2022-04-01-preview",
+      "name": "[parameters('containerGroupName')]",
+      "location": "westeurope",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "<managed-identity-with-right-permissions-to-key-vault-mhsm>": {}
+        }
+      },
+      "properties": {
+        "containers": [
+          {
+            "name": "skr-sidecar-container",
+            "properties": {
+              "command": [
+                "/skr.sh"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "SkrSideCarArgs",
+                  "value": "ewogICAiY2VydGNhY2hlIjogewogICAgICAiZW5kcG9pbnQiOiAiYW1lcmljYXMuYWNjY2FjaGUuYXp1cmUubmV0IiwKICAgICAgInRlZV90eXBlIjogIlNldlNucFZNIiwKICAgICAgImFwaV92ZXJzaW9uIjogImFwaS12ZXJzaW9uPTIwMjAtMTAtMTUtcHJldmlldyIKICAgfSAgICAgIAp9"
+                }
+              ],
+              "image": "<registry-name>/aci-skr:1.1",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGB": 2
+                }
+              },
+              "ports": [
+                {
+                  "port": 8080
+                }
+              ]
+            }
+          },          
+          {
+            "name": "test-skr-client-container",
+            "properties": {
+              "command": [
+                "/tests/skr_client.sh"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "SkrClientMAAEndpoint",
+                  "value": "<authority-of-key-imported-to-key-vault-mhsm>"
+                },
+                {
+                  "name": "SkrClientMHSMEndpoint",
+                  "value": "<key-vault-mhsm-endpoint>"
+                },
+                {
+                  "name": "SkrClientKID",
+                  "value": "<key-vault-mhsm-key-identifier>"
+                }
+              ],
+              "image": "<registry-name>/aci-skr:1.1",
+              "resources": {
+                "requests": {
+                  "cpu": 0.5,
+                  "memoryInGB": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "test-attest-client-container",
+            "properties": {
+              "command": [
+                "/tests/attest_client.sh"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "AttestClientRuntimeData",
+                  "value": "eyJrZXlzIjpbeyJlIjoiQVFBQiIsImtleV9vcHMiOlsiZW5jcnlwdCJdLCJraWQiOiJOdmhmdXEyY0NJT0FCOFhSNFhpOVByME5QXzlDZU16V1FHdFdfSEFMel93Iiwia3R5IjoiUlNBIiwibiI6InY5NjVTUm15cDh6Ykc1ZU5GdURDbW1pU2VhSHB1akcyYkNfa2VMU3V6dkRNTE8xV3lyVUp2ZWFhNWJ6TW9PMHBBNDZwWGttYnFIaXNvelZ6cGlORExDbzZkM3o0VHJHTWVGUGYyQVBJTXUtUlNyek41NnF2SFZ5SXI1Y2FXZkhXay1GTVJEd0FlZnlOWVJIa2RZWWtnbUZLNDRoaFVkdGxDQUtFdjVVUXBGWmp2aDRpSTlqVkJkR1lNeUJhS1FMaGpJNVdJaC1RRzZaYTVzU3VPQ0ZNbm11eXV2TjVEZmxwTEZ6NTk1U3MtRW9CSVktTmlsNmxDdHZjR2dSLUlialVZSEFPczVhamFtVHpnZU84a3gzVkNFOUhjeUtteVVac2l5aUY2SURScDJCcHkzTkhUakl6N3Rta3BUSHg3dEhuUnRsZkUyRlV2MEI2aV9RWWxfWkE1USJ9XX0="
+                }
+              ],
+              "image": "<registry-name>/aci-skr:1.1",
+              "resources": {
+                "requests": {
+                  "cpu": 0.5,
+                  "memoryInGB": 1
+                }
+              }
+            }
+          },
+          {
+            "name": "test-attest-maa-client-container",
+            "properties": {
+              "command": [
+                "/tests/attest_client.sh"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "AttestClientMAAEndpoint",
+                  "value": "<maa-endpoint>"
+                },
+                {
+                  "name": "AttestClientRuntimeData",
+                  "value": "eyJrZXlzIjpbeyJlIjoiQVFBQiIsImtleV9vcHMiOlsiZW5jcnlwdCJdLCJraWQiOiJOdmhmdXEyY0NJT0FCOFhSNFhpOVByME5QXzlDZU16V1FHdFdfSEFMel93Iiwia3R5IjoiUlNBIiwibiI6InY5NjVTUm15cDh6Ykc1ZU5GdURDbW1pU2VhSHB1akcyYkNfa2VMU3V6dkRNTE8xV3lyVUp2ZWFhNWJ6TW9PMHBBNDZwWGttYnFIaXNvelZ6cGlORExDbzZkM3o0VHJHTWVGUGYyQVBJTXUtUlNyek41NnF2SFZ5SXI1Y2FXZkhXay1GTVJEd0FlZnlOWVJIa2RZWWtnbUZLNDRoaFVkdGxDQUtFdjVVUXBGWmp2aDRpSTlqVkJkR1lNeUJhS1FMaGpJNVdJaC1RRzZaYTVzU3VPQ0ZNbm11eXV2TjVEZmxwTEZ6NTk1U3MtRW9CSVktTmlsNmxDdHZjR2dSLUlialVZSEFPczVhamFtVHpnZU84a3gzVkNFOUhjeUtteVVac2l5aUY2SURScDJCcHkzTkhUakl6N3Rta3BUSHg3dEhuUnRsZkUyRlV2MEI2aV9RWWxfWkE1USJ9XX0="
+                }
+              ],
+              "image": "<registry-name>/aci-skr:1.1",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGB": 1
+                }
+              }
+            }
+          }
+        ],
+        "imageRegistryCredentials": [
+          {
+            "server": "<registry-name>",
+            "username": "<registry-username-if-private>",
+            "password": "<registry-password-if-private>"
+          }
+        ],
+        "osType": "Linux",
+        "ipAddress": {
+          "type": "Public",
+          "ports": [
+            {
+              "protocol": "tcp",
+              "port": 8080
+            }
+          ]
+        },
+        "confidentialComputeProperties": {
+          "ccePolicy": "<base64-std-encoded-string-of-policy>",
+          "isolationType": "sevsnp"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "containerIPv4Address": {
+      "type": "String",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups/', parameters('containerGroupName'))).ipAddress.ip]"
+    }
+  }
+}

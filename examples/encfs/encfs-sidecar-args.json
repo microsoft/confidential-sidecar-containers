@@ -1,0 +1,25 @@
+{
+   "azure_filesystems":[
+      {
+         "mount_point":"/mnt/remote/share",
+         "azure_url":"<azure-blob-storage-url>",
+	      "azure_url_private": true,
+         "key": {
+            "kid": "<key-vault-mhsm-key-identifier>",
+            "authority": {
+                "endpoint": "<authority-of-key-imported-to-key-vault-mhsm>"
+            },
+            "mhsm": {
+                "endpoint": "key-vault-mhsm-endpoint",    
+            }    
+         }
+      }
+   ],
+   "azure_info": {
+      "certcache": {
+         "endpoint": "americas.acccache.azure.net",
+         "tee_type": "SevSnpVM",
+         "api_version": "api-version=2020-10-15-preview"
+      }      
+   }
+}
