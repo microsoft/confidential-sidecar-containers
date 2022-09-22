@@ -5,4 +5,4 @@ RUN apk update && apk add curl
 COPY ./bin/skr ./bin/get-snp-report /bin/
 COPY skr.sh tests/*_client.sh /
 RUN mkdir -p /tests/skr; mv *_client.sh /tests/skr
-RUN chmod +x /*.sh; date > /made-date
+RUN chmod +x /*.sh /tests/skr/*.sh; date > /made-date
