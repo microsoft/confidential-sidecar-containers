@@ -17,7 +17,7 @@ if [[ -z "${SkrSideCarArgs}" ]]; then
   else
     echo "0" > result
   fi
-else 
+else
   if /bin/skr -logfile /log.txt -base64 $SkrSideCarArgs; then
       echo "1" > result
   else

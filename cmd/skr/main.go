@@ -67,6 +67,11 @@ type KeyReleaseData struct {
 	AccessToken string `json:"access_token"`
 }
 
+type AttestError struct {
+	status           int
+	errorDescription gin.H
+}
+
 func usage() {
 	fmt.Printf("Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
@@ -81,6 +86,27 @@ func getStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Status NOT OK"})
 }
 
+func rawAttest(attestData *RawAttestData) (string, *AttestError) {
+	// base64 decode the incoming encoded security policy
+	inittimeDataBytes, err := base64.StdEncoding.DecodeString(EncodedSecurityPolicy)
+
+	if err != nil {
+		return "", &AttestError{http.StatusForbidden, gin.H{"error": errors.Wrap(err, "decoding policy from Base64 format failed").Error()}}
+	}
+
+	// base64 decode the incoming runtime data
+	runtimeDataBytes, err := base64.StdEncoding.DecodeString(attestData.RuntimeData)
+	if err != nil {
+		return "", &AttestError{http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "decoding base64-encoded runtime data of request failed").Error()}}
+	}
+
+	rawReport, err := attest.RawAttest(inittimeDataBytes, runtimeDataBytes)
+	if err != nil {
+		return "", &AttestError{http.StatusForbidden, gin.H{"error": err.Error()}}
+	}
+	return rawReport, nil
+}
+
 // postRawAttest retrieves a hardware attestation report signed by the
 // Platform Security Processor and which encodes the hash digest of
 // the request's RuntimeData in the attestation's ReportData
@@ -88,34 +114,47 @@ func getStatus(c *gin.Context) {
 // - RuntimeData is expected to be a base64-standard-encoded string
 func postRawAttest(c *gin.Context) {
 	var attestData RawAttestData
-
 	// Call BindJSON to bind the received JSON to AttestData
 	if err := c.ShouldBindJSON(&attestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format").Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format. Request must include json data with key 'runtime_data' and value of a base64 encoded blob").Error()})
 		return
 	}
-
-	// base64 decode the incoming encoded security policy
-	inittimeDataBytes, err := base64.StdEncoding.DecodeString(EncodedSecurityPolicy)
-
+	rawReport, err := rawAttest(&attestData)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": errors.Wrap(err, "decoding policy from Base64 format failed").Error()})
+		c.JSON(err.status, err.errorDescription)
 		return
-	}
-
-	// standard base64 decode the incoming runtime data
-	runtimeDataBytes, err := base64.StdEncoding.DecodeString(attestData.RuntimeData)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "decoding base64-encoded runtime data of request failed").Error()})
-		return
-	}
-
-	rawReport, err := attest.RawAttest(inittimeDataBytes, runtimeDataBytes)
-	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"report": rawReport})
+}
+
+func postJsonReport(c *gin.Context) {
+	var attestData RawAttestData
+
+	// Call BindJSON to bind the received JSON to AttestData
+	if err := c.ShouldBindJSON(&attestData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format. Request must include json data with key 'runtime_data' and value of a base64 encoded blob").Error()})
+		return
+	}
+
+	// get the base64 encoded string of the raw report
+	SNPReportEncoded, err := rawAttest(&attestData)
+	if err != nil {
+		c.JSON(err.status, err.errorDescription)
+		return
+	}
+
+	// decode it to a byte string that we can parse
+	SNPReportBytes, err2 := hex.DecodeString(SNPReportEncoded)
+	if err2 != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err2, "Encoding response failed").Error()})
+	}
+
+	// parse the byte string into a human-readable JSON
+	var SNPReport attest.SNPAttestationReport
+	SNPReport.DeserializeReport(SNPReportBytes)
+
+	c.JSON(http.StatusOK, gin.H{"report": &SNPReport})
 }
 
 // postMAAAttest retrieves an attestation token issued by Microsoft Azure Attestation
@@ -129,7 +168,7 @@ func postMAAAttest(c *gin.Context) {
 
 	// call BindJSON to bind the received JSON to AttestData
 	if err := c.ShouldBindJSON(&attestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format").Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format. Request must include json data with keys 'runtime_data' and 'maa_endpoint'").Error()})
 		return
 	}
 
@@ -175,7 +214,7 @@ func postKeyRelease(c *gin.Context) {
 
 	// Call BindJSON to bind the received JSON to KeyReleaseData
 	if err := c.ShouldBindJSON(&newKeyReleaseData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format")})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format. Request must include json data with keys 'maa_endpoint', 'mhsm_endpoint', and 'kid' with optional key 'access_token'")})
 		return
 	}
 
@@ -221,7 +260,7 @@ func setupServer(certCache attest.CertCache, identity common.Identity) *gin.Engi
 
 	r.GET("/status", getStatus)
 	r.POST("/attest/raw", postRawAttest)
-
+	r.POST("/attest/json", postJsonReport)
 	// the implementation of attest/maa and key/release APIs call MAA service
 	// to retrieve a MAA token. The MAA API requires that the request carries
 	// the certificate chain endording the signing key of the hardware attestation.

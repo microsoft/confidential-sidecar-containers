@@ -34,8 +34,8 @@ The `status` GET method returns the status of the server. The response carries a
 The `attest/raw` POST method expects a JSON of the following format:
 
 ```json
-{	    
-    "runtime_data": "<Base64-encoded blob; the hash digest of the blob will be presented as report data in the raw attestation report>"    
+{
+    "runtime_data": "<Base64-encoded blob; the hash digest of the blob will be presented as report data in the raw attestation report>"
 }
 ```
 
@@ -55,12 +55,63 @@ Upon error, the `attest/raw` POST method response carries a `BadRequest` or `Sta
 }
 ```
 
+The `attest/json` POST method expects a JSON of the following format:
+
+```json
+{
+    "runtime_data": "<Base64-encoded blob that will be presented as ReportData in hardware attestation report>"
+}
+```
+
+Upon success, the `attest/json` POST method response carries a `StatusOK` header and a payload of the following format:
+
+```json
+{
+    "report": {
+        "version": int,
+        "guest_svn": int,
+        "policy": int,
+        "family_id": string,
+        "image_id": string,
+        "vmpl": int,
+        "signature_algo": int,
+        "platform_version": int,
+        "platform_info": int,
+        "author_key_en": int,
+        "reserved1": int,
+        "report_data": string,
+        "measurement": string,
+        "host_data": string,
+        "id_key_digest": string,
+        "author_key_digest": string,
+        "report_id": string,
+        "report_id_ma": string,
+        "reported_tcb": int,
+        "reserved2":string,
+        "chip_id": string,
+        "committed_svn": int,
+        "committed_version": int,
+        "launch_svn": int,
+        "reserved3": string,
+        "signature": string
+    }
+}
+```
+
+Upon error, the `attest/json` POST method response carries a `BadRequest` or `StatusForbidden` header and a payload of the following format:
+
+```json
+{
+    "error": "<error message>"
+}
+```
+
 The `attest/maa` POST method expects a JSON of the following format:
 
 ```json
-{	
+{
     "maa_endpoint": "<maa endpoint>",
-    "runtime_data": "<Base64-encoded blob whose hash digest will be presented as runtime data in maa token>"    
+    "runtime_data": "<Base64-encoded blob whose hash digest will be presented as runtime data in maa token>"
 }
 ```
 
@@ -83,7 +134,7 @@ Upon error, the `attest/maa` POST method response carries a `BadRequest` or `Sta
 The `key/release` POST method expects a JSON of the following format:
 
 ```json
-{	
+{
     "maa_endpoint": "<maa endpoint>",
     "mhsm_endpoint": "<mhsm endpoint>",
     "kid": "<key identifier>",

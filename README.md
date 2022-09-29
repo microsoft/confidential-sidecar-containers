@@ -6,14 +6,14 @@ The code in this repository should be located at ``$GOPATH/src/microsoft/confide
 For more information on how the tools work and the sidecar's base64-encoded string attributes, check [the tecnical documentation](./TECH-INFO.md).
 
 ## Secure key release (SKR) sidecar
-The ``docker/skr/build.sh`` script builds all necessary Go tools for secure key release as standalone binaries and creates a Docker image that contains them so that it 
-can be used as a sidecar container. The skr sidecar container is executed by calling the script ``skr.sh`` with a base64-encoded string as an attribute or as an environment variable. 
+The ``docker/skr/build.sh`` script builds all necessary Go tools for secure key release as standalone binaries and creates a Docker image that contains them so that it
+can be used as a sidecar container. The skr sidecar container is executed by calling the script ``skr.sh`` with a base64-encoded string as an attribute or as an environment variable.
 
 The skr sidecar can be queried by application containers hosted in the same pod (or container group) for retrieving attestation reports and for releasing secrets from managed HSM key vaults.
 
 The ``examples/skr`` shows an example of how the skr sidecar can be deployed and tested within a confidential container group on ACI.
 
-### Third-party code 
+### Third-party code
 We modified the [AES unwrap key without padding method](https://github.com/NickBall/go-aes-key-wrap/blob/master/keywrap.go) to implement the aes key unwrap with padding method.
 
 ## Encrypted filesystem sidecar

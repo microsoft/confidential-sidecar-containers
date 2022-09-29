@@ -1,2 +1,16 @@
 /azmount
 /remotefs
+
+# temp files
+**/*.o
+
+# dev environment
+.vscode
+
+# compiled programs
+verbose-report
+get-snp-report
+get-fake-snp-report
+skr
+!skr/
+**/bin

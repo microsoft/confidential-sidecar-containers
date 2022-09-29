@@ -1,10 +1,12 @@
 # azmount and remotefs
-The encrypted filesystem sidecar container relies on two tools azmount and remotefs. 
+
+The encrypted filesystem sidecar container relies on two tools azmount and remotefs.
 
 ## remotefs
+
 This tool takes an argument such as this:
 
-```
+```json
 {
     "azure_filesystems":[
         {
@@ -16,10 +18,10 @@ This tool takes an argument such as this:
                  "authority": {
                      "endpoint": "sharedneu.neu.attest.azure.net"
                  },
-                 "mhsm": { 
+                 "mhsm": {
                      "endpoint": "anhsmname.managedhsm.azure.net"
                  }
-            }            
+            }
         },
         {
             "mount_point":"/remotemounts/share2",
@@ -30,10 +32,10 @@ This tool takes an argument such as this:
                  "authority": {
                      "endpoint": "sharedneu.neu.attest.azure.net"
                  },
-                 "mhsm": { 
+                 "mhsm": {
                      "endpoint": "anotherhsmname.managedhsm.azure.net"
                  }
-            }              
+            }
         }
     ],
     "azure_info": {
@@ -41,7 +43,7 @@ This tool takes an argument such as this:
             "endpoint": "americas.test.acccache.azure.net",
             "tee_type": "SevSnpVM",
             "api_version": "api-version=2020-10-15-preview"
-        } 
+        }
     }
 }
 ```
@@ -53,10 +55,10 @@ URL in the corresponding mountpoint. The URL can be private (which will be acces
 using token credentials obtained for a user-defined identity) or public (which will
 be accessed using anonymous credentials.)
 
-The SKR information need to specify the key identifier, the MHSM endpoint in which the 
-key is stored, and the authority endpoint which can authorize the MHSM for releasing 
-the key assuming the release policy is satisfied with claims presented in the authority's 
-token. For SKR, we also need to include the certcache endpoint from which the SKR library 
+The SKR information needs to specify the key identifier, the MHSM endpoint in which the
+key is stored, and the authority endpoint which can authorize the MHSM for releasing
+the key assuming the release policy is satisfied with claims presented in the authority's
+token. For SKR, we also need to include the certcache endpoint from which the SKR library
 can retrieve a certificate chain for the attestation's signing key pair. For testing
 purposes, it is possible to pass the raw hexstring key as opposed to SKR information.
 
@@ -65,7 +67,7 @@ In order to get this to work, the tool does the following for each filesystem
 
 - It invokes azmount to expose the encrypted file specified in ``azure_url`` as
   a local file. This file is read-only. Public containers can be read, but they
-  can't be written unless the user is authenticated. 
+  can't be written unless the user is authenticated.
 
   Also, the reason why this is a sepparate tool is that this tool uses FUSE to
   expose the remote file as a local file. This turns the userland process into a
@@ -90,10 +92,11 @@ In order to get this to work, the tool does the following for each filesystem
   appear until the filesystem is available inside of it.
 
 ## azmount
+
 This tool exposes a file located in Azure Blob Storage as a local file. For
 example, the tool can be used like this:
 
-```
+```shell
 mkdir /tmp/test
 azmount -url https://samplename.blob.core.windows.net/public-container/image-encrypted.img -mountpoint /tmp/test
 ```
@@ -103,14 +106,14 @@ the file from Azure Blob Storage.
 
 Alternatively, it can also mount a local file for testing purposes:
 
-```
+```shell
 mkdir /tmp/test
 azmount -localpath /home/example/myfile -mountpoint /tmp/test
 ```
 
 ``azmount`` will keep running until the user does:
 
-```
+```shell
 unmount /tmp/test
 ```
 
@@ -134,10 +137,11 @@ Other command line options are:
 - ``blocksize``: Size of a cache block in KiB.
 - ``numblocks``: Number of cache blocks to keep.
 
-# skr
-We also provide a stand-alone tool for attestation and secure key release. This tool instantiates a web server which exposes a REST API so that other containers can retrieve a hardware attestation report via the POST method `attest/raw` or an MAA token via the POST method `attest/maa`, and release a key via the POST method `key/release`. The server is configured with a certificate cache endpoint during startup, and can be reached at http://localhost:8080. 
+## skr
 
-The tool can be executed using the script https://github.com/microsoft/confidential-sidecars/blob/skr.sh and optionally the certificate cache endpoint information as an attribute to it or as an environment variable `SkrSidecarArgs`. If the script is executed without any certificate cache endpoint information, only  the `attest/raw` POST method is available.
+We also provide a stand-alone tool for attestation and secure key release. This tool instantiates a web server which exposes a REST API so that other containers can retrieve a hardware attestation report via the POST methods `attest/raw` and `attest/json`, or an MAA token via the POST method `attest/maa`, and release a key via the POST method `key/release`. The server is configured with a certificate cache endpoint during startup, and can be reached at <http://localhost:8080>.
+
+The tool can be executed using the script <https://github.com/microsoft/confidential-sidecars/blob/skr.sh> and optionally the certificate cache endpoint information as an attribute to it or as an environment variable `SkrSidecarArgs`. If the script is executed without any certificate cache endpoint information, only  the `attest/raw` and `attest/json` POST methods are available.
 
 The information for the cerificate cache endpoint is passed as a base64-encoded string and has the following schema
 
@@ -151,8 +155,8 @@ The information for the cerificate cache endpoint is passed as a base64-encoded 
 }
 ```
 
-
 ## API
+
 The `status` GET method returns the status of the server. The response carries a `StatusOK` header and a payload of the following format:
 
 ```json
@@ -168,12 +172,12 @@ The `status` GET method returns the status of the server. The response carries a
 The `attest/raw` POST method expects a JSON of the following format:
 
 ```json
-{	    
-    "runtime_data": "<Base64-encoded blob that will be presented as ReportData in hardware attestation report>"    
+{
+    "runtime_data": "<Base64-encoded blob that will be presented as ReportData in hardware attestation report>"
 }
 ```
 
-Upon success, the `attest/raw` POST method reponse carries a `StatusOK` header and a payload of the following format:
+Upon success, the `attest/raw` POST method response carries a `StatusOK` header and a payload of the following format:
 
 ```json
 {
@@ -181,16 +185,59 @@ Upon success, the `attest/raw` POST method reponse carries a `StatusOK` header a
 }
 ```
 
-The `attest/maa` POST method expects a JSON of the following format:
+The `attest/json` POST method expects a JSON of the following format:
 
 ```json
-{	
-    "maa_endpoint": "<maa endpoint>",
-    "runtime_data": "<Base64-encoded blob that will be presented as runtime claim in maa token>"    
+{
+    "runtime_data": "<Base64-encoded blob that will be presented as ReportData in hardware attestation report>"
 }
 ```
 
-Upon success, the `attest/maa` POST method reponse carries a `StatusOK` header and a payload of the following format:
+Upon success, the `attest/json` POST method response carries a `StatusOK` header and a payload of the following format:
+
+```json
+{
+    "report": {
+        "version": int,
+        "guest_svn": int,
+        "policy": int,
+        "family_id": string,
+        "image_id": string,
+        "vmpl": int,
+        "signature_algo": int,
+        "platform_version": int,
+        "platform_info": int,
+        "author_key_en": int,
+        "reserved1": int,
+        "report_data": string,
+        "measurement": string,
+        "host_data": string,
+        "id_key_digest": string,
+        "author_key_digest": string,
+        "report_id": string,
+        "report_id_ma": string,
+        "reported_tcb": int,
+        "reserved2":string,
+        "chip_id": string,
+        "committed_svn": int,
+        "committed_version": int,
+        "launch_svn": int,
+        "reserved3": string,
+        "signature": string
+    }
+}
+```
+
+The `attest/maa` POST method expects a JSON of the following format:
+
+```json
+{
+    "maa_endpoint": "<maa endpoint>",
+    "runtime_data": "<Base64-encoded blob that will be presented as runtime claim in maa token>"
+}
+```
+
+Upon success, the `attest/maa` POST method response carries a `StatusOK` header and a payload of the following format:
 
 ```json
 {
@@ -198,7 +245,7 @@ Upon success, the `attest/maa` POST method reponse carries a `StatusOK` header a
 }
 ```
 
-Upon error, the `attest/raw` and `attest/maa` POST methods response carries a `BadRequest` or `StatusForbidden` header and a payload of the following format:
+Upon error, the `attest/raw`, `attest/json`, and `attest/maa` POST methods response carries a `BadRequest` or `StatusForbidden` header and a payload of the following format:
 
 ```json
 {
@@ -209,7 +256,7 @@ Upon error, the `attest/raw` and `attest/maa` POST methods response carries a `B
 The `key/release` POST method expects a JSON of the following format:
 
 ```json
-{	
+{
     "maa_endpoint": "<maa endpoint>",
     "mhsm_endpoint": "<mhsm endpoint>",
     "kid": "<key identifier>",
@@ -217,7 +264,7 @@ The `key/release` POST method expects a JSON of the following format:
 }
 ```
 
-Upon success, the `key/release` POST method reponse carries a `StatusOK` header and a payload of the following format:
+Upon success, the `key/release` POST method response carries a `StatusOK` header and a payload of the following format:
 
 ```json
 {
