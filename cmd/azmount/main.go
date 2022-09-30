@@ -27,8 +27,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/microsoft/confidential-sidecars/cmd/azmount/filemanager"
-	"github.com/microsoft/confidential-sidecars/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/cmd/azmount/filemanager"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/sirupsen/logrus"
 )
 

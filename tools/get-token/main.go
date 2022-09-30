@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/microsoft/confidential-sidecars/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 )
 
 func main() {

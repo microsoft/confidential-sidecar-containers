@@ -1,4 +1,4 @@
-module github.com/microsoft/confidential-sidecars
+module github.com/Microsoft/confidential-sidecar-containers
 
 go 1.16
 

@@ -10,7 +10,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/microsoft/confidential-sidecars/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )

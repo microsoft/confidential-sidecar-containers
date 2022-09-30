@@ -18,9 +18,9 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jws"
-	"github.com/microsoft/confidential-sidecars/pkg/common"
 	"github.com/pkg/errors"
 )
 

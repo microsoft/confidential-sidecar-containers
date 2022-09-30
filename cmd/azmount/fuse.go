@@ -10,7 +10,7 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/microsoft/confidential-sidecars/cmd/azmount/filemanager"
+	"github.com/Microsoft/confidential-sidecar-containers/cmd/azmount/filemanager"
 	"github.com/pkg/errors"
 )
 

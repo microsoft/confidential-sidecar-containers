@@ -12,7 +12,7 @@ This tool instantiates a web server ( http://localhost:8080 ) which exposes a RE
 }
 ```
 
-The tool can be executed using the script https://github.com/microsoft/confidential-sidecars/blob/master/skr.sh and the base64-encoded string as an optional cert cache endpoint attribute to it.
+The tool can be executed using the script https://github.com/Microsoft/confidential-sidecar-containers/blob/master/skr.sh and the base64-encoded string as an optional cert cache endpoint attribute to it.
 
 If the cert cache endpoint is not provided, only the `attest/raw` POST method is available.
 

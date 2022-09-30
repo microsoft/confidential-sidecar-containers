@@ -8,8 +8,8 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 
-	"github.com/microsoft/confidential-sidecars/pkg/attest"
-	"github.com/microsoft/confidential-sidecars/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )

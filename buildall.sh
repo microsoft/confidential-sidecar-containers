@@ -7,14 +7,14 @@ set -e
 
 # This script builds all binaries
 
-mkdir bin
+mkdir -p bin
 pushd bin
 echo building skr
-CGO_ENABLED=0 GOOS=linux go build github.com/microsoft/confidential-sidecars/cmd/skr
+CGO_ENABLED=0 GOOS=linux go build github.com/Microsoft/confidential-sidecar-containers/cmd/skr
 echo building azmount
-CGO_ENABLED=0 GOOS=linux go build github.com/microsoft/confidential-sidecars/cmd/azmount
+CGO_ENABLED=0 GOOS=linux go build github.com/Microsoft/confidential-sidecar-containers/cmd/azmount
 echo building remotefs
-CGO_ENABLED=0 GOOS=linux go build github.com/microsoft/confidential-sidecars/cmd/remotefs
+CGO_ENABLED=0 GOOS=linux go build github.com/Microsoft/confidential-sidecar-containers/cmd/remotefs
 popd
 
 echo building get-snp-report

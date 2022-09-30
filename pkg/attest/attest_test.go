@@ -13,7 +13,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/microsoft/confidential-sidecars/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
 )
 
