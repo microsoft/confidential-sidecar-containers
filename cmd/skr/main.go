@@ -121,9 +121,9 @@ func postRawAttest(c *gin.Context) {
 // postMAAAttest retrieves an attestation token issued by Microsoft Azure Attestation
 // service which encodes the request's RuntimeData as a runtime claim
 //
-// - RuntimeData is expected to be a base64-standard-encoded string
-// - MAAEndpoint is the uri to the Microsoft Azure Attestation service endpoint which
-//   will author and sign the attestation token
+//   - RuntimeData is expected to be a base64-standard-encoded string
+//   - MAAEndpoint is the uri to the Microsoft Azure Attestation service endpoint which
+//     will author and sign the attestation token
 func postMAAAttest(c *gin.Context) {
 	var attestData MAAAttestData
 
@@ -164,12 +164,12 @@ func postMAAAttest(c *gin.Context) {
 
 // postKeyRelease retrieves a secret previously imported to Azure Key Vault MHSM
 //
-// - MHSMEndpoint is the uri to the MHSM from which the secret will be retrieved
-// - MAAEndpoint is the uri to the Microsoft Azure Attestation service endpoint which
-//   will author and sign the attestation claims presented to the MSHM during secure
-//   key release operation. It needs to be the same as the authority defined in the
-//   SKR policy when the secret was imported to the MHSM.
-// - KID is the key identifier of the secret to be retrieved.
+//   - MHSMEndpoint is the uri to the MHSM from which the secret will be retrieved
+//   - MAAEndpoint is the uri to the Microsoft Azure Attestation service endpoint which
+//     will author and sign the attestation claims presented to the MSHM during secure
+//     key release operation. It needs to be the same as the authority defined in the
+//     SKR policy when the secret was imported to the MHSM.
+//   - KID is the key identifier of the secret to be retrieved.
 func postKeyRelease(c *gin.Context) {
 	var newKeyReleaseData KeyReleaseData
 
@@ -242,6 +242,7 @@ func main() {
 	azureInfoBase64string := flag.String("base64", "", "optional base64-encoded json string with azure information")
 	logLevel := flag.String("loglevel", "debug", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
 	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
+	port := flag.String("port", "8080", "Port on which to listen")
 
 	flag.Usage = usage
 
@@ -268,6 +269,7 @@ func main() {
 	logrus.Infof("Args:")
 	logrus.Debugf("   Log Level: %s", *logLevel)
 	logrus.Debugf("   Log File:  %s", *logFile)
+	logrus.Debugf("   Port: %s", *port)
 	logrus.Debugf("   certificate cache:    %s", *azureInfoBase64string)
 
 	info := AzureInformation{}
@@ -285,5 +287,6 @@ func main() {
 		}
 	}
 
-	setupServer(info.CertCache, info.Identity).Run("localhost:8080")
+	url := "localhost:" + *port
+	setupServer(info.CertCache, info.Identity).Run(url)
 }
