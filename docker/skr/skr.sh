@@ -5,22 +5,32 @@
 
 # Important note: This script is meant to run from inside the container
 
-if [[ -z "${SkrSideCarArgs}" ]]; then
+CmdlineArgs="-logfile ./log.txt"
+
+if [ -z "${SkrSideCarArgs}" ]; then
   SkrSideCarArgs=$1
 fi
 
 echo SkrSideCarArgs = $SkrSideCarArgs
 
-if [[ -z "${SkrSideCarArgs}" ]]; then
-  if /bin/skr -logfile /log.txt; then
-    echo "1" > result
-  else
-    echo "0" > result
-  fi
-else 
-  if /bin/skr -logfile /log.txt -base64 $SkrSideCarArgs; then
-      echo "1" > result
-  else
-      echo "0" > result
-  fi
+if [ -n "${SkrSideCarArgs}" ]; then
+  CmdlineArgs="${CmdlineArgs} -base64 ${SkrSideCarArgs}"
+fi
+
+if [ -z "${Port}" ]; then
+  Port=$2
+fi
+
+echo Port = $Port
+
+if [ -n "${Port}" ]; then
+  CmdlineArgs="${CmdlineArgs} -port ${Port}"
+fi
+
+echo CmdlineArgs = $CmdlineArgs
+
+if /bin/skr $CmdlineArgs; then
+  echo "1" > result
+else
+  echo "0" > result
 fi
