@@ -4,15 +4,14 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
-	"time"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
@@ -67,8 +66,7 @@ func main() {
 	var err error
 
 	if keyHexString == "" {
-		secretKey := make([]byte, 32)
-		rand.Seed(time.Now().UnixNano())
+		secretKey = make([]byte, 32)
 		rand.Read(secretKey)
 	} else {
 		secretKey, err = hex.DecodeString(keyHexString)
