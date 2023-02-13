@@ -12,7 +12,7 @@ github.com/Azure/azure-storage-blob-go/azblob
 github.com/decred/dcrd/dcrec/secp256k1/v4
 # github.com/gin-contrib/sse v0.1.0
 github.com/gin-contrib/sse
-# github.com/gin-gonic/gin v1.7.4
+# github.com/gin-gonic/gin v1.7.7
 ## explicit
 github.com/gin-gonic/gin
 github.com/gin-gonic/gin/binding
