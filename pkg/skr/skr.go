@@ -6,7 +6,6 @@ package skr
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/base64"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -31,18 +30,15 @@ type KeyBlob struct {
 }
 
 // SecureKeyRelease releases a secret identified by the KID and MHSM in the keyblob
-// 1. Retrieve an MAA token using the attestation package. This token can be presented to a Azure Key
-//    Vault managed HSM to release a secret.
-// 2. Present the MAA token to the managed HSM for each secret that will be released. The managed HSM
-//    uses the public key presented as runtime-claims in the MAA token to wrap the released secret. This
-//    ensures that only the utility VM in posession of the private wrapping key can decrypt the material
+//  1. Retrieve an MAA token using the attestation package. This token can be presented to a Azure Key
+//     Vault managed HSM to release a secret.
+//  2. Present the MAA token to the managed HSM for each secret that will be released. The managed HSM
+//     uses the public key presented as runtime-claims in the MAA token to wrap the released secret. This
+//     ensures that only the utility VM in posession of the private wrapping key can decrypt the material
 //
 // The method requires serveral attributes including the security policy, the keyblob that contains
 // information about the mhsm, authority and the key to be released.
-//
-// TO-DO: The if fetchSNPReportFlag codebase will be removed when pushed to public repo. It is here to
-// allow testing on non-snp hw with fixed attestation reports.
-func SecureKeyRelease(EncodedSecurityPolicy string, certCache attest.CertCache, identity common.Identity, SKRKeyBlob KeyBlob) (_ []byte, err error) {
+func SecureKeyRelease(identity common.Identity, SKRKeyBlob KeyBlob, uvmInformation common.UvmInformation) (_ []byte, err error) {
 
 	logrus.Debugf("Releasing key blob: %v", SKRKeyBlob)
 
@@ -65,23 +61,10 @@ func SecureKeyRelease(EncodedSecurityPolicy string, certCache attest.CertCache, 
 		return nil, errors.Wrapf(err, "generating key blob failed")
 	}
 
-	// base64 decode the incoming encoded security policy
-	if EncodedSecurityPolicy == "" {
-		maaToken, err = attest.Attest(certCache, SKRKeyBlob.Authority, nil, jwkSetBytes)
-		if err != nil {
-			return nil, errors.Wrapf(err, "attestation failed")
-		}
-	} else {
-		policyBlobBytes, err := base64.StdEncoding.DecodeString(EncodedSecurityPolicy)
-		if err != nil {
-			return nil, errors.Wrap(err, "decoding policy from Base64 format failed")
-		}
-
-		// Attest
-		maaToken, err = attest.Attest(certCache, SKRKeyBlob.Authority, policyBlobBytes, jwkSetBytes)
-		if err != nil {
-			return nil, errors.Wrapf(err, "attestation failed")
-		}
+	// Attest
+	maaToken, err = attest.Attest(SKRKeyBlob.Authority, jwkSetBytes, uvmInformation)
+	if err != nil {
+		return nil, errors.Wrapf(err, "attestation failed")
 	}
 
 	// 2. Interact with Azure Key Vault managed HSM. The REST API of AKV managed HSM

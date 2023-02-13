@@ -14,12 +14,5 @@
             }    
          }
       }
-   ],
-   "azure_info": {
-      "certcache": {
-         "endpoint": "americas.acccache.azure.net",
-         "tee_type": "SevSnpVM",
-         "api_version": "api-version=2020-10-15-preview"
-      }      
-   }
+   ]
 }

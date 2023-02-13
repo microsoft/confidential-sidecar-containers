@@ -35,14 +35,7 @@ This tool takes an argument such as this:
                  }
             }              
         }
-    ],
-    "azure_info": {
-        "certcache": {
-            "endpoint": "americas.test.acccache.azure.net",
-            "tee_type": "SevSnpVM",
-            "api_version": "api-version=2020-10-15-preview"
-        } 
-    }
+    ]
 }
 ```
 
@@ -56,8 +49,7 @@ be accessed using anonymous credentials.)
 The SKR information need to specify the key identifier, the MHSM endpoint in which the 
 key is stored, and the authority endpoint which can authorize the MHSM for releasing 
 the key assuming the release policy is satisfied with claims presented in the authority's 
-token. For SKR, we also need to include the certcache endpoint from which the SKR library 
-can retrieve a certificate chain for the attestation's signing key pair. For testing
+token. For testing
 purposes, it is possible to pass the raw hexstring key as opposed to SKR information.
 
 In order to get this to work, the tool does the following for each filesystem
@@ -138,18 +130,6 @@ Other command line options are:
 We also provide a stand-alone tool for attestation and secure key release. This tool instantiates a web server which exposes a REST API so that other containers can retrieve a hardware attestation report via the POST method `attest/raw` or an MAA token via the POST method `attest/maa`, and release a key via the POST method `key/release`. The server is configured with a certificate cache endpoint during startup, and can be reached at http://localhost:8080. 
 
 The tool can be executed using the script https://github.com/Microsoft/confidential-sidecar-containers/blob/skr.sh and optionally the certificate cache endpoint information as an attribute to it or as an environment variable `SkrSidecarArgs`. If the script is executed without any certificate cache endpoint information, only  the `attest/raw` POST method is available.
-
-The information for the cerificate cache endpoint is passed as a base64-encoded string and has the following schema
-
-```json
-{
-   "certcache": {
-      "endpoint": "americas.test.acccache.azure.net",
-      "tee_type": "SevSnpVM",
-      "api_version": "api-version=2020-10-15-preview"
-   }
-}
-```
 
 
 ## API

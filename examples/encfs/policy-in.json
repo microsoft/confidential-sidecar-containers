@@ -23,10 +23,10 @@
             ]
         },        
         {            
-            "containerImage": "docker.io/alpine:3.13",
+            "containerImage": "docker.io/alpine:3.17.1",
             "environmentVariables": [],
             "command": [     
-                "/bin/bash",
+                "/bin/sh",
                 "-c",    
                 "while true; do /usr/bin/top -b -n 1 | /usr/bin/head -n 20; sleep 1; done"
              ],

@@ -18,7 +18,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/pkg/errors"
@@ -42,11 +41,10 @@ var (
 
 var (
 	Identity              common.Identity
-	CertCache             attest.CertCache
-	EncodedSecurityPolicy string
+	EncodedUvmInformation common.UvmInformation
 	// for testing encrypted filesystems without releasing secrets from
 	// MHSM allowTestingWithRawKey needs to be set to true and a raw key
-	// needs to have been provided. default mode is that such testing is
+	// needs to have been provided. Default mode is that such testing is
 	// disabled.
 	allowTestingWithRawKey = false
 )
@@ -174,23 +172,25 @@ func releaseRemoteFilesystemKey(tempDir string, keyBlob skr.KeyBlob) (keyFilePat
 
 	keyFilePath = filepath.Join(tempDir, "keyfile")
 
-	// 1) Retrieve the incoming encoded security policy
-	EncodedSecurityPolicy = osGetenv("SECURITY_POLICY")
+	if EncodedUvmInformation.EncodedSecurityPolicy == "" {
+		err = errors.New("EncodedSecurityPolicy is empty")
+		logrus.WithError(err).Debugf("Make sure the environment is correct") // only helpful running outside of a UVM
+		return "", err
+	}
 
-	fmt.Println("EncodedSecurityPolicy: ", EncodedSecurityPolicy)
+	fmt.Println("EncodedSecurityPolicy: ", EncodedUvmInformation.EncodedSecurityPolicy)
 
-	// 2) release key identified by keyBlob using encoded security policy and certcache
-	//    certcache is required for validating the attestation report against the cert
-	//    chain of the chip identified in the attestation report
+	// 2) release key identified by keyBlob using encoded security policy
 
 	keyBytes := make([]byte, 64)
 
 	// MHSM has limit on the request size. We do not pass the EncodedSecurityPolicy here so
 	// it is not presented as fine-grained init-time claims in the MAA token, which would
 	// introduce larger MAA tokens that MHSM would accept
-	keyBytes, err = skr.SecureKeyRelease("", CertCache, Identity, keyBlob)
+	keyBytes, err = skr.SecureKeyRelease(Identity, keyBlob, EncodedUvmInformation)
 	if err != nil {
 		logrus.WithError(err).Debugf("failed to release key: %v", keyBlob)
+		return "", errors.Wrapf(err, "failed to release key")
 	}
 
 	// 3) dm-crypt expects a key file, so create a key file using the key released in
@@ -207,21 +207,21 @@ func releaseRemoteFilesystemKey(tempDir string, keyBlob skr.KeyBlob) (keyFilePat
 // containerMountAzureFilesystem mounts a remote filesystems specified in the
 // policy of a given container.
 //
-// 1) Get the actual filesystem image. This is done by starting a new azmount
-//    process. The file is then exposed at ``/[tempDir]/[index]/data`` and the
-//    log of azmount is saved to ``/[tempDir]/log-[index].txt``.
+//  1. Get the actual filesystem image. This is done by starting a new azmount
+//     process. The file is then exposed at “/[tempDir]/[index]/data“ and the
+//     log of azmount is saved to “/[tempDir]/log-[index].txt“.
 //
-// 2) Obtain keyfile. This is hardcoded at the moment and needs to be replaced
-//    by the actual code that gets the key. It is saved to a temporary file so
-//    that it can be passed to cryptsetup. It can be removed afterwards.
+//  2. Obtain keyfile. This is hardcoded at the moment and needs to be replaced
+//     by the actual code that gets the key. It is saved to a temporary file so
+//     that it can be passed to cryptsetup. It can be removed afterwards.
 //
-// 3) Open encrypted filesystem with cryptsetup. The result is a block device in
-//    ``/dev/mapper/remote-crypt-[filesystem-index]``.
+//  3. Open encrypted filesystem with cryptsetup. The result is a block device in
+//     “/dev/mapper/remote-crypt-[filesystem-index]“.
 //
 // 4) Mount block device as a read-only filesystem.
 //
-// 5) Create a symlink to the filesystem in the path shared between the UVM and
-//    the container.
+//  5. Create a symlink to the filesystem in the path shared between the UVM and
+//     the container.
 func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem) (err error) {
 
 	cacheBlockSize := "512"
@@ -302,7 +302,12 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 func MountAzureFilesystems(tempDir string, info RemoteFilesystemsInformation) (err error) {
 
 	Identity = info.AzureInfo.Identity
-	CertCache = info.AzureInfo.CertCache
+
+	// Retrieve the incoming encoded security policy, cert and uvm endorsement
+	EncodedUvmInformation, err = common.GetUvmInfomation()
+	if err != nil {
+		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())
+	}
 
 	for i, fs := range info.AzureFilesystems {
 		logrus.Debugf("Mounting Azure Storage blob %d...", i)

@@ -7,6 +7,8 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+
+	"io/ioutil"
 	"os/exec"
 
 	"github.com/pkg/errors"
@@ -254,22 +256,34 @@ func fetchFakeSNPReport(keyBlobBytes []byte, policyBlobBytes []byte) ([]byte, er
 		hostData.Write(policyBlobBytes)
 	}
 
-	// the get-snp-report binary expects ReportData as the only command line attribute
-	logrus.Debugf("/bin/get-fake-snp-report %s %s", hex.EncodeToString(runtimeData.Sum(nil)), hex.EncodeToString(hostData.Sum(nil)))
-	cmd := exec.Command("/bin/get-fake-snp-report", hex.EncodeToString(runtimeData.Sum(nil)), hex.EncodeToString(hostData.Sum(nil)))
+	// For specialist standalone debugging on a non snp machine it is possible use a canned
+	// report (from a real machine) along with certs from that machine, matching UVM_REFERENCE_INFO
+	// and policy. This is done by setting the environment variables. Capturing all that from a
+	// real ACI instance requires a container running with a policy that lets this happen, typically
+	// the open_door.rego from the hcsshim repo.
 
-	reportBytesString, err := cmd.Output()
+	var num int
+	reportBytes, err := ioutil.ReadFile("snp_report.bin")
 	if err != nil {
-		return nil, errors.Wrapf(err, "cmd.Run() for fetching snp report failed")
-	}
+		// the get-fake-snp-report binary expects ReportData and HostData (hash of policy)
+		// the rest of such a report will not pass verification of course.
+		logrus.Debugf("/bin/get-fake-snp-report %s %s", hex.EncodeToString(runtimeData.Sum(nil)), hex.EncodeToString(hostData.Sum(nil)))
+		cmd := exec.Command("/bin/get-fake-snp-report", hex.EncodeToString(runtimeData.Sum(nil)), hex.EncodeToString(hostData.Sum(nil)))
 
-	// the get-snp-report binary outputs the raw hexadecimal representation  of the report
-	reportBytes := make([]byte, hex.DecodedLen(len(reportBytesString)))
+		reportBytesString, err := cmd.Output()
+		if err != nil {
+			return nil, errors.Wrapf(err, "cmd.Run() for fetching snp report failed")
+		}
 
-	num, err := hex.Decode(reportBytes, reportBytesString)
+		// the get-snp-report binary outputs the raw hexadecimal representation  of the report
+		reportBytes := make([]byte, hex.DecodedLen(len(reportBytesString)))
 
-	if err != nil {
-		return nil, errors.Wrapf(err, "decoding output to hexstring failed")
+		num, err = hex.Decode(reportBytes, reportBytesString)
+		if err != nil {
+			return nil, errors.Wrapf(err, "decoding output to hexstring failed")
+		}
+	} else {
+		num = len(reportBytes)
 	}
 
 	if num != len(reportBytes) {
@@ -283,7 +297,7 @@ func fetchFakeSNPReport(keyBlobBytes []byte, policyBlobBytes []byte) ([]byte, er
 // The attestation report retrieval request passes an arbiratry 64-byte block that will be
 // reported as REPORT_DATA (reportBytes)
 //
-// The get-snp-report tool is compiled during preperation of the rootfs. The binary is expected to
+// The get-snp-report tool is compiled during preperation of the container rootfs. The binary is expected to
 // be fount under /bin
 func fetchRealSNPReport(keyBytes []byte) (reportBytes []byte, err error) {
 	runtimeData := sha256.New()

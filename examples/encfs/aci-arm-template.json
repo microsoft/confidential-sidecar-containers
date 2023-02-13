@@ -59,7 +59,7 @@
                 "-c",
                 "while true; do /usr/bin/top -b -n 1 | /usr/bin/head -n 20; sleep 1; done"
               ],
-              "image": "docker.io/alpine:3.13",
+              "image": "docker.io/alpine:3.17.1",
               "resources": {
                 "requests": {
                   "cpu": 0.5,
