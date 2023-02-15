@@ -9,15 +9,18 @@ encryptedImage=encfs.img
 deviceName=cryptdevice1
 deviceNamePath="/dev/mapper/$deviceName"
 
-echo "[!] Generating keyfile..."
-
-dd if=/dev/random of="$keyFilePath" count=1 bs=32
+if [ -f "$keyFilePath" ]; then
+    echo "keyfile exists"
+else
+    echo "[!] Generating keyfile..."
+    dd if=/dev/random of="$keyFilePath" count=1 bs=32
+fi
 
 echo "Key in hex string format"
 
 python hexstring.py $keyFilePath
 
-truncate -s 64 "$keyFilePath"
+truncate -s 32 "$keyFilePath"
 
 echo "[!] Creating encrypted image..."
 

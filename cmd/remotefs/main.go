@@ -34,6 +34,9 @@ type AzureFilesystem struct {
 	AzureUrlPrivate bool `json:"azure_url_private"`
 	// This is the path where the filesystem will be exposed in the container.
 	MountPoint string `json:"mount_point"`
+	// This is the information used by encfs to derive the encryption key of the filesystem
+	// if the key being released is a private RSA key
+	KeyDerivationBlob skr.KeyDerivationBlob `json:"key_derivation,omitempty"`
 	// This is the information used by skr to release the encryption key of the filesystem
 	KeyBlob skr.KeyBlob `json:"key,omitempty"`
 	// This is a testing key hexstring encoded to be used against the filesystem. This should
@@ -100,7 +103,7 @@ func main() {
 	// populate missing attributes in KeyBlob
 	for i, _ := range info.AzureFilesystems {
 		// set the api versions and the tee type for which the authority will authorize secure key release
-		info.AzureFilesystems[i].KeyBlob.MHSM.APIVersion = "api-version=7.3-preview"
+		info.AzureFilesystems[i].KeyBlob.AKV.APIVersion = "api-version=7.3-preview"
 		info.AzureFilesystems[i].KeyBlob.Authority.APIVersion = "api-version=2020-10-01"
 		info.AzureFilesystems[i].KeyBlob.Authority.TEEType = "SevSnpVM"
 	}

@@ -10,15 +10,20 @@ This tool takes an argument such as this:
         {
             "mount_point":"/remotemounts/share1",
             "azure_url":"https://samplename.blob.core.windows.net/public-container/image-encrypted-1.img",
-            "azure_url_private": false,
+            "azure_url_private": true,
             "key": {
                  "kid": "EncryptedFilesystemsContainer",
+                 "kty": "RSA-HSM",
                  "authority": {
                      "endpoint": "sharedneu.neu.attest.azure.net"
                  },
-                 "mhsm": { 
-                     "endpoint": "anhsmname.managedhsm.azure.net"
+                 "akv": { 
+                     "endpoint": "avaultname.vault.azure.net"
                  }
+            },
+            "key_derivation":{
+                "salt": "92a631483ca875aad7e2477da755d58cac3876b77d10bcdd7b33bfa11e7d8b8e",
+                "label": "Encryption Key"
             }            
         },
         {
@@ -30,8 +35,8 @@ This tool takes an argument such as this:
                  "authority": {
                      "endpoint": "sharedneu.neu.attest.azure.net"
                  },
-                 "mhsm": { 
-                     "endpoint": "anotherhsmname.managedhsm.azure.net"
+                 "akv": { 
+                     "endpoint": "amanagedhsmname.managedhsm.azure.net"
                  }
             }              
         }
@@ -46,8 +51,8 @@ URL in the corresponding mountpoint. The URL can be private (which will be acces
 using token credentials obtained for a user-defined identity) or public (which will
 be accessed using anonymous credentials.)
 
-The SKR information need to specify the key identifier, the MHSM endpoint in which the 
-key is stored, and the authority endpoint which can authorize the MHSM for releasing 
+The SKR information need to specify the key identifier, the AKV endpoint in which the 
+key is stored, and the authority endpoint which can authorize the AKV for releasing 
 the key assuming the release policy is satisfied with claims presented in the authority's 
 token. For testing
 purposes, it is possible to pass the raw hexstring key as opposed to SKR information.
@@ -67,7 +72,9 @@ In order to get this to work, the tool does the following for each filesystem
   Because this tool is running on a different process, remotefs has to wait
   until the expected file is available. This has a timeout of 10 seconds.
 
-- The keyfile is obtained from either SKR or the hardcoded key in the tool.
+- The keyfile is obtained from either SKR or the hardcoded key in the tool. If
+  the key material released using SKR is an `RSA-HSM`, the tool uses the key 
+  derivation information to derive an octet key.
 
 - The encrypted file and the key file are passed to cryptsetup so that the
   encrypted file is exposed as an unencrypted block device under
@@ -191,7 +198,7 @@ The `key/release` POST method expects a JSON of the following format:
 ```json
 {	
     "maa_endpoint": "<maa endpoint>",
-    "mhsm_endpoint": "<mhsm endpoint>",
+    "akv_endpoint": "<akv endpoint>",
     "kid": "<key identifier>",
     "access_token": "optional aad token if the command will run in a resource without proper managed identity assigned"
 }
@@ -201,7 +208,7 @@ Upon success, the `key/release` POST method reponse carries a `StatusOK` header 
 
 ```json
 {
-    "key": "<hexstring representation of the key>"
+    "key": "<key in JSON Web Key format>"
 }
 ```
 

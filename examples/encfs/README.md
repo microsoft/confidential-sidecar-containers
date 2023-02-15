@@ -10,11 +10,14 @@ The user needs to instantiate an [Azure storage container](https://docs.microsof
 
 The script `generatefs/generatefs.sh` creates `encfs.img` with the contents of the `generatefs/filesystem` directory. You may need to adjust the size of the image in the script, as it isn't calculated automatically. 
 
+The script expects a symmetric key stored in binary format `keyfile.bin`. If not passed, the script will generate a new one.
+
 ```
 [!] Generating keyfile...
 1+0 records in
 1+0 records out
 32 bytes copied, 0.00142031 s, 22.5 kB/s
+keyfile exists
 Key in hex string format
 b'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef'
 [!] Creating encrypted image...
@@ -49,9 +52,10 @@ Deploying a confidential container group requires generating a security policy t
 The policy-input file includes two entries: (i) encrypted filesystem sidecar container which whitelists the /encfs.sh as entry point command and the environment variable *EncfsSideCarArgs* used by the script, and (ii) an application container which whitelists a while loop command as entry point command. 
 
 ### Import encryption key
-The user needs to instantiate an [AKV MHSM resource](https://docs.microsoft.com/en-us/azure/key-vault/managed-hsm/overview), and assign the *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys to the user-assigned managed identity.
+The user needs to instantiate an Azure Key Vault resource that supports storing keys in an HSM: a [Premium vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview) or an [MHSM resource](https://docs.microsoft.com/en-us/azure/key-vault/managed-hsm/overview). For the former, the user needs to assign 
+the *Key Vault Crypto Officer* and *Key Vault Crypto User* roles to the user-assigned managed identity and for the latter, the user needs to assign *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys to the user-assigned managed identity.
 
-Once the MHSM resource is ready, the user can import oct-HSM keys into it using the `importkey` tool placed under `<parent_repo_dir>/tools/importkey` after updating the `importkeyconfig.json` with the required information as discussed in the tools' readme file. For instance, the hostdata claim value needs to be set to the hash digest of the security policy, which can be obtained by executing the following command:
+Once the key vault resource is ready, the user can import `RSA-HSM` or `oct-HSM` keys into it using the `importkey` tool placed under `<parent_repo_dir>/tools/importkey` after updating the `importkeyconfig.json` with the required information as discussed in the tools' readme file. For instance, the hostdata claim value needs to be set to the hash digest of the security policy, which can be obtained by executing the following command:
 
 `go run <parent_dir>/tools/securitypolicydigest/main.go -p <base64-std-encoded-string-of-security-policy>`
 
@@ -59,7 +63,14 @@ Once the `importkeyconfig.json` is updated, execute the following command:
 
 `cd <parent_dir>/tools/importkey`
 
-`go run main.go -c <parent_dir>/examples/encfs/importkeyconfig.json -kh deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef`
+`go run main.go -c <parent_dir>/examples/encfs/importkeyconfig.json -kh deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef -out`
+
+`go run main.go -c <parent_dir>/examples/encfs/importkeyconfig.json -kp private-key.pem -out`
+
+`go run main.go -c <parent_dir>/examples/encfs/importkeyconfig.json -out`
+
+For `RSA-HSM` keys, the `importkey` (if prompted using the `-out` flag) derives an octet key from the RSA private key. Note that it is safe
+to use the private RSA key as entropy for a symmetric key as logn as the RSA key pair is not used for any other cryptographic operation.
 
 ## Testing
 In our confidential container group example, we will deploy the encrypted filesystem sidecar along with a simple container that runs indefentely. The simple container will have access to the remote filesystem mounted by the sidecar container.

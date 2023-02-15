@@ -13,10 +13,10 @@ import (
 	"encoding/hex"
 	"strings"
 	"testing"
-	
+
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/lestrrat-go/jwx/jwa"
-	"github.com/lestrrat-go/jwx/jws"	
+	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
 )
 
@@ -129,7 +129,7 @@ func Test_Keywrap(t *testing.T) {
 	}
 }
 
-func Test_MHSM(t *testing.T) {
+func Test_AKV(t *testing.T) {
 	// JWS token validation
 	type jwstokenValidationTestcase struct {
 		name string

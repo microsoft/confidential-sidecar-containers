@@ -3,15 +3,20 @@
       {
          "mount_point":"/mnt/remote/share",
          "azure_url":"<azure-blob-storage-url>",
-	      "azure_url_private": true,
+         "azure_url_private": true,
          "key": {
-            "kid": "<key-vault-mhsm-key-identifier>",
+            "kid": "<key-vault-akv-key-identifier>",
+            "kty": "<key-type-of-key-imported-to-akv>",
             "authority": {
-                "endpoint": "<authority-of-key-imported-to-key-vault-mhsm>"
+                "endpoint": "<authority-of-key-imported-to-akv>"
             },
-            "mhsm": {
-                "endpoint": "key-vault-mhsm-endpoint",    
+            "akv": {
+                "endpoint": "key-vault-akv-endpoint"
             }    
+         },
+         "key_derivation": {
+            "salt": "<salt-for-key-derivation-valid-only-for-RSA-HSM-keys>",
+            "label": "<label-for-derived-key-valid-only-for-RSA-HSM-keys>"
          }
       }
    ]

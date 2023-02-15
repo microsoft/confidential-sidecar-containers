@@ -7,10 +7,13 @@
 package main
 
 import (
+	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -23,6 +26,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+
+	"golang.org/x/crypto/hkdf"
 )
 
 // Test dependencies
@@ -43,7 +48,7 @@ var (
 	Identity              common.Identity
 	EncodedUvmInformation common.UvmInformation
 	// for testing encrypted filesystems without releasing secrets from
-	// MHSM allowTestingWithRawKey needs to be set to true and a raw key
+	// AKV allowTestingWithRawKey needs to be set to true and a raw key
 	// needs to have been provided. Default mode is that such testing is
 	// disabled.
 	allowTestingWithRawKey = false
@@ -160,15 +165,14 @@ func rawRemoteFilesystemKey(tempDir string, rawKeyHexString string) (keyFilePath
 	return keyFilePath, nil
 }
 
-// releaseRemoteFilesystemKey releases the key identified by keyBlob from managed HSM
-// azure key vault
+// releaseRemoteFilesystemKey releases the key identified by keyBlob from AKV
 //
 // 1) Retrieve encoded  security policy by reading the environment variable
 //
 // 2) Perform secure key release
 //
 // 3) Prepare the key file path using the released key
-func releaseRemoteFilesystemKey(tempDir string, keyBlob skr.KeyBlob) (keyFilePath string, err error) {
+func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob skr.KeyDerivationBlob, keyBlob skr.KeyBlob) (keyFilePath string, err error) {
 
 	keyFilePath = filepath.Join(tempDir, "keyfile")
 
@@ -178,24 +182,71 @@ func releaseRemoteFilesystemKey(tempDir string, keyBlob skr.KeyBlob) (keyFilePat
 		return "", err
 	}
 
-	fmt.Println("EncodedSecurityPolicy: ", EncodedUvmInformation.EncodedSecurityPolicy)
-
 	// 2) release key identified by keyBlob using encoded security policy
-
-	keyBytes := make([]byte, 64)
-
-	// MHSM has limit on the request size. We do not pass the EncodedSecurityPolicy here so
-	// it is not presented as fine-grained init-time claims in the MAA token, which would
-	// introduce larger MAA tokens that MHSM would accept
-	keyBytes, err = skr.SecureKeyRelease(Identity, keyBlob, EncodedUvmInformation)
+	jwKey, err := skr.SecureKeyRelease(Identity, keyBlob, EncodedUvmInformation)
 	if err != nil {
 		logrus.WithError(err).Debugf("failed to release key: %v", keyBlob)
 		return "", errors.Wrapf(err, "failed to release key")
 	}
+	logrus.Debugf("Key Type: %s", jwKey.KeyType())
+
+	octetKeyBytes := make([]byte, 32)
+	var rawKey interface{}
+	err = jwKey.Raw(&rawKey)
+	if err != nil {
+		logrus.WithError(err).Debugf("failed to extract raw key")
+		return "", errors.Wrapf(err, "failed to extract raw key")
+	}
+
+	if jwKey.KeyType() == "oct" {
+		rawOctetKeyBytes, ok := rawKey.([]byte)
+		if !ok || len(rawOctetKeyBytes) != 32 {
+			logrus.WithError(err).Debugf("expected 32-byte octet key")
+			return "", errors.Wrapf(err, "expected 32-byte octet key")
+		}
+		octetKeyBytes = rawOctetKeyBytes
+	} else if jwKey.KeyType() == "RSA" {
+		rawKey, ok := rawKey.(*rsa.PrivateKey)
+		if !ok {
+			logrus.WithError(err).Debugf("expected RSA key")
+			return "", errors.Wrapf(err, "expected RSA key")
+		}
+		// use sha256 as hashing function for HKDF
+		hash := sha256.New
+
+		// public salt and label
+		var labelString string
+		if keyDerivationBlob.Label != "" {
+			labelString = keyDerivationBlob.Label
+		} else {
+			labelString = "Symmetric Encryption Key"
+		}
+
+		// decode public salt hexstring
+		salt, err := hex.DecodeString(keyDerivationBlob.Salt)
+		if err != nil {
+			logrus.WithError(err).Debugf("failed to decode salt hexstring")
+			return "", errors.Wrapf(err, "failed to decode salt hexstring")
+		}
+
+		// setup derivation function using secret D exponent, salt, and label
+		hkdf := hkdf.New(hash, rawKey.D.Bytes(), salt, []byte(labelString))
+
+		// derive key
+		if _, err := io.ReadFull(hkdf, octetKeyBytes); err != nil {
+			logrus.WithError(err).Debugf("failed to derive oct key")
+			return "", errors.Wrapf(err, "failed to derive oct key")
+		}
+
+		logrus.Debugf("Symmetric key %s (salt: %s label: %s)", hex.EncodeToString(octetKeyBytes), keyDerivationBlob.Salt, labelString)
+	} else {
+		logrus.WithError(err).Debugf("key type %snot supported", jwKey.KeyType())
+		return "", errors.Wrapf(err, "key type %s not supported", jwKey.KeyType())
+	}
 
 	// 3) dm-crypt expects a key file, so create a key file using the key released in
 	//    previous step
-	err = ioutilWriteFile(keyFilePath, keyBytes, 0644)
+	err = ioutilWriteFile(keyFilePath, octetKeyBytes, 0644)
 	if err != nil {
 		logrus.WithError(err).Debugf("failed to delete keyfile: %s", keyFilePath)
 		return "", errors.Wrapf(err, "failed to write keyfile")
@@ -237,7 +288,7 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 
 	var keyFilePath string
 	if fs.KeyBlob.KID != "" {
-		keyFilePath, err = releaseRemoteFilesystemKey(tempDir, fs.KeyBlob)
+		keyFilePath, err = releaseRemoteFilesystemKey(tempDir, fs.KeyDerivationBlob, fs.KeyBlob)
 		if err != nil {
 			return errors.Wrapf(err, "failed to obtain keyfile")
 		}

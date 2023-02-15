@@ -21,8 +21,8 @@ const (
 	AttestRequestURITemplate = "https://%s/attest/%s?%s"
 )
 
-// MAA contains information about the MAA service that acts as an authority
-// for managed HSM service
+// MAA contains information about the MAA service that acts as the
+// author of the claims
 type MAA struct {
 	Endpoint   string `json:"endpoint"`
 	TEEType    string `json:"tee_type,omitempty"`
@@ -65,7 +65,7 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 
 	base64urlEncodedUvmReferenceInfo := base64.URLEncoding.EncodeToString(uvmReferenceInfo)
 
-	if common.GenerateTestData  {
+	if common.GenerateTestData {
 		ioutil.WriteFile("body.uvm_reference_info.bin", uvmReferenceInfo, 0644)
 		ioutil.WriteFile("body.uvm_reference_info.base64url", []byte(base64urlEncodedUvmReferenceInfo), 0644)
 	}
@@ -80,8 +80,8 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 	}
 
 	base64urlEncodedmaaEndorsement := base64.URLEncoding.EncodeToString(maaEndorsementJSONBytes)
-	
-	if common.GenerateTestData  {
+
+	if common.GenerateTestData {
 		ioutil.WriteFile("body.endorsements.bin", maaEndorsementJSONBytes, 0644)
 		ioutil.WriteFile("body.endorsements.base64url", []byte(base64urlEncodedmaaEndorsement), 0644)
 	}
@@ -98,10 +98,10 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "marhalling maa Report field failed")
 	}
-	
+
 	request.Report = base64.URLEncoding.EncodeToString(maaReportJSONBytes)
 
-	if common.GenerateTestData  {
+	if common.GenerateTestData {
 		ioutil.WriteFile("body.maa_report.json", maaReportJSONBytes, 0644)
 		ioutil.WriteFile("body.report.base64url", []byte(request.Report), 0644)
 	}
@@ -152,7 +152,7 @@ func (maa MAA) attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlob
 		return "", errors.Wrapf(err, "marshalling maa request failed")
 	}
 	logrus.Debugf("MAA Request: %s\n", string(maaRequestJSONData))
-	
+
 	if common.GenerateTestData {
 		ioutil.WriteFile("request.json", maaRequestJSONData, 0644)
 	}

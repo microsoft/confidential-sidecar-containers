@@ -28,7 +28,7 @@ const (
 )
 
 // GetToken retrieves an authentication token which will be used for authorizing
-// requests sent to Azure services requiring authorization (e.g., Azure Blob, MHSM)
+// requests sent to Azure services requiring authorization (e.g., Azure Blob, AKV)
 func GetToken(ResourceId string, i Identity) (r TokenResponse, err error) {
 
 	// HTTP GET request to authentication token service

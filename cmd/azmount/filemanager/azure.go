@@ -84,14 +84,14 @@ func AzureSetup(urlString string, urlPrivate bool, identity common.Identity) err
 			token, err = common.GetToken("https://"+u.Host, identity)
 
 			if err != nil {
-				logrus.Infof("can't obtain a token rquired for accessing private blobs. will retry in case the ACI identity sidecar is not running yet.")
+				logrus.Infof("can't obtain a token required for accessing private blobs. will retry in case the ACI identity sidecar is not running yet.")
 				time.Sleep(3 * time.Second)
 				count++
 				if count == 20 {
 					return errors.Wrapf(err, "timeout of 60 seconds expired. could not obtained token")
 				}
 			} else {
-				logrus.Infof("token obtained. continuing")
+				logrus.Infof("token obtained: %s continuing", token.AccessToken)
 				break
 			}
 		}
