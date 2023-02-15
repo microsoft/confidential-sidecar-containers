@@ -187,13 +187,12 @@ func postKeyRelease(c *gin.Context) {
 	}
 
 	jwKey, err := skr.SecureKeyRelease(Identity, skrKeyBlob, EncodedUvmInformation)
-
-	logrus.Debugf("Key released of type %s", jwKey.KeyType())
-
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
 	}
+
+	logrus.Debugf("Key released of type %s", jwKey.KeyType())
 
 	jwkJSONBytes, err := json.Marshal(jwKey)
 	if err != nil {

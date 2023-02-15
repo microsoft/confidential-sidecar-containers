@@ -116,6 +116,7 @@ func SecureKeyRelease(identity common.Identity, SKRKeyBlob KeyBlob, uvmInformati
 
 	keyBytes, kty, err := SKRKeyBlob.AKV.ReleaseKey(maaToken, SKRKeyBlob.KID, privateWrappingKey)
 	if err != nil {
+		logrus.Debugf("releasing the key %s failed. err: %s", SKRKeyBlob.KID, err.Error())
 		return nil, errors.Wrapf(err, "releasing the key %s failed", SKRKeyBlob.KID)
 	}
 
