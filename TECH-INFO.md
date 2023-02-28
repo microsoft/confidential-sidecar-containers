@@ -51,7 +51,7 @@ URL in the corresponding mountpoint. The URL can be private (which will be acces
 using token credentials obtained for a user-defined identity) or public (which will
 be accessed using anonymous credentials.)
 
-The SKR information need to specify the key identifier, the AKV endpoint in which the 
+The SKR information needs to specify the key identifier, the AKV endpoint in which the 
 key is stored, and the authority endpoint which can authorize the AKV for releasing 
 the key assuming the release policy is satisfied with claims presented in the authority's 
 token. For testing
@@ -64,7 +64,7 @@ In order to get this to work, the tool does the following for each filesystem
   a local file. This file is read-only. Public containers can be read, but they
   can't be written unless the user is authenticated. 
 
-  Also, the reason why this is a sepparate tool is that this tool uses FUSE to
+  Also, the reason why this is a separate tool is that this tool uses FUSE to
   expose the remote file as a local file. This turns the userland process into a
   server of Kernel requests (such as read or write), and it is needed to have a
   different process per FUSE filesystem.
