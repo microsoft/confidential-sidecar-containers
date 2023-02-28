@@ -1,12 +1,12 @@
 {
-    "key":{
+    "key": {
         "kid": "<key-vault-key-identifier>",
         "kty": "<key-type-of-key-imported-to-akv>",
         "authority": {
             "endpoint": "<authority-of-key-imported-to-akv>"
         },
         "akv": {
-            "endpoint": "key-vault-akv-endpoint",  
+            "endpoint": "key-vault-akv-endpoint",
             "api_version": "api-version=7.3-preview",
             "bearer_token": "<aad-token-with-permissions-to-akv>"
         }
@@ -14,15 +14,21 @@
     "key_derivation": {
         "salt": "<salt-for-key-derivation-valid-only-for-RSA-HSM-keys>",
         "label": "<label-for-derived-key-valid-only-for-RSA-HSM-keys>"
-     },    
-    "claims":[        
-        [{
-            "claim":  "x-ms-sevsnpvm-launchmeasurement",
-            "equals": "ede826880a4e1a41898a96810efb09f2070513abb355e89652564cd18f1d43a7a031d1ff54490dbd61687de101b66ed1"
-        },
-        {
-            "claim":"x-ms-sevsnpvm-hostdata",
-            "equals": "600049351bb364c3aed0110df3050795fc33b7fbc2c9146a50ce754728e2f112"
-        }]
+    },
+    "claims": [
+        [
+            {
+                "claim": "x-ms-sevsnpvm-hostdata",
+                "equals": "<hash-digest-of-the-security-policy>"
+            },
+            {
+                "claim": "x-ms-compliance-status",
+                "equals": "azure-compliant-uvm"
+            },
+            {
+                "claim": "x-ms-sevsnpvm-is-debuggable",
+                "equals": "false"
+            }
+        ]
     ]
 }

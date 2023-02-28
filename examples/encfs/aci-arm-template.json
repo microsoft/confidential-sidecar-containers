@@ -22,8 +22,8 @@
           "<user-assigned-identity-with-access-to-azure-services>": {}
         }
       },
-      "properties": {        
-        "containers": [          
+      "properties": {
+        "containers": [
           {
             "name": "encrypted-filesystem-sidecar-container",
             "properties": {
@@ -36,7 +36,7 @@
                   "value": "<base64-std-encodes-string-of-sidecar-args>"
                 }
               ],
-              "image": "<registry-name>/encfs:<tag_version>",
+              "image": "mcr.microsoft.com/aci/encfs:main_20230216.1",
               "resources": {
                 "requests": {
                   "cpu": 1,
@@ -88,7 +88,7 @@
           }
         ],
         "osType": "Linux",
-        "ipAddress": {          
+        "ipAddress": {
           "type": "Public",
           "ports": [
             {
@@ -97,9 +97,9 @@
             }
           ]
         },
+        "sku": "confidential",
         "confidentialComputeProperties": {
-          "ccePolicy": "<base64-std-encoded-string-of-security-policy>",
-          "isolationType": "sevsnp"
+          "ccePolicy": "<base64-std-encoded-string-of-security-policy>"
         },
         "volumes": [
           {

@@ -1,12 +1,12 @@
 {
-    "key":{
+    "key": {
         "kid": "<key-vault-key-identifier>",
         "kty": "<key-type-of-key-imported-to-akv>",
         "authority": {
             "endpoint": "<authority-of-key-imported-to-key-vault>"
         },
         "akv": {
-            "endpoint": "key-vault-endpoint",    
+            "endpoint": "key-vault-endpoint",
             "api_version": "api-version=7.3-preview",
             "bearer_token": "<aad-token-with-permissions-to-key-vault"
         }
@@ -14,26 +14,20 @@
     "key_derivation": {
         "salt": "<salt-for-key-derivation-valid-only-for-RSA-HSM-keys>",
         "label": "<label-for-derived-key-valid-only-for-RSA-HSM-keys>"
-     },    
-    "claims":[
+    },
+    "claims": [
         [
             {
-                "claim":  "x-ms-sevsnpvm-launchmeasurement",
-                "equals": "deac3d39f12ba5f45e4bdd7a3686134c0b7b6883381210a87d6b8015e60a6bad5b264d5c2725e6b6ef8b9e3f376160b4"
+                "claim": "x-ms-sevsnpvm-hostdata",
+                "equals": "<hash-digest-of-the-security-policy>"
             },
             {
-                "claim":"x-ms-sevsnpvm-hostdata",
-                "equals": "5c977256bb003c884e307dc4dabab0ecb154a0cb1c09776245f86390fe3904fc"
-            }
-        ],
-        [
-            {
-                "claim": "x-ms-sevsnpvm-launchmeasurement",
-                "equals": "ede826880a4e1a41898a96810efb09f2070513abb355e89652564cd18f1d43a7a031d1ff54490dbd61687de101b66ed1"
+                "claim": "x-ms-compliance-status",
+                "equals": "azure-compliant-uvm"
             },
             {
-                "claim":"x-ms-sevsnpvm-hostdata",
-                "equals": "5c977256bb003c884e307dc4dabab0ecb154a0cb1c09776245f86390fe3904fc"
+                "claim": "x-ms-sevsnpvm-is-debuggable",
+                "equals": "false"
             }
         ]
     ]
