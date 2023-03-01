@@ -3,11 +3,9 @@ This repository contains the code needed to build the sidecar containers used fo
 
 The code in this repository should be located at ``$GOPATH/src/microsoft/confidential-sidecar-containers``.
 
-For more information on how the tools work and the sidecar's base64-encoded string attributes, check [the tecnical documentation](./TECH-INFO.md).
-
 ## Secure key release (SKR) sidecar
 The ``docker/skr/build.sh`` script builds all necessary Go tools for secure key release as standalone binaries and creates a Docker image that contains them so that it 
-can be used as a sidecar container. The skr sidecar container is executed by calling the script ``skr.sh`` with a base64-encoded string as an attribute or as an environment variable. 
+can be used as a sidecar container. The skr sidecar container is executed by calling the script ``skr.sh``. More information about the skr API can be found [here.](cmd/skr/README.md)
 
 The skr sidecar can be queried by application containers hosted in the same pod (or container group) for retrieving attestation reports and for releasing secrets from managed HSM key vaults.
 
@@ -17,9 +15,9 @@ The ``examples/skr`` shows an example of how the skr sidecar can be deployed and
 We modified the [AES unwrap key without padding method](https://github.com/NickBall/go-aes-key-wrap/blob/master/keywrap.go) to implement the aes key unwrap with padding method.
 
 ## Encrypted filesystem sidecar
-The ``docker/encfs/build.sh`` script builds all necessary Go tools (for encrypted filesystems) and creates a Docker image that contains them so that it can be used as a sidecar container. The encrypted filesystem sidecar container is executed by calling the script ``encfs.sh`` with a base64-encoded string or as an environment variable.
+The ``docker/encfs/build.sh`` script builds all necessary Go tools (for encrypted filesystems) and creates a Docker image that contains them so that it can be used as a sidecar container. The encrypted filesystem sidecar container is executed by calling the script ``encfs.sh`` with a base64-encoded string or as an environment variable. The entry point to the sidecar is the [remotefs tool](cmd/remotefs/README.md) which leverages the [azmount tool.](cmd/azmount/README.md) 
 
-The encrypted filesystem sidecar uses the SKR library to release key material from managed HSM key vaults required for mounting the encrypted filesystems required by the application.
+The encrypted filesystem sidecar uses the SKR library to release key material from Azure Key Vault instances required for mounting the encrypted filesystems required by the application.
 
 The ``examples/encfs`` shows an example of how the encrypted filesystem sidecar can be deployed within a confidential container group on ACI.
 ## Dependencies:
