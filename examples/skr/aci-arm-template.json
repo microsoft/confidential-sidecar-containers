@@ -13,7 +13,7 @@
   "resources": [
     {
       "type": "Microsoft.ContainerInstance/containerGroups",
-      "apiVersion": "2022-04-01-preview",
+      "apiVersion": "2022-10-01-preview",
       "name": "[parameters('containerGroupName')]",
       "location": "[resourceGroup().location]",
       "identity": {
