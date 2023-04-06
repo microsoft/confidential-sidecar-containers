@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+/* linux kernel 5.15.* versions of the ioctls that talk to the PSP */
+
 /* From sev-snp driver include/uapi/linux/psp-sev-guest.h */
 struct sev_snp_guest_request {
     uint8_t req_msg_type;
@@ -16,7 +18,7 @@ struct sev_snp_guest_request {
     uint64_t request_uaddr;
     uint16_t response_len;
     uint64_t response_uaddr;
-    uint32_t error;           /* firmware error code on failure (see psp-sev.h) */
+    uint32_t error;    /* firmware error code on failure (see psp-sev.h) */
 };
 
 enum snp_msg_type {
@@ -39,7 +41,7 @@ enum snp_msg_type {
 };
 
 
-#define SEV_GUEST_IOC_TYPE           'S'
-#define SEV_SNP_GUEST_MSG_REQUEST    _IOWR(SEV_GUEST_IOC_TYPE, 0x0, struct sev_snp_guest_request)
-#define SEV_SNP_GUEST_MSG_REPORT     _IOWR(SEV_GUEST_IOC_TYPE, 0x1, struct sev_snp_guest_request)
-#define SEV_SNP_GUEST_MSG_KEY        _IOWR(SEV_GUEST_IOC_TYPE, 0x2, struct sev_snp_guest_request)
+#define SEV_GUEST_IOC_TYPE            'S'
+#define SEV_SNP_GUEST_MSG_REQUEST     _IOWR(SEV_GUEST_IOC_TYPE, 0x0, struct sev_snp_guest_request)
+#define SEV_SNP_GUEST_MSG_REPORT      _IOWR(SEV_GUEST_IOC_TYPE, 0x1, struct sev_snp_guest_request)
+#define SEV_SNP_GUEST_MSG_KEY         _IOWR(SEV_GUEST_IOC_TYPE, 0x2, struct sev_snp_guest_request)
