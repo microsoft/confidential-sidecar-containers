@@ -18,7 +18,7 @@ bin/get-snp-report: get-snp-report.o get-snp-report5.o get-snp-report6.o helpers
 	@mkdir -p bin
 	$(CC) $(LDFLAGS) -o $@ $^
 
-bin/verbose-report: verbose-report.o
+bin/verbose-report: verbose-report.o get-snp-report5.o get-snp-report6.o helpers.o
 	@mkdir -p bin
 	$(CC) $(LDFLAGS) -o $@ $^
 

@@ -5,19 +5,19 @@
 
 # Important note: This script is meant to run from inside the container
 
-if [[ -z "${SkrClientMAAEndpoint}" ]]; then
+if [ -z "${SkrClientMAAEndpoint}" ]; then
   SkrClientMAAEndpoint=$1
 fi
 
 echo SkrClientMAAEndpoint = $SkrClientMAAEndpoint
 
-if [[ -z "${SkrClientAKVEndpoint}" ]]; then
+if [ -z "${SkrClientAKVEndpoint}" ]; then
   SkrClientAKVEndpoint=$2
 fi
 
 echo SkrClientAKVEndpoint = $SkrClientAKVEndpoint
 
-if [[ -z "${SkrClientKID}" ]]; then
+if [ -z "${SkrClientKID}" ]; then
   SkrClientKID=$3
 fi
 

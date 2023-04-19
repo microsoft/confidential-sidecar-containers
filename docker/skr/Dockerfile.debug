@@ -1,0 +1,22 @@
+FROM ubuntu:18.04
+RUN apt update
+RUN apt install --fix-missing -y net-tools wget curl bc jq bash vim ssh
+
+# clearly this is extremely insecure but is only for debugging
+# do not copy this.
+RUN useradd --uid 1000 --gid 0 --non-unique -ms /bin/bash auserwithalongname
+RUN echo "auserwithalongname:shortpassword" | chpasswd
+RUN mkdir /run/sshd
+
+# set the start command which will be used by default by ACI
+# note that this script exposes attestation on an external port
+# NEVER DO THIS IN PRODUCTION as it exposes the attestations
+# which can be used to trick an attestation agent or relying party
+
+COPY ./bin/skr ./bin/get-snp-report ./bin/verbose-report /bin/
+COPY skr.sh skr-debug.sh tests/*_client.sh /
+RUN mkdir -p /tests/skr; mv *_client.sh /tests/skr
+RUN chmod +x /*.sh /tests/skr/*.sh; date > /made-date
+
+# set the start command
+CMD [ "sleep", "1000000" ]

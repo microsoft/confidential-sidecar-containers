@@ -1,2 +1,5 @@
+**.o
 /azmount
 /remotefs
+/tools/get-snp-report/bin
+/bin
