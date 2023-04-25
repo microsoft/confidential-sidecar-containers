@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/pkg/errors"
@@ -46,6 +47,7 @@ var (
 
 var (
 	Identity              common.Identity
+	CertState             attest.CertState
 	EncodedUvmInformation common.UvmInformation
 	// for testing encrypted filesystems without releasing secrets from
 	// AKV allowTestingWithRawKey needs to be set to true and a raw key
@@ -182,8 +184,10 @@ func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob skr.KeyDerivat
 		return "", err
 	}
 
-	// 2) release key identified by keyBlob using encoded security policy
-	jwKey, err := skr.SecureKeyRelease(Identity, keyBlob, EncodedUvmInformation)
+	// 2) release key identified by keyBlob using encoded security policy and certfetcher (contained in CertState object)
+	//    certfetcher is required for validating the attestation report against the cert
+	//    chain of the chip identified in the attestation report
+	jwKey, err := skr.SecureKeyRelease(Identity, CertState, keyBlob, EncodedUvmInformation)
 	if err != nil {
 		logrus.WithError(err).Debugf("failed to release key: %v", keyBlob)
 		return "", errors.Wrapf(err, "failed to release key")
@@ -355,9 +359,20 @@ func MountAzureFilesystems(tempDir string, info RemoteFilesystemsInformation) (e
 	Identity = info.AzureInfo.Identity
 
 	// Retrieve the incoming encoded security policy, cert and uvm endorsement
-	EncodedUvmInformation, err = common.GetUvmInfomation()
+	EncodedUvmInformation, err = common.GetUvmInformation()
 	if err != nil {
 		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())
+	}
+
+	logrus.Debugf("EncodedUvmInformation.InitialCerts.Tcbm: %s\n", EncodedUvmInformation.InitialCerts.Tcbm)
+	thimTcbm, err := strconv.ParseUint(EncodedUvmInformation.InitialCerts.Tcbm, 16, 64)
+	if err != nil {
+		logrus.Fatal("Unable to convert Initial Certs TCBM to a uint64")
+	}
+
+	CertState = attest.CertState{
+		CertFetcher: info.AzureInfo.CertFetcher,
+		Tcbm:        thimTcbm,
 	}
 
 	for i, fs := range info.AzureFilesystems {

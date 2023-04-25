@@ -57,7 +57,7 @@ type KeyBlob struct {
 // information about the AKV, authority and the key to be released.
 //
 // The return type is a JWK key
-func SecureKeyRelease(identity common.Identity, SKRKeyBlob KeyBlob, uvmInformation common.UvmInformation) (_ jwk.Key, err error) {
+func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRKeyBlob KeyBlob, uvmInformation common.UvmInformation) (_ jwk.Key, err error) {
 
 	logrus.Debugf("Releasing key blob: %v", SKRKeyBlob)
 
@@ -81,7 +81,7 @@ func SecureKeyRelease(identity common.Identity, SKRKeyBlob KeyBlob, uvmInformati
 	}
 
 	// Attest
-	maaToken, err = attest.Attest(SKRKeyBlob.Authority, jwkSetBytes, uvmInformation)
+	maaToken, err = certState.Attest(SKRKeyBlob.Authority, jwkSetBytes, uvmInformation)
 	if err != nil {
 		return nil, errors.Wrapf(err, "attestation failed")
 	}

@@ -3,12 +3,12 @@
         "kid": "<key-vault-key-identifier>",
         "kty": "<key-type-of-key-imported-to-akv>",
         "authority": {
-            "endpoint": "<authority-of-key-imported-to-key-vault>"
+            "endpoint": "<attestation-authority-endpoint>"
         },
         "akv": {
-            "endpoint": "key-vault-endpoint",
+            "endpoint": "<key-vault-endpoint>",
             "api_version": "api-version=7.3-preview",
-            "bearer_token": "<aad-token-with-permissions-to-key-vault"
+            "bearer_token": "<aad-token-with-permissions-to-key-vault>"
         }
     },
     "key_derivation": {

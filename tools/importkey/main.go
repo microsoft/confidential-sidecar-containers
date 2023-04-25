@@ -283,7 +283,7 @@ func main() {
 		fmt.Println(AKVResponse.Key.KID)
 		releasePolicyJSON, err := json.Marshal(releasePolicy)
 		if err != nil {
-			fmt.Println("marshalling releasy policy failed")
+			fmt.Println("marshalling release policy failed")
 		} else {
 			fmt.Println(string(releasePolicyJSON))
 		}

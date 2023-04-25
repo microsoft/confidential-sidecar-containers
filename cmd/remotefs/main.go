@@ -11,13 +11,15 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/sirupsen/logrus"
 )
 
 type AzureInfo struct {
-	Identity common.Identity `json:"identity,omitempty"`
+	CertFetcher attest.CertFetcher `json:"certcache,omitempty"`
+	Identity    common.Identity    `json:"identity,omitempty"`
 }
 
 type RemoteFilesystemsInformation struct {
