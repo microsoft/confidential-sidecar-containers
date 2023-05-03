@@ -90,4 +90,5 @@ jobs:
       run: |
         # Can't use `go test -v ./...` because some of the tests depend on SEV-SNP or Confidential ACI features
         go test -v ./pkg/uvm ./cmd/azmount/filemanager ./pkg/skr
+        go test -v ./pkg/attest/ -run "^(Test_SNP|Test_MAA)$"
 
