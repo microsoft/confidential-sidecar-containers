@@ -81,10 +81,13 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.19
+        go-version: "1.20"
 
     - name: Go Build
       run: go build -v ./...
 
     - name: Go Tests
-      run: go test -v ./...
+      run: |
+        # Can't use `go test -v ./...` because some of the tests depend on SEV-SNP or Confidential ACI features
+        go test -v ./pkg/uvm ./cmd/azmount/filemanager ./pkg/skr
+
