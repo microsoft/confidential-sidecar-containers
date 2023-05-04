@@ -5,25 +5,23 @@ set -ex
 DIR_OF_THIS_FILE=$(cd $(dirname $0); pwd)/
 
 function usage {
-    echo "Usage: $0 <AZURE_TENANT_ID> <AZURE_APP_ID> <AZURE_SERVICE_PRINCIPAL_PASSWORD> <AZURE_SUBSCRIPTION_ID> <AZURE_RESOURCE_GROUP> <DOCKER_REGISTRY_NAME> <DEPLOY_ID>"
+    set +x
+    echo "Usage: $0 <AZURE_RESOURCE_GROUP> <DOCKER_REGISTRY_NAME> <DEPLOY_ID>"
+    echo "You need to login to Azure CLI and set default subscription before run this script by \`az account set --subscription <subscription>\`"
     echo "Options:"
     echo "  -h, --help  Show this help message and exit"
 }
 
 # Check for the three required parameters
-if [[ $# -lt 7 ]]; then
+if [[ $# -lt 3 ]]; then
     echo $#
     usage
     exit 1
 fi
 
-AZURE_TENANT_ID="$1"
-AZURE_APP_ID="$2"
-AZURE_SERVICE_PRINCIPAL_PASSWORD="$3"
-AZURE_SUBSCRIPTION_ID="$4"
-AZURE_RESOURCE_GROUP="$5"
-DOCKER_REGISTRY_NAME="$6"
-DEPLOY_ID="$7"
+AZURE_RESOURCE_GROUP="$1"
+DOCKER_REGISTRY_NAME="$2"
+DEPLOY_ID="$3"
 
 while [[ $# -gt 0 ]]
 do
@@ -40,22 +38,7 @@ do
     shift # past argument or value
 done
 
-# ---- Handle sudo
-SUDO=""
-if [ "$EUID" != 0 ]; then
-    SUDO="sudo"
-fi
-
-# Login to Azure
-if ! command -v az &> /dev/null; then
-    curl -sL https://aka.ms/InstallAzureCLIDeb | $SUDO bash
-fi
-
-az login --service-principal -u $AZURE_APP_ID -p $AZURE_SERVICE_PRINCIPAL_PASSWORD --tenant $AZURE_TENANT_ID
-az account set --subscription $AZURE_SUBSCRIPTION_ID
-
 # Build docker image
-
 DOCKER_IMAGE_NAME=attestation-container-dev
 DOCKER_IMAGE_VERSION=$DEPLOY_ID
 
