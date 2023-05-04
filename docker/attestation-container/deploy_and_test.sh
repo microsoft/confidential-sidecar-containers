@@ -81,7 +81,8 @@ trap clean_up EXIT
 cd $DIR_OF_THIS_FILE
 CONTAINER_GROUP_NAME="attestation-container-ci-$DEPLOY_ID"
 DEPLOYMENT_NAME=$CONTAINER_GROUP_NAME
-az deployment group create --resource-group $AZURE_RESOURCE_GROUP --name $DEPLOYMENT_NAME --template-file template.json --parameter containerGroupName="$CONTAINER_GROUP_NAME" dockerImage="$DOCKER_IMAGE"
+# Do not use unsafe_ci_template.json in production. It's not secure.
+az deployment group create --resource-group $AZURE_RESOURCE_GROUP --name $DEPLOYMENT_NAME --template-file unsafe_ci_template.json --parameter containerGroupName="$CONTAINER_GROUP_NAME" dockerImage="$DOCKER_IMAGE"
 function clean_up_container_group {
     az container delete --resource-group $AZURE_RESOURCE_GROUP --name $DEPLOYMENT_NAME --yes
 }
