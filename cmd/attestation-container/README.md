@@ -40,23 +40,11 @@ go build
 
 ## API
 
-The gPRC API is defined in [attestation-container.proto](https://github.com/microsoft/CCF/blob/main/attestation-container/protobuf/attestation-container.proto).
+The gPRC API is defined in [attestation-container.proto](https://github.com/microsoft/confidential-sidecar-containers/tree/main/cmd/attestation-container/protobuf/attestation-container.proto).
 
-Note that gPRC communication is used over [Unix domain sockets (UDS)](https://en.wikipedia.org/wiki/Unix_domain_socket). You can find an example client code in [the E2E test](https://github.com/microsoft/CCF/blob/main/attestation-container/attestation-container_test.go).
+Note that gPRC communication is used over [Unix domain sockets (UDS)](https://en.wikipedia.org/wiki/Unix_domain_socket). You can find an example client code in [the E2E test](https://github.com/microsoft/confidential-sidecar-containers/tree/main/cmd/attestation-container/attestation-container_test.go).
 
 ## Test
-
-Unit test:
-
-```bash
-cd attest
-go test # Test for attest package
-
-cd ../uvm
-go test # Test for uvm package
-```
-
-E2E test:
 
 ```bash
 # Run the app first
@@ -74,16 +62,4 @@ When you edit `.proto` file, you also need to update `.pb.go` files by:
 
 ```bash
 protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative protobuf/attestation-container.proto
-```
-
-### Upgrade dependencies
-
-PRs to upgrade the dependencies are created automatically by [Dependabot](https://docs.github.com/en/code-security/dependabot/working-with-dependabot) (The setting is done [here](https://github.com/microsoft/CCF/blob/main/.github/dependabot.yml)).
-
-However, when Dependabot creates multiple PRs at the same time, go.mod file can be corrupted.
-In that case, you still need to fix go.mod using `go` command manually.
-
-```bash
-go get -u
-go mod tidy
 ```
