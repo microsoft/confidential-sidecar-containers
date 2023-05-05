@@ -23,15 +23,15 @@ const (
 )
 
 const (
-	AMD_ENDORSEMENT_HOST   = "https://kdsintf.amd.com"
-	AZURE_ENDORSEMENT_HOST = "https://global.acccache.azure.net"
+	AMD_CERTIFICATE_HOST   = "https://kdsintf.amd.com"
+	AZURE_CERTIFICATE_HOST = "https://global.acccache.azure.net"
 
 	DEFAULT_SECURITY_CONTEXT_ENVVAR = "UVM_SECURITY_CONTEXT_DIR" // SEV-SNP ACI deployments
 	UVM_ENDORSEMENTS_FILE_NAME      = "reference-info-base64"
-	REPORT_ENDORSEMENTS_FILE_NAME   = "host-amd-cert-base64"
+	PLATFORM_CERTIFICATES_FILE_NAME = "host-amd-cert-base64"
 )
 
-type ACIEndorsements struct {
+type ACICertificates struct {
 	CacheControl     string `json:"cacheControl"`
 	VcekCert         string `json:"vcekCert"`
 	CertificateChain string `json:"certificateChain"`
@@ -83,16 +83,16 @@ func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, err
 	return nil, err
 }
 
-func fetchAttestationEndorsementAzure(reportedTCBBytes [REPORTED_TCB_SIZE]byte, chipID string) ([]byte, error) {
-	// Fetch attestation endorsement from Azure endpoint
+func fetchPlatformCertificateAzure(reportedTCBBytes [REPORTED_TCB_SIZE]byte, chipID string) ([]byte, error) {
+	// Fetch platform certificate from Azure endpoint
 	reportedTCB := binary.LittleEndian.Uint64(reportedTCBBytes[:])
 	reportedTCBHex := fmt.Sprintf("%x", reportedTCB)
-	requestURL := fmt.Sprintf("%s/SevSnpVM/certificates/%s/%s?api-version=2020-10-15-preview", AZURE_ENDORSEMENT_HOST, chipID, reportedTCBHex)
+	requestURL := fmt.Sprintf("%s/SevSnpVM/certificates/%s/%s?api-version=2020-10-15-preview", AZURE_CERTIFICATE_HOST, chipID, reportedTCBHex)
 	return fetchWithRetry(requestURL, defaultBaseSec, defaultMaxRetries)
 }
 
-func fetchAttestationEndorsementAMD(reportedTCBBytes [REPORTED_TCB_SIZE]byte, chipID string) ([]byte, error) {
-	// Fetch attestation endorsement from AMD endpoint
+func fetchPlatformCertificateAMD(reportedTCBBytes [REPORTED_TCB_SIZE]byte, chipID string) ([]byte, error) {
+	// Fetch platform certificate from AMD endpoint
 	// https://www.amd.com/en/support/tech-docs/versioned-chip-endorsement-key-vcek-certificate-and-kds-interface-specification
 
 	boot_loader := reportedTCBBytes[0]
@@ -100,7 +100,7 @@ func fetchAttestationEndorsementAMD(reportedTCBBytes [REPORTED_TCB_SIZE]byte, ch
 	snp := reportedTCBBytes[6]
 	microcode := reportedTCBBytes[7]
 	const PRODUCT_NAME = "Milan"
-	requestURL := fmt.Sprintf("%s/vcek/v1/%s/%s?blSPL=%d&teeSPL=%d&snpSPL=%d&ucodeSPL=%d", AMD_ENDORSEMENT_HOST, PRODUCT_NAME, chipID, boot_loader, tee, snp, microcode)
+	requestURL := fmt.Sprintf("%s/vcek/v1/%s/%s?blSPL=%d&teeSPL=%d&snpSPL=%d&ucodeSPL=%d", AMD_CERTIFICATE_HOST, PRODUCT_NAME, chipID, boot_loader, tee, snp, microcode)
 	vcekCertDER, err := fetchWithRetry(requestURL, defaultBaseSec, defaultMaxRetries)
 	if err != nil {
 		return nil, err
@@ -110,25 +110,25 @@ func fetchAttestationEndorsementAMD(reportedTCBBytes [REPORTED_TCB_SIZE]byte, ch
 	if err != nil {
 		return nil, fmt.Errorf("Could not decode VCEK: %s", err)
 	}
-	endorsement := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: vcek.Raw})
+	cert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: vcek.Raw})
 
-	requestURLChain := fmt.Sprintf("%s/vcek/v1/%s/cert_chain", AMD_ENDORSEMENT_HOST, PRODUCT_NAME)
-	endorsementCertChain, err := fetchWithRetry(requestURLChain, defaultBaseSec, defaultMaxRetries)
+	requestURLChain := fmt.Sprintf("%s/vcek/v1/%s/cert_chain", AMD_CERTIFICATE_HOST, PRODUCT_NAME)
+	certChain, err := fetchWithRetry(requestURLChain, defaultBaseSec, defaultMaxRetries)
 	if err != nil {
 		return nil, err
 	}
-	return append(endorsement, endorsementCertChain...), nil
+	return append(cert, certChain...), nil
 }
 
 /*
-Fetches attestation endorsements of SEV-SNP VM.
+Fetches platform certificates of SEV-SNP VM.
 
 The endorsements are concatenation of VCEK, ASK, and ARK certificates (PEM format, in that order).
 https://www.amd.com/en/support/tech-docs/versioned-chip-endorsement-key-vcek-certificate-and-kds-interface-specification
 */
-func FetchAttestationEndorsement(server string, reportedTCBBytes []byte, chipIDBytes []byte) ([]byte, error) {
+func FetchPlatformCertificate(server string, reportedTCBBytes []byte, chipIDBytes []byte) ([]byte, error) {
 	if server != "AMD" && server != "Azure" {
-		return nil, fmt.Errorf("invalid endorsement server: %s", server)
+		return nil, fmt.Errorf("invalid platform certificate server: %s", server)
 	}
 	if len(reportedTCBBytes) != REPORTED_TCB_SIZE {
 		return nil, fmt.Errorf("Length of reportedTCBBytes should be %d", REPORTED_TCB_SIZE)
@@ -141,35 +141,35 @@ func FetchAttestationEndorsement(server string, reportedTCBBytes []byte, chipIDB
 	copy(reportedTCB[:], reportedTCBBytes)
 	chipID := hex.EncodeToString(chipIDBytes)
 	if server == "Azure" {
-		return fetchAttestationEndorsementAzure(reportedTCB, chipID)
+		return fetchPlatformCertificateAzure(reportedTCB, chipID)
 	} else {
-		return fetchAttestationEndorsementAMD(reportedTCB, chipID)
+		return fetchPlatformCertificateAMD(reportedTCB, chipID)
 	}
 }
 
-func ParseEndorsementACI(endorsementACIBase64 string) (ACIEndorsements, error) {
-	endorsementsRaw, err := base64.StdEncoding.DecodeString(endorsementACIBase64)
+func ParseCertificateACI(certificateACIBase64 string) (ACICertificates, error) {
+	certificatesRaw, err := base64.StdEncoding.DecodeString(certificateACIBase64)
 	if err != nil {
-		return ACIEndorsements{}, fmt.Errorf("Failed to decode ACI endorsements: %s", err)
+		return ACICertificates{}, fmt.Errorf("Failed to decode ACI certificates: %s", err)
 	}
 
-	endorsements := ACIEndorsements{}
-	err = json.Unmarshal([]byte(endorsementsRaw), &endorsements)
+	certificates := ACICertificates{}
+	err = json.Unmarshal([]byte(certificatesRaw), &certificates)
 	if err != nil {
-		return ACIEndorsements{}, fmt.Errorf("Failed to unmarshal JSON ACI endorsements: %s", err)
+		return ACICertificates{}, fmt.Errorf("Failed to unmarshal JSON ACI certificates: %s", err)
 	}
-	return endorsements, nil
+	return certificates, nil
 }
 
-func ParseEndorsementACIFromSecurityContextDirectory(securityContextDirectory string) (ACIEndorsements, error) {
-	endorsementsBase64, err := os.ReadFile(path.Join(securityContextDirectory, REPORT_ENDORSEMENTS_FILE_NAME))
+func ParseCertificateACIFromSecurityContextDirectory(securityContextDirectory string) (ACICertificates, error) {
+	certificatesBase64, err := os.ReadFile(path.Join(securityContextDirectory, PLATFORM_CERTIFICATES_FILE_NAME))
 	if err != nil {
-		return ACIEndorsements{}, err
+		return ACICertificates{}, err
 	}
 
-	endorsement, err := ParseEndorsementACI(string(endorsementsBase64))
+	certificates, err := ParseCertificateACI(string(certificatesBase64))
 	if err != nil {
-		return ACIEndorsements{}, err
+		return ACICertificates{}, err
 	}
-	return endorsement, nil
+	return certificates, nil
 }

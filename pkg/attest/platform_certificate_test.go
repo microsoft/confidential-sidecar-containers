@@ -30,27 +30,27 @@ func getReportedTCBAndChipID(t *testing.T) ([]byte, []byte) {
 	return reportedTCBBytes, chipIDBytes
 }
 
-func TestFetchAttestationEndorsementFromAzure(t *testing.T) {
+func TestFetchPlatformCertificateFromAzure(t *testing.T) {
 	reportedTCBBytes, chipIDBytes := getReportedTCBAndChipID(t)
-	endorsement, err := FetchAttestationEndorsement("Azure", reportedTCBBytes, chipIDBytes)
-	if err != nil || len(endorsement) == 0 {
-		t.Fatalf("Fetching attestation endorsement failed: %s", err)
+	certificates, err := FetchPlatformCertificate("Azure", reportedTCBBytes, chipIDBytes)
+	if err != nil || len(certificates) == 0 {
+		t.Fatalf("Fetching platform certificate failed: %s", err)
 	}
 }
 
-func TestFetchAttestationEndorsementFromAMD(t *testing.T) {
+func TestFetchPlatformCertificateFromAMD(t *testing.T) {
 	reportedTCBBytes, chipIDBytes := getReportedTCBAndChipID(t)
-	endorsement, err := FetchAttestationEndorsement("AMD", reportedTCBBytes, chipIDBytes)
-	if err != nil || len(endorsement) == 0 {
-		t.Fatalf("Fetching attestation endorsement failed: %s", err)
+	certificates, err := FetchPlatformCertificate("AMD", reportedTCBBytes, chipIDBytes)
+	if err != nil || len(certificates) == 0 {
+		t.Fatalf("Fetching platform certificate failed: %s", err)
 	}
 }
 
 func TestInvalidServer(t *testing.T) {
 	reportedTCBBytes, chipIDBytes := getReportedTCBAndChipID(t)
 	server := "Invalid Server Type"
-	_, err := FetchAttestationEndorsement(server, reportedTCBBytes, chipIDBytes)
-	if err.Error() != fmt.Sprintf("invalid endorsement server: %s", server) {
+	_, err := FetchPlatformCertificate(server, reportedTCBBytes, chipIDBytes)
+	if err.Error() != fmt.Sprintf("invalid platform certificate server: %s", server) {
 		t.Fatalf("Should return error for invalid server")
 	}
 }
@@ -58,7 +58,7 @@ func TestInvalidServer(t *testing.T) {
 func TestInvalidReportedTCBBytes(t *testing.T) {
 	reportedTCBBytes, chipIDBytes := getReportedTCBAndChipID(t)
 	reportedTCBBytes = []byte{}
-	_, err := FetchAttestationEndorsement("Azure", reportedTCBBytes, chipIDBytes)
+	_, err := FetchPlatformCertificate("Azure", reportedTCBBytes, chipIDBytes)
 	if err.Error() != fmt.Sprintf("Length of reportedTCBBytes should be %d", REPORTED_TCB_SIZE) {
 		t.Fatalf("Should return error for invalid length of reportedTCBBytes")
 	}
@@ -67,40 +67,40 @@ func TestInvalidReportedTCBBytes(t *testing.T) {
 func TestInvalidChipID(t *testing.T) {
 	reportedTCBBytes, chipIDBytes := getReportedTCBAndChipID(t)
 	chipIDBytes = []byte{}
-	_, err := FetchAttestationEndorsement("Azure", reportedTCBBytes, chipIDBytes)
+	_, err := FetchPlatformCertificate("Azure", reportedTCBBytes, chipIDBytes)
 	if err.Error() != fmt.Sprintf("Length of chipIDBytes should be %d", CHIP_ID_SIZE) {
 		t.Fatalf("Should return error for invalid length of chipIDBytes")
 	}
 }
-func TestGetAttestationEndorsementFromEnvironment(t *testing.T) {
+func TestGetPlatformCertificateFromEnvironment(t *testing.T) {
 	flag.Parse()
 	testDataHostAmdCertificate := filepath.Join(*testDataDir, "host_amd_certificate_env")
-	endorsement, err := os.ReadFile(testDataHostAmdCertificate)
+	certificate, err := os.ReadFile(testDataHostAmdCertificate)
 	if err != nil {
 		t.Fatalf("Could not open file %s", testDataHostAmdCertificate)
 	}
 
 	// Valid
-	_, err = ParseEndorsementACI(string(endorsement))
+	_, err = ParseCertificateACI(string(certificate))
 	if err != nil {
-		t.Fatalf("Could not parse ACI endorsement: %s", err)
+		t.Fatalf("Could not parse ACI certificate: %s", err)
 	}
 
 	// Empty
-	_, err = ParseEndorsementACI("")
+	_, err = ParseCertificateACI("")
 	if !strings.Contains(err.Error(), "unexpected end of JSON input") {
-		t.Fatalf("Could not parse ACI endorsement: %s", err)
+		t.Fatalf("Could not parse ACI certificate: %s", err)
 	}
 
 	// Invalid base64
-	_, err = ParseEndorsementACI(string(endorsement[:len(endorsement)-1]))
+	_, err = ParseCertificateACI(string(certificate[:len(certificate)-1]))
 	if !strings.Contains(err.Error(), "illegal base64 data") {
-		t.Fatalf("Could not parse ACI endorsement: %s", err)
+		t.Fatalf("Could not parse ACI certificate: %s", err)
 	}
 
 	// Invalid JSON
-	_, err = ParseEndorsementACI(string(endorsement[:len(endorsement)-4]))
+	_, err = ParseCertificateACI(string(certificate[:len(certificate)-4]))
 	if !strings.Contains(err.Error(), "unexpected end of JSON input") {
-		t.Fatalf("Could not parse ACI endorsement: %s", err)
+		t.Fatalf("Could not parse ACI certificate: %s", err)
 	}
 }

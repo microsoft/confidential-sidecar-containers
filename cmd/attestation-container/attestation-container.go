@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	pb "github.com/Microsoft/confidential-sidecar-containers/cmd/attestation-container/protobuf"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/uvm"
 
 	"google.golang.org/grpc"
@@ -21,11 +21,11 @@ import (
 var (
 	socketAddress                  = flag.String("socket-address", "/tmp/attestation-container.sock", "The socket address of Unix domain socket (UDS)")
 	securityContextDirectoryEnvVar = flag.String("security-context-directory-envvar", attest.DEFAULT_SECURITY_CONTEXT_ENVVAR, "Name of environment variable specifying name of directory containing confidential ACI security context")
-	attestationEndorsementServer   = flag.String("attestation-endorsement-server", "", "Server to fetch attestation endorsement. If set, endorsements contained in security context directory are ignored. Value is either 'Azure' or 'AMD'")
+	platformCertificateServer      = flag.String("platform-certificate-server", "", "Server to fetch platform certificate. If set, certificates contained in security context directory are ignored. Value is either 'Azure' or 'AMD'")
 	insecureVirtual                = flag.Bool("insecure-virtual", false, "If set, dummy attestation is returned (INSECURE: do not use in production)")
 
-	attestationEndorsementValue *attest.ACIEndorsements = nil
-	uvmEndorsementEnvVarValue   []byte                  = nil
+	platformCertificateValue  *attest.ACICertificates = nil
+	uvmEndorsementEnvVarValue []byte                  = nil
 )
 
 type server struct {
@@ -48,25 +48,25 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 		return nil, status.Errorf(codes.Internal, "failed to fetch attestation report: %s", err)
 	}
 
-	var attestationEndorsement []byte
-	if attestationEndorsementValue == nil {
+	var platformCertificate []byte
+	if platformCertificateValue == nil {
 		reportedTCBBytes := reportBytes[attest.REPORTED_TCB_OFFSET : attest.REPORTED_TCB_OFFSET+attest.REPORTED_TCB_SIZE]
 		chipIDBytes := reportBytes[attest.CHIP_ID_OFFSET : attest.CHIP_ID_OFFSET+attest.CHIP_ID_SIZE]
-		attestationEndorsement, err = attest.FetchAttestationEndorsement(*attestationEndorsementServer, reportedTCBBytes, chipIDBytes)
+		platformCertificate, err = attest.FetchPlatformCertificate(*platformCertificateServer, reportedTCBBytes, chipIDBytes)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to fetch attestation endorsement: %s", err)
+			return nil, status.Errorf(codes.Internal, "failed to fetch platform certificate: %s", err)
 		}
 	} else {
-		attestationEndorsement = append(attestationEndorsement, attestationEndorsementValue.VcekCert...)
-		attestationEndorsement = append(attestationEndorsement, attestationEndorsementValue.CertificateChain...)
+		platformCertificate = append(platformCertificate, platformCertificateValue.VcekCert...)
+		platformCertificate = append(platformCertificate, platformCertificateValue.CertificateChain...)
 	}
 
-	return &pb.FetchAttestationReply{Attestation: reportBytes, AttestationEndorsements: attestationEndorsement, UvmEndorsements: uvmEndorsementEnvVarValue}, nil
+	return &pb.FetchAttestationReply{Attestation: reportBytes, PlatformCertificates: platformCertificate, UvmEndorsements: uvmEndorsementEnvVarValue}, nil
 }
 
 func validateFlags() {
-	if *attestationEndorsementServer != "" && *attestationEndorsementServer != "AMD" && *attestationEndorsementServer != "Azure" {
-		log.Fatalf("invalid --attestation-endorsement-server value %s (valid values: 'AMD', 'Azure')", *attestationEndorsementServer)
+	if *platformCertificateServer != "" && *platformCertificateServer != "AMD" && *platformCertificateServer != "Azure" {
+		log.Fatalf("invalid --platform-certificate-server value %s (valid values: 'AMD', 'Azure')", *platformCertificateServer)
 	}
 }
 
@@ -92,15 +92,15 @@ func main() {
 			log.Fatalf("Security context directory %s is not specified", *securityContextDirectoryEnvVar)
 		}
 
-		if *attestationEndorsementServer == "" {
-			attestationEndorsementValue = new(attest.ACIEndorsements)
+		if *platformCertificateServer == "" {
+			platformCertificateValue = new(attest.ACICertificates)
 			var err error
-			*attestationEndorsementValue, err = attest.ParseEndorsementACIFromSecurityContextDirectory(securityContextDirectory)
+			*platformCertificateValue, err = attest.ParseCertificateACIFromSecurityContextDirectory(securityContextDirectory)
 			if err != nil {
 				log.Fatalf(err.Error())
 			}
 		} else {
-			log.Printf("Attestation report endorsement will be retrieved from server %s", *attestationEndorsementServer)
+			log.Printf("Platform certificates will be retrieved from server %s", *platformCertificateServer)
 		}
 
 		var err error

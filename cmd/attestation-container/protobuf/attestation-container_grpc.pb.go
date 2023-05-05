@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.6.1
-// source: protobuf/attestation-container.proto
+// source: cmd/attestation-container/protobuf/attestation-container.proto
 
 package protobuf
 
@@ -22,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AttestationContainerClient interface {
-	// Fetches and returns attestation report and its endorsements.
+	// Fetches and returns attestation report, platform certificates, and UVM endorsements (UVM reference info).
 	// In future it returns Certificate Revocation List (CRL) as well.
 	FetchAttestation(ctx context.Context, in *FetchAttestationRequest, opts ...grpc.CallOption) (*FetchAttestationReply, error)
 }
@@ -48,7 +48,7 @@ func (c *attestationContainerClient) FetchAttestation(ctx context.Context, in *F
 // All implementations must embed UnimplementedAttestationContainerServer
 // for forward compatibility
 type AttestationContainerServer interface {
-	// Fetches and returns attestation report and its endorsements.
+	// Fetches and returns attestation report, platform certificates, and UVM endorsements (UVM reference info).
 	// In future it returns Certificate Revocation List (CRL) as well.
 	FetchAttestation(context.Context, *FetchAttestationRequest) (*FetchAttestationReply, error)
 	mustEmbedUnimplementedAttestationContainerServer()
@@ -105,5 +105,5 @@ var AttestationContainer_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "protobuf/attestation-container.proto",
+	Metadata: "cmd/attestation-container/protobuf/attestation-container.proto",
 }

@@ -65,17 +65,17 @@ func TestFetchReport(t *testing.T) {
 	}
 	log.Printf("Attestation: %v", hex.EncodeToString(attestation))
 
-	// Verify endorsements
-	endorsementCertificates := r.GetAttestationEndorsements()
-	if len(endorsementCertificates) == 0 {
-		log.Fatalf("endorsementCertificates is empty")
+	// Verify platform certificates
+	platformCertificates := r.GetPlatformCertificates()
+	if len(platformCertificates) == 0 {
+		log.Fatalf("platformCertificates is empty")
 	}
-	chainLen := len(splitPemChain(endorsementCertificates))
+	chainLen := len(splitPemChain(platformCertificates))
 	if chainLen != 3 {
 		// Expecting VCEK, ASK and ARK
-		log.Fatalf("endorsementCertificates does not contain 3 certificates, found %d", chainLen)
+		log.Fatalf("platformCertificates does not contain 3 certificates, found %d", chainLen)
 	}
-	log.Printf("Attestation endorsement certificates: %v", hex.EncodeToString(endorsementCertificates))
+	log.Printf("Platform certificates: %v", hex.EncodeToString(platformCertificates))
 
 	if len(r.GetUvmEndorsements()) == 0 {
 		log.Fatalf("UVM endorsement is empty")

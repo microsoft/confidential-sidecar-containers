@@ -6,7 +6,7 @@ package attestation_container;
 
 // attestation_container service definition.
 service AttestationContainer {
-  // Fetches and returns attestation report and its endorsements.
+  // Fetches and returns attestation report, platform certificates, and UVM endorsements (UVM reference info).
   // In future it returns Certificate Revocation List (CRL) as well.
   rpc FetchAttestation (FetchAttestationRequest) returns (FetchAttestationReply) {}
 }
@@ -22,6 +22,6 @@ message FetchAttestationReply {
   bytes attestation = 1;
   // Concatenation of VCEK, ASK, and ARK certificates (PEM format, in that order).
   // https://www.amd.com/en/support/tech-docs/versioned-chip-endorsement-key-vcek-certificate-and-kds-interface-specification
-  bytes attestation_endorsements = 2;
+  bytes platform_certificates = 2;
   bytes uvm_endorsements = 3;
 }
