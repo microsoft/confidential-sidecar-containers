@@ -2,10 +2,14 @@ package attest
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"unsafe"
 
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"golang.org/x/sys/unix"
 )
 
@@ -119,7 +123,19 @@ func createPayloadBytes(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_S
 	return payload, nil
 }
 
-func FetchAttestationReportByte(reportData [64]byte) ([]byte, error) {
+type AttestationReportFetcher interface {
+	FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error)
+	FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error)
+}
+
+func AttestationReportFetcherNew() AttestationReportFetcher {
+	return &realAttestationReportFetcher{}
+}
+
+type realAttestationReportFetcher struct {
+}
+
+func (_ *realAttestationReportFetcher) FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error) {
 	fd, err := unix.Open(SNP_DEVICE_PATH, unix.O_RDWR|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return nil, fmt.Errorf("Error opening SNP device %s: %s", SNP_DEVICE_PATH, err)
@@ -148,5 +164,39 @@ func FetchAttestationReportByte(reportData [64]byte) ([]byte, error) {
 		return nil, fmt.Errorf("fetching attestation report failed. status: %v", status)
 	}
 	const SNP_REPORT_OFFSET = 32
-	return reportRspBytes[SNP_REPORT_OFFSET : SNP_REPORT_OFFSET+ATTESTATION_REPORT_SIZE], nil
+	reportBytes := reportRspBytes[SNP_REPORT_OFFSET : SNP_REPORT_OFFSET+ATTESTATION_REPORT_SIZE]
+	if common.GenerateTestData {
+		ioutil.WriteFile("snp_report.bin", reportBytes, 0644)
+	}
+	return reportBytes, nil
+}
+
+// PR_COMMENT: Can be used instead of RawAttest
+// RawAttest returns the raw attestation report in hex string format
+func (r *realAttestationReportFetcher) FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error) {
+	report, err := r.FetchAttestationReportByte(reportData)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(report), nil
+}
+
+// Takes bytes and generate report data that MAA expects (SHA256 hash of arbitrary data).
+// TODO: check if this comment is correct
+func GenerateMAAReportData(inputBytes []byte) [REPORT_DATA_SIZE]byte {
+	runtimeData := sha256.New()
+	if inputBytes != nil {
+		runtimeData.Write(inputBytes)
+	}
+	reportData := [REPORT_DATA_SIZE]byte{}
+	runtimeDataBytes := runtimeData.Sum(nil)
+	const sha256len = 32
+	if len(runtimeDataBytes) != sha256len {
+		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(runtimeDataBytes)))
+	}
+	if sha256len > REPORT_DATA_SIZE {
+		panic(fmt.Errorf("Generated hash is too large for report data. hash length: %d bytes, report data size: %d", sha256len, REPORT_DATA_SIZE))
+	}
+	copy(reportData[:], runtimeDataBytes)
+	return reportData
 }

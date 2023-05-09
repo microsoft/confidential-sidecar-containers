@@ -16,6 +16,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Function list:
+// --- Getting attestation report
+// - GetSNPReport: securityPolicy param. Used by Attest
+// - RawAttest: returns hex string
+// - Attest: Validate all the things with MAA
+// - FetchSNPReport in snp.go: Actually fetches the report. Used by RawAttest and GetSNPReport
+// --- Other
+// - RefreshCertChain
+
 // CertState contains information about the certificate cache service
 // that provides access to the certificate chain required upon attestation
 type CertState struct {
@@ -98,8 +107,17 @@ func RawAttest(inittimeDataBytes []byte, runtimeDataBytes []byte) (string, error
 //
 //	retrieval and has been reported by the PSP in the attestation report as REPORT DATA
 func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) (string, error) {
+	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedSecurityPolicy)
+	if err != nil {
+		return "", errors.Wrap(err, "decoding policy from Base64 format failed")
+	}
+	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
+
 	// Fetch the attestation report
-	SNPReportBytes, inittimeDataBytes, err := GetSNPReport(uvmInformation.EncodedSecurityPolicy, runtimeDataBytes)
+	// PR_COMMENT: I guess there is no use case to use MAA with fake attestation report, so I am hard-coding to use Real AttestationReportFetcher
+	reportFetcher := AttestationReportFetcherNew()
+	reportData := GenerateMAAReportData(runtimeDataBytes)
+	SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to retrieve attestation report")
 	}
@@ -125,7 +143,7 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 
 		if SNPReport.ReportedTCB != certState.Tcbm {
 			// TCB values still don't match, try retrieving the SNP report again
-			SNPReportBytes, inittimeDataBytes, err = GetSNPReport(uvmInformation.EncodedSecurityPolicy, runtimeDataBytes)
+			SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 			if err != nil {
 				return "", errors.Wrapf(err, "failed to retrieve new attestation report")
 			}

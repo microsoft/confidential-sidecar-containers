@@ -292,6 +292,7 @@ func main() {
 	logrus.Debugf("   azure info:    %s", *azureInfoBase64string)
 	logrus.Debugf("   corrupt tcbm:  %t", *allowTestingMismatchedTCB)
 
+	// TODO: It's also duplicated with the new code
 	EncodedUvmInformation, err = common.GetUvmInformation() // from the env.
 	if err != nil {
 		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())

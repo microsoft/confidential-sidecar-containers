@@ -21,7 +21,8 @@ func getReportedTCBAndChipID(t *testing.T) ([]byte, []byte) {
 		reportData[i] = byte(i)
 	}
 
-	reportBytes, err := FetchAttestationReportByte(reportData)
+	reportFetcher := AttestationReportFetcherNew()
+	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		t.Fatalf("Fetching report failed: %v", err)
 	}
