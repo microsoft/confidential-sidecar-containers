@@ -64,7 +64,6 @@ func GetSNPReport(securityPolicy string, runtimeDataBytes []byte) ([]byte, []byt
 }
 
 func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]byte, error) {
-	logrus.Debugf("Refreshing cert chain\n")
 	// TCB values not the same, try refreshing cert first
 	vcekCertChain, thimTcbm, err := certState.CertFetcher.GetCertChain(SNPReport.ChipID, SNPReport.ReportedTCB)
 	if err != nil {
