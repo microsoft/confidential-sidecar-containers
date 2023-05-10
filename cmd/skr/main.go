@@ -325,14 +325,28 @@ func main() {
 		tcbm = EncodedUvmInformation.InitialCerts.Tcbm
 	}
 
-	thimTcbm, err := strconv.ParseUint(tcbm, 16, 64)
+	_, err = strconv.ParseUint(tcbm, 16, 64)
 	if err != nil {
 		logrus.Fatal("Unable to convert intial TCBM to a uint64")
 	}
 
+	// if info.CertFetcher.Endpoint == "" {
+	// 	info.CertFetcher.TEEType = "SevSnpVM"
+	// 	info.CertFetcher.APIVersion = "api-version=2020-10-15-preview"
+	// 	info.CertFetcher.Endpoint = "global.acccache.azure.net"
+	// 	info.CertFetcher.EndpointType = "AzCache"
+	// }
+
+	// if info.CertFetcher.Endpoint == "" {
+	// 	info.CertFetcher.TEEType = "Milan"
+	// 	info.CertFetcher.APIVersion = ""
+	// 	info.CertFetcher.Endpoint = "kdsintf.amd.com/vcek/v1"
+	// 	info.CertFetcher.EndpointType = "AMD"
+	// }
+
 	certState := attest.CertState{
 		CertFetcher: info.CertFetcher,
-		Tcbm:        thimTcbm,
+		Tcbm:        0,
 	}
 
 	setupServer(certState, info.Identity).Run(url)
