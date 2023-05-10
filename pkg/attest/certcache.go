@@ -120,7 +120,7 @@ type CertFetcher struct {
 
 // retrieveCertChain interacts with the cert cache service to fetch the cert chain of the
 // chip identified by chipId running firmware identified by reportedTCB. These attributes
-// are retrived from the attestation report.
+// are retrieved from the attestation report.
 // Returns the cert chain as a bytes array, the TCBM from the local THIM cert cache is as a string
 // (only in the case of a local THIM endpoint), and any errors encountered
 func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint64) ([]byte, uint64, error) {
@@ -135,13 +135,11 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 	if certFetcher.Endpoint != "" {
 		switch certFetcher.EndpointType {
 		case "AMD":
+			// Fetch platform certificate from AMD endpoint
+			// https://www.amd.com/en/support/tech-docs/versioned-chip-endorsement-key-vcek-certificate-and-kds-interface-specification
 			// AMD cert cache endpoint returns the VCEK certificate in DER format
 			uri = fmt.Sprintf(AmdVCEKRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, reportedTCBBytes[UcodeSplTcbmByteIndex], reportedTCBBytes[SnpSplTcbmByteIndex], reportedTCBBytes[TeeSplTcbmByteIndex], reportedTCBBytes[BlSplTcbmByteIndex])
-			httpResponse, err := common.HTTPGetRequest(uri, false)
-			if err != nil {
-				return nil, reportedTCB, errors.Wrapf(err, "AMD certcache http get request failed")
-			}
-			derBytes, err := common.HTTPResponseBody(httpResponse)
+			derBytes, err := fetchWithRetry(uri, defaultBaseSec, defaultMaxRetries)
 			if err != nil {
 				return nil, reportedTCB, err
 			}
@@ -150,11 +148,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 
 			// now retrieve the cert chain
 			uri = fmt.Sprintf(AmdCertChainRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType)
-			httpResponse, err = common.HTTPGetRequest(uri, false)
-			if err != nil {
-				return nil, reportedTCB, errors.Wrapf(err, "AMD certcache http get request failed")
-			}
-			certChainPEMBytes, err := common.HTTPResponseBody(httpResponse)
+			certChainPEMBytes, err := fetchWithRetry(uri, defaultBaseSec, defaultMaxRetries)
 			if err != nil {
 				return nil, reportedTCB, errors.Wrapf(err, "pulling AMD certchain response from get request failed")
 			}
@@ -166,11 +160,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 		case "LocalTHIM":
 			uri = fmt.Sprintf(LocalTHIMUriTemplate, certFetcher.Endpoint)
 			// local THIM cert cache endpoint returns THIM Certs object
-			httpResponse, err := common.HTTPGetRequest(uri, false)
-			if err != nil {
-				return nil, thimTcbm, errors.Wrapf(err, "certcache http get request failed")
-			}
-			THIMCertsBytes, err := common.HTTPResponseBody(httpResponse)
+			THIMCertsBytes, err := fetchWithRetry(uri, defaultBaseSec, defaultMaxRetries)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from get request failed")
 			}
@@ -183,11 +173,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			return []byte(thimCerts), thimTcbm, nil
 		case "AzCache":
 			uri = fmt.Sprintf(AzureCertCacheRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, strconv.FormatUint(reportedTCB, 16), certFetcher.APIVersion)
-			httpResponse, err := common.HTTPGetRequest(uri, false)
-			if err != nil {
-				return nil, thimTcbm, errors.Wrapf(err, "AzCache http get request failed")
-			}
-			certChain, err := common.HTTPResponseBody(httpResponse)
+			certChain, err := fetchWithRetry(uri, defaultBaseSec, defaultMaxRetries)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from AzCache get request failed")
 			}
@@ -204,6 +190,14 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 	}
 }
 
+/*
+Fetches platform certificates of SEV-SNP VM.
+
+The certificates are concatenation of VCEK, ASK, and ARK certificates (PEM format, in that order).
+https://www.amd.com/en/support/tech-docs/versioned-chip-endorsement-key-vcek-certificate-and-kds-interface-specification
+
+It also returns TCB  as uint64.
+*/
 func (certFetcher CertFetcher) GetCertChain(chipID string, reportedTCB uint64) ([]byte, uint64, error) {
 	return certFetcher.retrieveCertChain(chipID, reportedTCB)
 }
