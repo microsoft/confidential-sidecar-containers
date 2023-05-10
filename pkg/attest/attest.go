@@ -32,6 +32,7 @@ type CertState struct {
 	Tcbm        uint64      `json:"tcbm"`
 }
 
+// TODO: Delete
 func GetSNPReport(securityPolicy string, runtimeDataBytes []byte) ([]byte, []byte, error) {
 	// check if sev device exists on the platform; if not fetch fake snp report
 	fetchRealSNPReport := true
@@ -73,6 +74,7 @@ func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]
 	return vcekCertChain, nil
 }
 
+// TODO: Delete
 // RawAttest returns the raw attestation report in hex string format
 func RawAttest(inittimeDataBytes []byte, runtimeDataBytes []byte) (string, error) {
 	// check if sev device exists on the platform; if not fetch fake snp report

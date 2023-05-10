@@ -121,6 +121,8 @@ func fetchPlatformCertificateAMD(reportedTCBBytes [REPORTED_TCB_SIZE]byte, chipI
 }
 
 /*
+TODO: Delete
+
 Fetches platform certificates of SEV-SNP VM.
 
 The endorsements are concatenation of VCEK, ASK, and ARK certificates (PEM format, in that order).

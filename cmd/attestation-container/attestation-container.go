@@ -51,9 +51,21 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 
 	var platformCertificate []byte
 	if platformCertificateValue == nil {
-		reportedTCBBytes := reportBytes[attest.REPORTED_TCB_OFFSET : attest.REPORTED_TCB_OFFSET+attest.REPORTED_TCB_SIZE]
-		chipIDBytes := reportBytes[attest.CHIP_ID_OFFSET : attest.CHIP_ID_OFFSET+attest.CHIP_ID_SIZE]
-		platformCertificate, err = attest.FetchPlatformCertificate(*platformCertificateServer, reportedTCBBytes, chipIDBytes)
+		var SNPReport attest.SNPAttestationReport
+		if err = SNPReport.DeserializeReport(reportBytes); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to deserialize attestation report: %s", err)
+		}
+		// reportedTCBBytes := reportBytes[attest.REPORTED_TCB_OFFSET : attest.REPORTED_TCB_OFFSET+attest.REPORTED_TCB_SIZE]
+		// chipIDBytes := reportBytes[attest.CHIP_ID_OFFSET : attest.CHIP_ID_OFFSET+attest.CHIP_ID_SIZE]
+		// platformCertificate, err = attest.FetchPlatformCertificate(*platformCertificateServer, reportedTCBBytes, chipIDBytes)
+		var certFetcher attest.CertFetcher
+		if *platformCertificateServer == "AMD" {
+			certFetcher = attest.DefaultAMDMilanCertFetcherNew()
+		} else {
+			// Use "Azure". The value of platformCertificateServer should be already checked.
+			certFetcher = attest.DefaultAzureCertFetcherNew()
+		}
+		platformCertificate, _, err = certFetcher.GetCertChain(SNPReport.ChipID, SNPReport.ReportedTCB)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to fetch platform certificate: %s", err)
 		}

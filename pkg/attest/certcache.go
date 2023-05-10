@@ -44,6 +44,7 @@ const (
 // all the byte arrays for the tcb values are of length 3 and fit the format [2 1 IMPORTANT_VALUE]
 const x509CertExtensionsValuePos = 2
 
+// TODO: maybe make it private
 // parses the cached CertChain and returns the VCEK leaf certificate
 // Subject of the (x509) VCEK certificate (CN=SEV-VCEK)
 func GetVCEKFromCertChain(certChain []byte) (*x509.Certificate, error) {
@@ -66,6 +67,7 @@ func GetVCEKFromCertChain(certChain []byte) (*x509.Certificate, error) {
 	return nil, errors.New("No certificate chain found")
 }
 
+// TODO: maybe make it private
 // parses the VCEK certificate to return the TCB version
 // fields reprocessed back into a uint64 to compare against the `ReportedTCB` in the fetched attestation report
 func ParseVCEK(certChain []byte) ( /*tcbVersion*/ uint64, error) {
@@ -78,6 +80,8 @@ func ParseVCEK(certChain []byte) ( /*tcbVersion*/ uint64, error) {
 	// parse extensions to update the THIM URL and get TCB Version
 	for _, ext := range vcekCert.Extensions {
 		switch ext.Id.String() {
+		// Based on Table 9 of SEV-SNP Firmware ABI Specification
+		// https://www.amd.com/en/support/tech-docs/sev-secure-nested-paging-firmware-abi-specification
 
 		// blSPL
 		case "1.3.6.1.4.1.3704.1.3.1":
@@ -116,6 +120,26 @@ type CertFetcher struct {
 	Endpoint     string `json:"endpoint"`
 	TEEType      string `json:"tee_type,omitempty"`
 	APIVersion   string `json:"api_version,omitempty"`
+}
+
+// Creates default AMD CertFetcher instance for Milan
+func DefaultAMDMilanCertFetcherNew() CertFetcher {
+	return CertFetcher{
+		EndpointType: "AMD",
+		Endpoint:     "kdsintf.amd.com/vcek/v1",
+		TEEType:      "Milan",
+		APIVersion:   "",
+	}
+}
+
+// Creates default Azure CertFetcher instance for SEV-SNP
+func DefaultAzureCertFetcherNew() CertFetcher {
+	return CertFetcher{
+		EndpointType: "AzCache",
+		Endpoint:     "global.acccache.azure.net",
+		TEEType:      "SevSnpVM",
+		APIVersion:   "api-version=2020-10-15-preview",
+	}
 }
 
 // retrieveCertChain interacts with the cert cache service to fetch the cert chain of the
@@ -196,7 +220,7 @@ Fetches platform certificates of SEV-SNP VM.
 The certificates are concatenation of VCEK, ASK, and ARK certificates (PEM format, in that order).
 https://www.amd.com/en/support/tech-docs/versioned-chip-endorsement-key-vcek-certificate-and-kds-interface-specification
 
-It also returns TCB  as uint64.
+It also returns TCB as uint64 (useful only when "LocalTHIM" is used for EndpointType).
 */
 func (certFetcher CertFetcher) GetCertChain(chipID string, reportedTCB uint64) ([]byte, uint64, error) {
 	return certFetcher.retrieveCertChain(chipID, reportedTCB)
