@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"flag"
 	"log"
@@ -11,7 +12,7 @@ import (
 
 	pb "github.com/Microsoft/confidential-sidecar-containers/cmd/attestation-container/protobuf"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/uvm"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -24,8 +25,9 @@ var (
 	platformCertificateServer      = flag.String("platform-certificate-server", "", "Server to fetch platform certificate. If set, certificates contained in security context directory are ignored. Value is either 'Azure' or 'AMD'")
 	insecureVirtual                = flag.Bool("insecure-virtual", false, "If set, dummy attestation is returned (INSECURE: do not use in production)")
 
-	platformCertificateValue  *attest.ACICertificates = nil
-	uvmEndorsementEnvVarValue []byte                  = nil
+	platformCertificateValue *common.THIMCerts = nil
+	// UVM Endorsement (UVM reference info)
+	uvmEndorsementValue []byte = nil
 )
 
 type server struct {
@@ -74,7 +76,7 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 		platformCertificate = append(platformCertificate, platformCertificateValue.CertificateChain...)
 	}
 
-	return &pb.FetchAttestationReply{Attestation: reportBytes, PlatformCertificates: platformCertificate, UvmEndorsements: uvmEndorsementEnvVarValue}, nil
+	return &pb.FetchAttestationReply{Attestation: reportBytes, PlatformCertificates: platformCertificate, UvmEndorsements: uvmEndorsementValue}, nil
 }
 
 func validateFlags() {
@@ -100,26 +102,20 @@ func main() {
 			log.Fatalf("Unknown error: %s", err)
 		}
 
-		securityContextDirectory, ok := os.LookupEnv(*securityContextDirectoryEnvVar)
-		if !ok {
-			log.Fatalf("Security context directory %s is not specified", *securityContextDirectoryEnvVar)
+		uvmInfo, err := common.GetUvmInformation()
+		if err != nil {
+			log.Fatalf("Failed to get UVM information: %s", err)
 		}
 
 		if *platformCertificateServer == "" {
-			platformCertificateValue = new(attest.ACICertificates)
-			var err error
-			*platformCertificateValue, err = attest.ParseCertificateACIFromSecurityContextDirectory(securityContextDirectory)
-			if err != nil {
-				log.Fatalf(err.Error())
-			}
+			platformCertificateValue = &uvmInfo.InitialCerts
 		} else {
 			log.Printf("Platform certificates will be retrieved from server %s", *platformCertificateServer)
 		}
 
-		var err error
-		uvmEndorsementEnvVarValue, err = uvm.ParseUVMEndorsement(securityContextDirectory)
+		uvmEndorsementValue, err = base64.StdEncoding.DecodeString(uvmInfo.EncodedUvmReferenceInfo)
 		if err != nil {
-			log.Fatalf(err.Error())
+			log.Fatalf("Failed to decode base64 string: %s", err)
 		}
 	}
 

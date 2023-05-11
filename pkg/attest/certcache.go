@@ -189,12 +189,16 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from get request failed")
 			}
 
-			thimCerts, thimTcbm, err := thimCerts.GetLocalCerts(string(THIMCertsBytes))
+			thimCerts, err = common.ParseTHIMCerts(string(THIMCertsBytes))
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "certcache failed to get local certs")
 			}
+			thimTcbm, err = common.ParseTHIMTCBM(thimCerts)
+			if err != nil {
+				return nil, thimTcbm, errors.Wrapf(err, "failed to parse THIM TCBM")
+			}
 
-			return []byte(thimCerts), thimTcbm, nil
+			return common.ConcatenateCerts(thimCerts), thimTcbm, nil
 		case "AzCache":
 			uri = fmt.Sprintf(AzureCertCacheRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, strconv.FormatUint(reportedTCB, 16), certFetcher.APIVersion)
 			certChain, err := fetchWithRetry(uri, defaultBaseSec, defaultMaxRetries)

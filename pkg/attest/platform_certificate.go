@@ -2,18 +2,14 @@ package attest
 
 import (
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"math"
 	"math/rand"
 	"net/http"
-	"os"
-	"path"
 	"time"
 )
 
@@ -30,13 +26,6 @@ const (
 	UVM_ENDORSEMENTS_FILE_NAME      = "reference-info-base64"
 	PLATFORM_CERTIFICATES_FILE_NAME = "host-amd-cert-base64"
 )
-
-type ACICertificates struct {
-	CacheControl     string `json:"cacheControl"`
-	VcekCert         string `json:"vcekCert"`
-	CertificateChain string `json:"certificateChain"`
-	Tcbm             string `json:"tcbm"`
-}
 
 func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, error) {
 	if maxRetries < 0 {
@@ -147,31 +136,4 @@ func FetchPlatformCertificate(server string, reportedTCBBytes []byte, chipIDByte
 	} else {
 		return fetchPlatformCertificateAMD(reportedTCB, chipID)
 	}
-}
-
-func ParseCertificateACI(certificateACIBase64 string) (ACICertificates, error) {
-	certificatesRaw, err := base64.StdEncoding.DecodeString(certificateACIBase64)
-	if err != nil {
-		return ACICertificates{}, fmt.Errorf("Failed to decode ACI certificates: %s", err)
-	}
-
-	certificates := ACICertificates{}
-	err = json.Unmarshal([]byte(certificatesRaw), &certificates)
-	if err != nil {
-		return ACICertificates{}, fmt.Errorf("Failed to unmarshal JSON ACI certificates: %s", err)
-	}
-	return certificates, nil
-}
-
-func ParseCertificateACIFromSecurityContextDirectory(securityContextDirectory string) (ACICertificates, error) {
-	certificatesBase64, err := os.ReadFile(path.Join(securityContextDirectory, PLATFORM_CERTIFICATES_FILE_NAME))
-	if err != nil {
-		return ACICertificates{}, err
-	}
-
-	certificates, err := ParseCertificateACI(string(certificatesBase64))
-	if err != nil {
-		return ACICertificates{}, err
-	}
-	return certificates, nil
 }

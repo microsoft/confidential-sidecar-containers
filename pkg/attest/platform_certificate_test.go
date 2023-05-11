@@ -1,16 +1,8 @@
 package attest
 
 import (
-	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
-)
-
-var (
-	testDataDir = flag.String("testdata-dir", "testdata/", "Path to testdata directory")
 )
 
 func getReportedTCBAndChipID(t *testing.T) ([]byte, []byte) {
@@ -71,37 +63,5 @@ func TestInvalidChipID(t *testing.T) {
 	_, err := FetchPlatformCertificate("Azure", reportedTCBBytes, chipIDBytes)
 	if err.Error() != fmt.Sprintf("Length of chipIDBytes should be %d", CHIP_ID_SIZE) {
 		t.Fatalf("Should return error for invalid length of chipIDBytes")
-	}
-}
-func TestGetPlatformCertificateFromEnvironment(t *testing.T) {
-	flag.Parse()
-	testDataHostAmdCertificate := filepath.Join(*testDataDir, "host_amd_certificate_env")
-	certificate, err := os.ReadFile(testDataHostAmdCertificate)
-	if err != nil {
-		t.Fatalf("Could not open file %s", testDataHostAmdCertificate)
-	}
-
-	// Valid
-	_, err = ParseCertificateACI(string(certificate))
-	if err != nil {
-		t.Fatalf("Could not parse ACI certificate: %s", err)
-	}
-
-	// Empty
-	_, err = ParseCertificateACI("")
-	if !strings.Contains(err.Error(), "unexpected end of JSON input") {
-		t.Fatalf("Could not parse ACI certificate: %s", err)
-	}
-
-	// Invalid base64
-	_, err = ParseCertificateACI(string(certificate[:len(certificate)-1]))
-	if !strings.Contains(err.Error(), "illegal base64 data") {
-		t.Fatalf("Could not parse ACI certificate: %s", err)
-	}
-
-	// Invalid JSON
-	_, err = ParseCertificateACI(string(certificate[:len(certificate)-4]))
-	if !strings.Contains(err.Error(), "unexpected end of JSON input") {
-		t.Fatalf("Could not parse ACI certificate: %s", err)
 	}
 }
