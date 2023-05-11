@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/pem"
 	"flag"
 	"log"
@@ -63,7 +62,6 @@ func TestFetchReport(t *testing.T) {
 	if len(attestation) == 0 {
 		log.Fatalf("attestation is empty")
 	}
-	log.Printf("Attestation: %v", hex.EncodeToString(attestation))
 
 	// Verify platform certificates
 	platformCertificates := r.GetPlatformCertificates()
@@ -75,12 +73,10 @@ func TestFetchReport(t *testing.T) {
 		// Expecting VCEK, ASK and ARK
 		log.Fatalf("platformCertificates does not contain 3 certificates, found %d", chainLen)
 	}
-	log.Printf("Platform certificates: %v", hex.EncodeToString(platformCertificates))
 
 	if len(r.GetUvmEndorsements()) == 0 {
 		log.Fatalf("UVM endorsement is empty")
 	}
-	log.Printf("UVM endorsement: %s", r.GetUvmEndorsements())
 }
 
 func TestInputError(t *testing.T) {
