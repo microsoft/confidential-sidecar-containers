@@ -13,6 +13,8 @@ const (
 
 /*
 Gets UVM endorsement from environment variable as base64 encoded string and returns as []byte.
+
+TODO: Delete this after adding similar test cases to info.go
 */
 func ParseUVMEndorsement(securityContextDirectory string) ([]byte, error) {
 	uvmEndorsementsBase64, err := os.ReadFile(path.Join(securityContextDirectory, UVM_ENDORSEMENTS_FILE_NAME))

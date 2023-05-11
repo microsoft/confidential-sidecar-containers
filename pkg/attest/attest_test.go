@@ -306,7 +306,7 @@ func TestCertFetcherWithRealAttestationReport(t *testing.T) {
 		reportData[i] = byte(i)
 	}
 
-	reportFetcher := AttestationReportFetcherNew()
+	reportFetcher := NewAttestationReportFetcher()
 	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		t.Fatalf("failed to fetch report for test")

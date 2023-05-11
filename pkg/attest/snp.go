@@ -242,6 +242,7 @@ func FetchSNPReport(real bool, keyBlob []byte, policyBlob []byte) ([]byte, error
 	return fetchFakeSNPReport(keyBlob, policyBlob)
 }
 
+// TODO: Delete
 // fetchFakeSNPReport returns an attestation report containing the hash of the policy in the report's host_data
 // this is used for end-to-end testing on hardware without SNP.
 func fetchFakeSNPReport(keyBlobBytes []byte, policyBlobBytes []byte) ([]byte, error) {
@@ -293,6 +294,7 @@ func fetchFakeSNPReport(keyBlobBytes []byte, policyBlobBytes []byte) ([]byte, er
 	return reportBytes, nil
 }
 
+// TODO: Delete
 // fetchRealSNPReport uses the get-snp-report tool to retrieve an attestation report from the PSP
 // The attestation report retrieval request passes an arbiratry 64-byte block that will be
 // reported as REPORT_DATA (reportBytes)

@@ -44,7 +44,7 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 		return &pb.FetchAttestationReply{}, nil
 	}
 
-	reportFetcher := attest.AttestationReportFetcherNew()
+	reportFetcher := attest.NewAttestationReportFetcher()
 	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to fetch attestation report: %s", err)

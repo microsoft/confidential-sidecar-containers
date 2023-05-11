@@ -18,15 +18,37 @@ func TestFetchReport(t *testing.T) {
 		reportData[i] = byte(i)
 	}
 
-	reportFetcher := AttestationReportFetcherNew()
+	reportFetcher := NewAttestationReportFetcher()
 	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		t.Fatalf("Fetching report failed: %v", err)
 	}
 	expectedByteString := hex.EncodeToString(reportData[:])
 	// Confirm `report data` (user provided 64 byte data) is correct
-	// Offset of `report data` is specified in SEV-SNP Firmware ABI Specification Table 21
-	// https://www.amd.com/en/support/tech-docs/sev-secure-nested-paging-firmware-abi-specification
-	const REPORT_DATA_OFFSET = 80
 	assertEqual(t, "Check report data", expectedByteString, hex.EncodeToString(reportBytes[REPORT_DATA_OFFSET:REPORT_DATA_OFFSET+REPORT_DATA_SIZE]))
+}
+
+func Test_FetchFakeReport(t *testing.T) {
+	// Report data for test
+	reportData := [REPORT_DATA_SIZE]byte{}
+	for i := 0; i < REPORT_DATA_SIZE; i++ {
+		reportData[i] = byte(i)
+	}
+
+	hostData := [HOST_DATA_SIZE]byte{}
+	for i := 0; i < HOST_DATA_SIZE; i++ {
+		hostData[i] = byte(i)
+	}
+
+	reportFetcher := UnsafeNewFakeAttestationReportFetcher(hostData)
+	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
+	if err != nil {
+		t.Fatalf("Fetching report failed: %v", err)
+	}
+	expectedReportDataByteString := hex.EncodeToString(reportData[:])
+	// Confirm `report data` (user provided 64 byte data) is correct
+	assertEqual(t, "Check report data", expectedReportDataByteString, hex.EncodeToString(reportBytes[REPORT_DATA_OFFSET:REPORT_DATA_OFFSET+REPORT_DATA_SIZE]))
+	expectedHostDataByteString := hex.EncodeToString(hostData[:])
+	// Confirm `report data` (user provided 64 byte data) is correct
+	assertEqual(t, "Check report data", expectedHostDataByteString, hex.EncodeToString(reportBytes[HOST_DATA_OFFSET:HOST_DATA_OFFSET+HOST_DATA_SIZE]))
 }

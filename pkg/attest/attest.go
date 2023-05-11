@@ -5,10 +5,7 @@ package attest
 
 import (
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
-
-	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
@@ -32,29 +29,6 @@ func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]
 	return vcekCertChain, nil
 }
 
-// TODO: Delete (maybe after supporting fake report)
-// RawAttest returns the raw attestation report in hex string format
-func RawAttest(inittimeDataBytes []byte, runtimeDataBytes []byte) (string, error) {
-	// check if sev device exists on the platform; if not fetch fake snp report
-	fetchRealSNPReport := true
-	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
-		// dev/sev doesn't exist, check dev/sev-guest
-		if _, err := os.Stat("/dev/sev-guest"); errors.Is(err, os.ErrNotExist) {
-			// dev/sev-guest doesn't exist
-			fetchRealSNPReport = false
-		}
-	}
-
-	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, inittimeDataBytes)
-	if err != nil {
-		return "", errors.Wrapf(err, "fetching snp report failed")
-	}
-
-	logrus.Debugf("   SNPReportBytes:    %v", SNPReportBytes)
-
-	return hex.EncodeToString(SNPReportBytes), nil
-}
-
 // Attest interacts with maa services to fetch an MAA token
 // MAA expects four attributes:
 // (A) the attestation report signed by the PSP signing key
@@ -76,7 +50,7 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 
 	// Fetch the attestation report
 	// PR_COMMENT: I guess there is no use case to use MAA with fake attestation report, so I am hard-coding to use Real AttestationReportFetcher
-	reportFetcher := AttestationReportFetcherNew()
+	reportFetcher := NewAttestationReportFetcher()
 	reportData := GenerateMAAReportData(runtimeDataBytes)
 	SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
