@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"io/ioutil"
 	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -16,51 +15,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Function list:
-// --- Getting attestation report
-// - GetSNPReport: securityPolicy param. Used by Attest
-// - RawAttest: returns hex string
-// - Attest: Validate all the things with MAA
-// - FetchSNPReport in snp.go: Actually fetches the report. Used by RawAttest and GetSNPReport
-// --- Other
-// - RefreshCertChain
-
 // CertState contains information about the certificate cache service
 // that provides access to the certificate chain required upon attestation
 type CertState struct {
 	CertFetcher CertFetcher `json:"cert_cache"`
 	Tcbm        uint64      `json:"tcbm"`
-}
-
-// TODO: Delete
-func GetSNPReport(securityPolicy string, runtimeDataBytes []byte) ([]byte, []byte, error) {
-	// check if sev device exists on the platform; if not fetch fake snp report
-	fetchRealSNPReport := true
-	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
-		// dev/sev doesn't exist, check dev/sev-guest
-		if _, err := os.Stat("/dev/sev-guest"); errors.Is(err, os.ErrNotExist) {
-			// dev/sev-guest doesn't exist
-			fetchRealSNPReport = false
-		}
-	}
-
-	inittimeDataBytes, err := base64.StdEncoding.DecodeString(securityPolicy)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "decoding policy from Base64 format failed")
-	}
-	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
-
-	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, inittimeDataBytes)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "fetching snp report failed")
-	}
-
-	if common.GenerateTestData {
-		ioutil.WriteFile("snp_report.bin", SNPReportBytes, 0644)
-	}
-
-	logrus.Debugf("   SNPReportBytes:    %v", SNPReportBytes)
-	return SNPReportBytes, inittimeDataBytes, nil
 }
 
 func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]byte, error) {
@@ -73,7 +32,7 @@ func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]
 	return vcekCertChain, nil
 }
 
-// TODO: Delete
+// TODO: Delete (maybe after supporting fake report)
 // RawAttest returns the raw attestation report in hex string format
 func RawAttest(inittimeDataBytes []byte, runtimeDataBytes []byte) (string, error) {
 	// check if sev device exists on the platform; if not fetch fake snp report

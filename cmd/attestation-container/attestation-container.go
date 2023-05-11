@@ -20,10 +20,9 @@ import (
 )
 
 var (
-	socketAddress                  = flag.String("socket-address", "/tmp/attestation-container.sock", "The socket address of Unix domain socket (UDS)")
-	securityContextDirectoryEnvVar = flag.String("security-context-directory-envvar", attest.DEFAULT_SECURITY_CONTEXT_ENVVAR, "Name of environment variable specifying name of directory containing confidential ACI security context")
-	platformCertificateServer      = flag.String("platform-certificate-server", "", "Server to fetch platform certificate. If set, certificates contained in security context directory are ignored. Value is either 'Azure' or 'AMD'")
-	insecureVirtual                = flag.Bool("insecure-virtual", false, "If set, dummy attestation is returned (INSECURE: do not use in production)")
+	socketAddress             = flag.String("socket-address", "/tmp/attestation-container.sock", "The socket address of Unix domain socket (UDS)")
+	platformCertificateServer = flag.String("platform-certificate-server", "", "Server to fetch platform certificate. If set, certificates contained in security context directory are ignored. Value is either 'Azure' or 'AMD'")
+	insecureVirtual           = flag.Bool("insecure-virtual", false, "If set, dummy attestation is returned (INSECURE: do not use in production)")
 
 	platformCertificateValue *common.THIMCerts = nil
 	// UVM Endorsement (UVM reference info)
@@ -57,9 +56,6 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 		if err = SNPReport.DeserializeReport(reportBytes); err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to deserialize attestation report: %s", err)
 		}
-		// reportedTCBBytes := reportBytes[attest.REPORTED_TCB_OFFSET : attest.REPORTED_TCB_OFFSET+attest.REPORTED_TCB_SIZE]
-		// chipIDBytes := reportBytes[attest.CHIP_ID_OFFSET : attest.CHIP_ID_OFFSET+attest.CHIP_ID_SIZE]
-		// platformCertificate, err = attest.FetchPlatformCertificate(*platformCertificateServer, reportedTCBBytes, chipIDBytes)
 		var certFetcher attest.CertFetcher
 		if *platformCertificateServer == "AMD" {
 			certFetcher = attest.DefaultAMDMilanCertFetcherNew()
