@@ -1,3 +1,11 @@
+//go:build !skip_e2e && !skip_snp_required
+
+// E2E test. Requires to run `go run .` before running it.
+// It also requires to be ran inside SNP VM.
+// When you run tests from the project root, you can skip it by
+// `go test ./... -tags skip_e2e` or `go test ./... -tags skip_snp_required`,
+// or even `go test ./... -tags skip_e2e,skip_snp_required`.
+
 package main
 
 import (

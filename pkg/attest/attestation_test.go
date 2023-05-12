@@ -11,24 +11,7 @@ func assertEqual[T comparable](t *testing.T, description string, expect T, actua
 	}
 }
 
-func TestFetchReport(t *testing.T) {
-	// Report data for test
-	reportData := [REPORT_DATA_SIZE]byte{}
-	for i := 0; i < REPORT_DATA_SIZE; i++ {
-		reportData[i] = byte(i)
-	}
-
-	reportFetcher := NewAttestationReportFetcher()
-	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
-	if err != nil {
-		t.Fatalf("Fetching report failed: %v", err)
-	}
-	expectedByteString := hex.EncodeToString(reportData[:])
-	// Confirm `report data` (user provided 64 byte data) is correct
-	assertEqual(t, "Check report data", expectedByteString, hex.EncodeToString(reportBytes[REPORT_DATA_OFFSET:REPORT_DATA_OFFSET+REPORT_DATA_SIZE]))
-}
-
-func Test_FetchFakeReport(t *testing.T) {
+func TestFetchFakeReport(t *testing.T) {
 	// Report data for test
 	reportData := [REPORT_DATA_SIZE]byte{}
 	for i := 0; i < REPORT_DATA_SIZE; i++ {
