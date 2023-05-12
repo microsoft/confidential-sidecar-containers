@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 //go:build !skip_snp_required
 
 // This test requires to be ran inside SNP VM.

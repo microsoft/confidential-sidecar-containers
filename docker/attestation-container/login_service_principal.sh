@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 set -ex
 
 DIR_OF_THIS_FILE=$(cd $(dirname $0); pwd)/

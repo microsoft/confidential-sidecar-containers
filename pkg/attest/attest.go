@@ -89,7 +89,6 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
 
 	// Fetch the attestation report
-	// PR_COMMENT: I guess there is no use case to use MAA with fake attestation report, so I am hard-coding to use Real AttestationReportFetcher
 	reportFetcher := NewAttestationReportFetcher()
 	reportData := GenerateMAAReportData(runtimeDataBytes)
 	SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)

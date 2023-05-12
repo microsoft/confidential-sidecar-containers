@@ -118,10 +118,6 @@ func Test_CertFetcher(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			// PR_COMMENT: I changed it to test public API rather than private function to avoid the case
-			// where we don't realize that we break a public API.
-			// Maybe we can just remove `retrieveCertChain` and put its contents inside `GetCertChain`.
-			// Currently `GetCertChain` just calls `retrieveCertChain` and doesn't anything aside it.
 			certchain, _, err := tc.certFetcher.GetCertChain(tc.chipID, tc.platformVersion)
 
 			if tc.expectErr {

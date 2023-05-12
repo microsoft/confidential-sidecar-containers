@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 //go:build !skip_e2e && !skip_snp_required
 
 // E2E test. Requires to run `go run .` before running it.

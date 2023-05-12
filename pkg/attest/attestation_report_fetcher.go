@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 package attest
 
 import (
@@ -134,13 +137,6 @@ type AttestationReportFetcher interface {
 	FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error)
 }
 
-// PR_COMMENT: This interface ('New...' function that returns interface rather than struct) is based on design of
-// golang's standard library
-// e.g. https://pkg.go.dev/crypto/sha256#New224
-// We can provide `UnsafeNewFakeAttestationReportFetcher` which returns fake report in the same way but with `hostData` as parameter.
-// With this method we don't have to include `hostData` in functions to fetch real attestation report which don't need it.
-// Users of this package can switch between `realAttestationReportFetcher“ and `fakeAttestationReportFetcher`
-// easily using dependency injection or similar techniques.
 func NewAttestationReportFetcher() AttestationReportFetcher {
 	return &realAttestationReportFetcher{}
 }
@@ -184,8 +180,6 @@ func (_ *realAttestationReportFetcher) FetchAttestationReportByte(reportData [RE
 	return reportBytes, nil
 }
 
-// PR_COMMENT: Can be used instead of RawAttest
-// RawAttest returns the raw attestation report in hex string format
 func (f *realAttestationReportFetcher) FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error) {
 	report, err := f.FetchAttestationReportByte(reportData)
 	if err != nil {
