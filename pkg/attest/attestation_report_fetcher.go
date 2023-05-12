@@ -2,7 +2,6 @@ package attest
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -225,23 +224,4 @@ func (f *fakeAttestationReportFetcher) FetchAttestationReportHex(reportData [REP
 		return "", err
 	}
 	return hex.EncodeToString(report), nil
-}
-
-// Takes bytes and generate report data that MAA expects (SHA256 hash of arbitrary data).
-func GenerateMAAReportData(inputBytes []byte) [REPORT_DATA_SIZE]byte {
-	runtimeData := sha256.New()
-	if inputBytes != nil {
-		runtimeData.Write(inputBytes)
-	}
-	reportData := [REPORT_DATA_SIZE]byte{}
-	runtimeDataBytes := runtimeData.Sum(nil)
-	const sha256len = 32
-	if len(runtimeDataBytes) != sha256len {
-		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(runtimeDataBytes)))
-	}
-	if sha256len > REPORT_DATA_SIZE {
-		panic(fmt.Errorf("Generated hash is too large for report data. hash length: %d bytes, report data size: %d", sha256len, REPORT_DATA_SIZE))
-	}
-	copy(reportData[:], runtimeDataBytes)
-	return reportData
 }
