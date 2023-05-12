@@ -111,7 +111,6 @@ func postRawAttest(c *gin.Context) {
 	}
 
 	var attestationReportFetcher attest.AttestationReportFetcher
-	// TODO: Check if we really need fake report here
 	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
 		hostData := attest.GenerateMAAHostData(inittimeDataBytes)
 		attestationReportFetcher = attest.UnsafeNewFakeAttestationReportFetcher(hostData)
