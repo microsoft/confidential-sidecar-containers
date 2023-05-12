@@ -45,8 +45,28 @@ func GenerateMAAReportData(inputBytes []byte) [REPORT_DATA_SIZE]byte {
 	if sha256len > REPORT_DATA_SIZE {
 		panic(fmt.Errorf("Generated hash is too large for report data. hash length: %d bytes, report data size: %d", sha256len, REPORT_DATA_SIZE))
 	}
-	copy(reportData[:], runtimeDataBytes)
+	copy(reportData[:sha256len], runtimeDataBytes)
 	return reportData
+}
+
+// Takes bytes and generate host data that UVM creates at launch of SNP VM (SHA256 hash of arbitrary data).
+// It's only useful to create fake attestation report
+func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
+	inittimeData := sha256.New()
+	if inputBytes != nil {
+		inittimeData.Write(inputBytes)
+	}
+	hostData := [HOST_DATA_SIZE]byte{}
+	inittimeDataBytes := inittimeData.Sum(nil)
+	const sha256len = 32
+	if len(inittimeDataBytes) != sha256len {
+		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(inittimeDataBytes)))
+	}
+	if sha256len > HOST_DATA_SIZE {
+		panic(fmt.Errorf("Generated hash is too large for host data. hash length: %d bytes, report host size: %d", sha256len, REPORT_DATA_SIZE))
+	}
+	copy(hostData[:], inittimeDataBytes)
+	return hostData
 }
 
 // Attest interacts with maa services to fetch an MAA token

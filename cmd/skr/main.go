@@ -113,14 +113,12 @@ func postRawAttest(c *gin.Context) {
 	var attestationReportFetcher attest.AttestationReportFetcher
 	// TODO: Check if we really need fake report here
 	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
-		hostData := [attest.HOST_DATA_SIZE]byte{}
-		copy(hostData[:], inittimeDataBytes)
+		hostData := attest.GenerateMAAHostData(inittimeDataBytes)
 		attestationReportFetcher = attest.UnsafeNewFakeAttestationReportFetcher(hostData)
 	} else {
 		attestationReportFetcher = attest.NewAttestationReportFetcher()
 	}
-	reportData := [attest.REPORT_DATA_SIZE]byte{}
-	copy(reportData[:], runtimeDataBytes)
+	reportData := attest.GenerateMAAReportData(runtimeDataBytes)
 	rawReport, err := attestationReportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
