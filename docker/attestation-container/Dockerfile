@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/app ./cmd/attestation-container/
 FROM builder-app AS builder-test
 WORKDIR /usr/src/app
 ## Pre-compile tests to avoid I/O errors in ACI
-RUN pushd cmd/attestation-container && CGO_ENABLED=0 go test -c && popd && pushd pkg/attest && CGO_ENABLED=0 go test -c && popd && pushd pkg/uvm && CGO_ENABLED=0 go test -c
+RUN pushd cmd/attestation-container && CGO_ENABLED=0 go test -c && popd && pushd pkg/attest && CGO_ENABLED=0 go test -c && popd && pushd pkg/common && CGO_ENABLED=0 go test -c
 
 # Run
 FROM mcr.microsoft.com/cbl-mariner/distroless/minimal:2.0 AS app-run
@@ -30,8 +30,8 @@ COPY --from=builder-app /usr/local/bin/app /usr/local/bin/app
 FROM app-run AS app-dev
 COPY --from=builder-test /usr/src/app/cmd/attestation-container/attestation-container.test* /usr/local/bin/attestation-container.test 
 COPY --from=builder-test /usr/src/app/pkg/attest/attest.test* /usr/local/bin/attest.test 
-COPY --from=builder-test /usr/src/app/pkg/attest/testdata/host_amd_certificate_env* /testdata/
-COPY --from=builder-test /usr/src/app/pkg/uvm/uvm.test* /usr/local/bin/uvm.test 
+COPY --from=builder-test /usr/src/app/pkg/common/test_security_context/* /test_security_context/
+COPY --from=builder-test /usr/src/app/pkg/common/common.test* /usr/local/bin/common.test 
 
 # Final 
 FROM app-${variant} AS final

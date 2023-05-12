@@ -79,7 +79,7 @@ function clean_up {
 }
 
 # Test
-az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'attest.test --testdata-dir /testdata -test.v'
-az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'uvm.test -test.v'
+az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'attest.test -test.v'
+az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'common.test --testdata-dir /test_security_context -test.v'
 az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'attestation-container.test -addr /mnt/uds/sock -test.v'
 
