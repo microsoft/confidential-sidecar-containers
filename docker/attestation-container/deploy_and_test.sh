@@ -74,12 +74,35 @@ function clean_up_container_group {
 }
 # Update clean_up definition
 function clean_up {
+    set +e
     clean_up_docker_image
     clean_up_container_group
 }
 
 # Test
-az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'attest.test -test.v'
-az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'common.test --testdata-dir /test_security_context -test.v'
-az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'attestation-container.test -addr /mnt/uds/sock -test.v'
 
+# `az container exec` doesn't return non-zero exit code
+# even if the command called by `az` was failed.
+# As workararound, temporary file is used to find failed tests.
+
+TMP_FILE=$(tempfile)
+
+function clean_up_log {
+    rm $TMP_FILE
+}
+# Update clean_up definition
+function clean_up {
+    set +e
+    clean_up_docker_image
+    clean_up_container_group
+    clean_up_log
+}
+
+az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'attest.test -test.v' | tee -a $TMP_FILE
+az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'common.test --testdata-dir /test_security_context -test.v' | tee -a $TMP_FILE
+az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'attestation-container.test -addr /mnt/uds/sock -test.v' | tee -a $TMP_FILE
+
+if grep "command terminated with non-zero exit code" $TMP_FILE; then
+    echo "Test failed"
+    exit 1
+fi
