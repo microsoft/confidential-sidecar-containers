@@ -4,15 +4,10 @@
 package attest
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 
-	"io/ioutil"
-	"os/exec"
-
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -230,103 +225,4 @@ func (r *SNPAttestationReport) SerializeReport() (report []uint8, err error) {
 	}
 
 	return report, nil
-}
-
-// fetchSNPReport abstracts whether we fetch a real or a hardcoded snp
-// report (for testing purposes)
-func FetchSNPReport(real bool, keyBlob []byte, policyBlob []byte) ([]byte, error) {
-	if real {
-		return fetchRealSNPReport(keyBlob)
-	}
-
-	return fetchFakeSNPReport(keyBlob, policyBlob)
-}
-
-// TODO: Delete
-// fetchFakeSNPReport returns an attestation report containing the hash of the policy in the report's host_data
-// this is used for end-to-end testing on hardware without SNP.
-func fetchFakeSNPReport(keyBlobBytes []byte, policyBlobBytes []byte) ([]byte, error) {
-	// hardcoded attestation report that includes default key and policy blobs
-	runtimeData := sha256.New()
-	if keyBlobBytes != nil {
-		runtimeData.Write(keyBlobBytes)
-	}
-
-	hostData := sha256.New()
-	if policyBlobBytes != nil {
-		hostData.Write(policyBlobBytes)
-	}
-
-	// For specialist standalone debugging on a non snp machine it is possible use a canned
-	// report (from a real machine) along with certs from that machine, matching UVM_REFERENCE_INFO
-	// and policy. This is done by setting the environment variables. Capturing all that from a
-	// real ACI instance requires a container running with a policy that lets this happen, typically
-	// the open_door.rego from the hcsshim repo.
-
-	var num int
-	reportBytes, err := ioutil.ReadFile("snp_report.bin")
-	if err != nil {
-		// the get-fake-snp-report binary expects ReportData and HostData (hash of policy)
-		// the rest of such a report will not pass verification of course.
-		logrus.Debugf("/bin/get-fake-snp-report %s %s", hex.EncodeToString(runtimeData.Sum(nil)), hex.EncodeToString(hostData.Sum(nil)))
-		cmd := exec.Command("/bin/get-fake-snp-report", hex.EncodeToString(runtimeData.Sum(nil)), hex.EncodeToString(hostData.Sum(nil)))
-
-		reportBytesString, err := cmd.Output()
-		if err != nil {
-			return nil, errors.Wrapf(err, "cmd.Run() for fetching snp report failed")
-		}
-
-		// the get-snp-report binary outputs the raw hexadecimal representation  of the report
-		reportBytes := make([]byte, hex.DecodedLen(len(reportBytesString)))
-
-		num, err = hex.Decode(reportBytes, reportBytesString)
-		if err != nil {
-			return nil, errors.Wrapf(err, "decoding output to hexstring failed")
-		}
-	} else {
-		num = len(reportBytes)
-	}
-
-	if num != len(reportBytes) {
-		return nil, errors.Wrapf(err, "decoding output not expected number of bytes")
-	}
-
-	return reportBytes, nil
-}
-
-// TODO: Delete
-// fetchRealSNPReport uses the get-snp-report tool to retrieve an attestation report from the PSP
-// The attestation report retrieval request passes an arbiratry 64-byte block that will be
-// reported as REPORT_DATA (reportBytes)
-//
-// The get-snp-report tool is compiled during preperation of the container rootfs. The binary is expected to
-// be fount under /bin
-func fetchRealSNPReport(keyBytes []byte) (reportBytes []byte, err error) {
-	runtimeData := sha256.New()
-	if keyBytes != nil {
-		runtimeData.Write(keyBytes)
-	}
-
-	// the get-snp-report binary expects ReportData as the only command line attribute
-	logrus.Debugf("/bin/get-snp-report %s", hex.EncodeToString(runtimeData.Sum(nil)))
-	cmd := exec.Command("/bin/get-snp-report", hex.EncodeToString(runtimeData.Sum(nil)))
-
-	reportBytesString, err := cmd.Output()
-	if err != nil {
-		return nil, errors.Wrapf(err, "cmd.Run() for fetching snp report failed")
-	}
-
-	// the get-snp-report binary outputs the raw hexadecimal representation  of the report
-	reportBytes = make([]byte, hex.DecodedLen(len(reportBytesString)))
-
-	num, err := hex.Decode(reportBytes, reportBytesString)
-	if err != nil {
-		return nil, errors.Wrapf(err, "decoding output to hexstring failed")
-	}
-
-	if num != len(reportBytes) {
-		return nil, errors.Wrapf(err, "decoding output not expected number of bytes")
-	}
-
-	return reportBytes, nil
 }

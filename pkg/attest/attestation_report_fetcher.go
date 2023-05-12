@@ -127,8 +127,11 @@ func createPayloadBytes(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_S
 }
 
 type AttestationReportFetcher interface {
-	// TODO: Comment about report data
+	// Fetches attestation report as []byte.
+	// reportData is guest-provided data defined in SEV-SNP Firmware ABI Specification.
 	FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error)
+	// Fetches attestation report as hex.
+	// reportData is guest-provided data defined in SEV-SNP Firmware ABI Specification.
 	FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error)
 }
 
@@ -193,7 +196,8 @@ func (f *realAttestationReportFetcher) FetchAttestationReportHex(reportData [REP
 }
 
 // Not SECURE. It returns fake attestation report.
-// In real SNP VMs, hostDataBytes (TODO: Table ... of ....) is provided by the hypervisor
+// hostDataBytes is data provided by the hypervisor at launch defined in SEV-SNP Firmware ABI Specification.
+// In real SNP VMs, hostDataBytes is provided by the hypervisor.
 func UnsafeNewFakeAttestationReportFetcher(hostDataBytes [HOST_DATA_SIZE]byte) AttestationReportFetcher {
 	return &fakeAttestationReportFetcher{
 		hostDataBytes: hostDataBytes,
@@ -224,7 +228,6 @@ func (f *fakeAttestationReportFetcher) FetchAttestationReportHex(reportData [REP
 }
 
 // Takes bytes and generate report data that MAA expects (SHA256 hash of arbitrary data).
-// TODO: check if this comment is correct
 func GenerateMAAReportData(inputBytes []byte) [REPORT_DATA_SIZE]byte {
 	runtimeData := sha256.New()
 	if inputBytes != nil {

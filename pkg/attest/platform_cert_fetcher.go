@@ -49,7 +49,6 @@ const (
 // all the byte arrays for the tcb values are of length 3 and fit the format [2 1 IMPORTANT_VALUE]
 const x509CertExtensionsValuePos = 2
 
-// TODO: maybe make it private
 // parses the cached CertChain and returns the VCEK leaf certificate
 // Subject of the (x509) VCEK certificate (CN=SEV-VCEK)
 func GetVCEKFromCertChain(certChain []byte) (*x509.Certificate, error) {
@@ -72,7 +71,6 @@ func GetVCEKFromCertChain(certChain []byte) (*x509.Certificate, error) {
 	return nil, errors.New("No certificate chain found")
 }
 
-// TODO: maybe make it private
 // parses the VCEK certificate to return the TCB version
 // fields reprocessed back into a uint64 to compare against the `ReportedTCB` in the fetched attestation report
 func ParseVCEK(certChain []byte) ( /*tcbVersion*/ uint64, error) {
