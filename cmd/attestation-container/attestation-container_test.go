@@ -54,7 +54,7 @@ func TestFetchReport(t *testing.T) {
 	}
 	conn, err := grpc.Dial(*addr, grpc.WithInsecure(), grpc.WithDialer(dialer))
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Fatalf("did not connect. attestation-container needs to be run before run this test: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewAttestationContainerClient(conn)
@@ -66,7 +66,7 @@ func TestFetchReport(t *testing.T) {
 	publicKey := []byte("public-key-contents")
 	r, err := c.FetchAttestation(ctx, &pb.FetchAttestationRequest{ReportData: publicKey})
 	if err != nil {
-		log.Fatalf("could not get attestation: %v", err)
+		log.Fatalf("could not get attestation. attestation-container needs to be run before run this test: %v", err)
 	}
 	// Verify attestation
 	attestation := r.GetAttestation()

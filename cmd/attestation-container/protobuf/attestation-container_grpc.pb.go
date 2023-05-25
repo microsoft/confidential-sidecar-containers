@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.6.1
-// source: cmd/attestation-container/protobuf/attestation-container.proto
+// source: protobuf/attestation-container.proto
 
 package protobuf
 
@@ -105,5 +105,5 @@ var AttestationContainer_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "cmd/attestation-container/protobuf/attestation-container.proto",
+	Metadata: "protobuf/attestation-container.proto",
 }

@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/base64"
 	"flag"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,10 +23,11 @@ func Test_ParseTHIMCerts(t *testing.T) {
 	}
 
 	// Valid
-	_, err = ParseTHIMCerts(string(certificate))
+	ce, err := ParseTHIMCerts(string(certificate))
 	if err != nil {
 		t.Fatalf("Could not parse THIM certificate: %s", err)
 	}
+	log.Printf("%#v\n", ce)
 
 	// Empty
 	_, err = ParseTHIMCerts("")

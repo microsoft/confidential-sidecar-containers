@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "microsoft/attestation-container/protobuf";
+option go_package = "github.com/Microsoft/confidential-sidecar-containers/cmd/attestation-container/protobuf";
 
 package attestation_container;
 

@@ -33,7 +33,7 @@ var (
 )
 
 type server struct {
-	pb.UnimplementedAttestationContainerServer
+	pb.AttestationContainerServer
 }
 
 func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRequest) (*pb.FetchAttestationReply, error) {
