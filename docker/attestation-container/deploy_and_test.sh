@@ -10,6 +10,7 @@ DIR_OF_THIS_FILE=$(cd $(dirname $0); pwd)/
 function usage {
     set +x
     echo "Usage: $0 <AZURE_RESOURCE_GROUP> <DOCKER_REGISTRY_NAME> <DEPLOY_ID>"
+    echo "This script deploys attestation-container to Confidential ACI and runs its test"
     echo "You need to login to Azure CLI and set default subscription before run this script by \`az account set --subscription <subscription>\`"
     echo "Options:"
     echo "  -h, --help  Show this help message and exit"
