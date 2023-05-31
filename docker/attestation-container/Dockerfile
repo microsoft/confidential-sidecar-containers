@@ -8,7 +8,7 @@
 ARG variant=run
 
 # Build
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.20-fips-cbl-mariner2.0 AS builder-app
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.19-fips-cbl-mariner2.0 AS builder-app
 WORKDIR /usr/src/app
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
