@@ -6,7 +6,6 @@ package common
 import (
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"strconv"
 
@@ -34,13 +33,13 @@ type THIMCerts struct {
 func ParseTHIMCerts(base64EncodedHostCertsFromTHIM string) (THIMCerts, error) {
 	certificatesRaw, err := base64.StdEncoding.DecodeString(base64EncodedHostCertsFromTHIM)
 	if err != nil {
-		return THIMCerts{}, fmt.Errorf("Failed to decode ACI certificates: %s", err)
+		return THIMCerts{}, errors.Wrapf(err, "base64 decoding platform certs failed")
 	}
 
 	certificates := THIMCerts{}
 	err = json.Unmarshal([]byte(certificatesRaw), &certificates)
 	if err != nil {
-		return THIMCerts{}, fmt.Errorf("Failed to unmarshal JSON ACI certificates: %s", err)
+		return THIMCerts{}, errors.Wrapf(err, "failed to unmarshal JSON ACI certificates")
 	}
 	return certificates, nil
 }
