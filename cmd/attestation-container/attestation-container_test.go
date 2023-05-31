@@ -15,7 +15,6 @@ import (
 	"context"
 	"encoding/pem"
 	"flag"
-	"log"
 	"net"
 	"testing"
 	"time"
@@ -54,7 +53,7 @@ func TestFetchReport(t *testing.T) {
 	}
 	conn, err := grpc.Dial(*addr, grpc.WithInsecure(), grpc.WithDialer(dialer))
 	if err != nil {
-		log.Fatalf("did not connect. attestation-container needs to be run before run this test: %v", err)
+		t.Fatalf("did not connect. attestation-container needs to be run before run this test: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewAttestationContainerClient(conn)
@@ -66,27 +65,27 @@ func TestFetchReport(t *testing.T) {
 	publicKey := []byte("public-key-contents")
 	r, err := c.FetchAttestation(ctx, &pb.FetchAttestationRequest{ReportData: publicKey})
 	if err != nil {
-		log.Fatalf("could not get attestation. attestation-container needs to be run before run this test: %v", err)
+		t.Fatalf("could not get attestation. attestation-container needs to be run before run this test: %v", err)
 	}
 	// Verify attestation
 	attestation := r.GetAttestation()
 	if len(attestation) == 0 {
-		log.Fatalf("attestation is empty")
+		t.Fatalf("attestation is empty")
 	}
 
 	// Verify platform certificates
 	platformCertificates := r.GetPlatformCertificates()
 	if len(platformCertificates) == 0 {
-		log.Fatalf("platformCertificates is empty")
+		t.Fatalf("platformCertificates is empty")
 	}
 	chainLen := len(splitPemChain(platformCertificates))
 	if chainLen != 3 {
 		// Expecting VCEK, ASK and ARK
-		log.Fatalf("platformCertificates does not contain 3 certificates, found %d", chainLen)
+		t.Fatalf("platformCertificates does not contain 3 certificates, found %d", chainLen)
 	}
 
 	if len(r.GetUvmEndorsements()) == 0 {
-		log.Fatalf("UVM endorsement is empty")
+		t.Fatalf("UVM endorsement is empty")
 	}
 }
 
@@ -98,7 +97,7 @@ func TestInputError(t *testing.T) {
 	}
 	conn, err := grpc.Dial(*addr, grpc.WithInsecure(), grpc.WithDialer(dialer))
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		t.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewAttestationContainerClient(conn)
@@ -108,6 +107,6 @@ func TestInputError(t *testing.T) {
 	defer cancel()
 	publicKey := []byte("too long (longer than 64 bytes in utf-8) ------------------------")
 	if _, err := c.FetchAttestation(ctx, &pb.FetchAttestationRequest{ReportData: publicKey}); err == nil {
-		log.Fatalf("server should return input error for too large input")
+		t.Fatalf("server should return input error for too large input")
 	}
 }
