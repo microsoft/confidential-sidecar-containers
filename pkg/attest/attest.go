@@ -82,6 +82,8 @@ func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
 // (E) runtime data: for example it may be a wrapping key blob that has been hashed during the attestation report
 //
 //	retrieval and has been reported by the PSP in the attestation report as REPORT DATA
+//
+// Note that it uses fake attestation report if it's not running inside SNP VM
 func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) (string, error) {
 	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedSecurityPolicy)
 	if err != nil {
