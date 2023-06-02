@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
@@ -89,7 +90,16 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
 
 	// Fetch the attestation report
-	reportFetcher := NewAttestationReportFetcher()
+
+	var reportFetcher AttestationReportFetcher
+	// Use fake attestation report if it's not running inside SNP VM
+	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
+		hostData := GenerateMAAHostData(inittimeDataBytes)
+		reportFetcher = UnsafeNewFakeAttestationReportFetcher(hostData)
+	} else {
+		reportFetcher = NewAttestationReportFetcher()
+	}
+
 	reportData := GenerateMAAReportData(runtimeDataBytes)
 	SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
