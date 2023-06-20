@@ -146,8 +146,8 @@ func DefaultAzureCertFetcherNew() CertFetcher {
 }
 
 const (
-	defaultRetryBaseSec    = 2
-	defaultRetryMaxRetries = 5
+	defaultRetryBaseSec    = 10
+	defaultRetryMaxRetries = 2
 )
 
 func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, error) {
