@@ -27,7 +27,7 @@ jobs:
   push-encfs-image:
     name: Push Encrypted FS Image
     runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
