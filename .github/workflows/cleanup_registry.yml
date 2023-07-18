@@ -1,0 +1,42 @@
+name: Cleanup Registry
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  cleanup_registry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        
+      - name: Log in to Azure Container Registry
+        run: |
+          az acr login \
+            --name ${{ secrets.REGISTRY_NAME }} \
+            --username ${{ secrets.REGISTRY_NAME }} \
+            --password ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Cleanup Registry
+        env:
+          REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: |
+          repos=("skr" "skr_debug" "encfs")
+          branches=$(git ls-remote --heads origin)
+          
+          # Delete any tags which don't have a corresponding branch
+          for repo in "${repos[@]}"; do
+            tags=$(az acr repository show-tags --name $REGISTRY_NAME -u $REGISTRY_NAME -p $REGISTRY_PASSWORD --repository $repo | jq -r '.[]')
+            for tag in $tags; do
+              echo "Checking $repo:$tag"
+              if [[ $branches =~ $tag ]]; then
+                echo "Branch $tag still exists"
+              else
+                echo "Branch $tag no longer exists, deleting tag"
+                az acr repository delete --name $REGISTRY_NAME -u $REGISTRY_NAME -p $REGISTRY_PASSWORD --image $repo:$tag --yes
+              fi
+            done
+          done
