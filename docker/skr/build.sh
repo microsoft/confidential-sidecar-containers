@@ -4,7 +4,6 @@
 # Licensed under the MIT License.
 
 set -e
-pushd $(dirname $0)
 
 # This script builds the binaries and sets up the docker image
 
@@ -24,4 +23,3 @@ docker build --tag skr -f Dockerfile.skr .
 
 # cleanup
 rm -rf bin
-popd
