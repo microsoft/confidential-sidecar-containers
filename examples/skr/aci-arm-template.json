@@ -48,7 +48,7 @@
             "name": "test-skr-client-container",
             "properties": {
               "command": [
-                "/tests/skr_client.sh"
+                "/tests/skr/skr_client.sh"
               ],
               "environmentVariables": [
                 {
@@ -77,7 +77,7 @@
             "name": "test-attest-client-container",
             "properties": {
               "command": [
-                "/tests/attest_client.sh"
+                "/tests/skr/attest_client.sh"
               ],
               "environmentVariables": [
                 {
@@ -98,7 +98,7 @@
             "name": "test-attest-maa-client-container",
             "properties": {
               "command": [
-                "/tests/attest_client.sh"
+                "/tests/skr/attest_client.sh"
               ],
               "environmentVariables": [
                 {

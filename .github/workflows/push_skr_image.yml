@@ -1,0 +1,55 @@
+name: Push SKR Image
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/push_skr_image.yml
+      - cmd/skr/**
+      - docker/skr/**
+      - tools/get-snp-report/bin/get-snp-report
+      - tools/get-snp-report/bin/get-fake-snp-report
+
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/push_skr_image.yml
+      - cmd/skr/**
+      - docker/skr/**
+      - tools/get-snp-report/bin/get-snp-report
+      - tools/get-snp-report/bin/get-fake-snp-report
+
+jobs:
+  push-skr-image:
+    name: Push SKR Image
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Log in to Azure Container Registry
+        run: |
+          az acr login \
+            --name ${{ secrets.REGISTRY_NAME }} \
+            --username ${{ secrets.REGISTRY_NAME }} \
+            --password ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build Image
+        run: docker/skr/build.sh
+
+      - name: Push Image
+        run: |
+          if [ ${{ github.event_name }} == "push" ]; then
+            branch_name=main
+          else  
+            branch_name=$(echo ${{ github.head_ref }})
+          fi
+          docker/skr/push.sh \
+            ${{ secrets.REGISTRY_NAME }} \
+            ${{ secrets.REGISTRY_DOMAIN }} \
+            skr:$branch_name \
+            --skip-login
