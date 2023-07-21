@@ -20,7 +20,6 @@ RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/app ./cmd/attestation-container/
 
 FROM builder-app AS builder-test
 WORKDIR /usr/src/app
-## Pre-compile tests to avoid I/O errors in ACI
 RUN pushd cmd/attestation-container && CGO_ENABLED=0 go test -c && popd && pushd pkg/attest && CGO_ENABLED=0 go test -c && popd && pushd pkg/common && CGO_ENABLED=0 go test -c
 
 # Run
