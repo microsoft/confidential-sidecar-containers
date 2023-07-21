@@ -42,7 +42,7 @@ go build
 
 The gPRC API is defined in [attestation-container.proto](https://github.com/microsoft/confidential-sidecar-containers/tree/main/cmd/attestation-container/protobuf/attestation-container.proto).
 
-Note that gPRC communication is used over [Unix domain sockets (UDS)](https://en.wikipedia.org/wiki/Unix_domain_socket). You can find an example client code in [the E2E test](https://github.com/microsoft/confidential-sidecar-containers/tree/main/cmd/attestation-container/attestation-container_test.go).
+Note that gPRC communication is used over [Unix domain sockets (UDS)](https://en.wikipedia.org/wiki/Unix_domain_socket) in order to make sure only processes on the same UVM can get an attestation report. You can find an example client code in [the E2E test](https://github.com/microsoft/confidential-sidecar-containers/tree/main/cmd/attestation-container/attestation-container_test.go).
 
 ## Test
 
