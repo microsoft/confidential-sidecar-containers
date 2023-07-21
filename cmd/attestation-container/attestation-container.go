@@ -29,6 +29,12 @@ var (
 
 	platformCertificateValue *common.THIMCerts = nil
 	// UVM Endorsement (UVM reference info)
+	// This is a base64 encoded COSE_Sign1 envelope whose issuer and feed should match Confidential ACIs signing identity
+	// The payload is a json file containing two fields:
+	// - x-ms-sevsnpvm-guestsvn
+	//   This is a version number of the Utility VM that the container is running on.
+	// - x-ms-sevsnpvm-measurement
+	//   This is the SHA256 hash of the Utility VM's measurement. It should match the MEASUREMENT field in the attestation report
 	uvmEndorsementValue []byte = nil
 )
 
