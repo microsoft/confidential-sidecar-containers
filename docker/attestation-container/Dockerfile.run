@@ -1,6 +1,5 @@
 FROM mcr.microsoft.com/oss/go/microsoft/golang:1.19-fips-cbl-mariner2.0 
 WORKDIR /usr/src/app
-COPY ./go.mod ./pkg/attest ./pkg/common ./cmd/attestation-container .
-RUN go mod download && go mod verify
+COPY . .
 RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/app ./cmd/attestation-container/
 CMD ["app"]
