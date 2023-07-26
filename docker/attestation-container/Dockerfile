@@ -23,7 +23,7 @@ WORKDIR /usr/src/app
 RUN pushd cmd/attestation-container && CGO_ENABLED=0 go test -c && popd && pushd pkg/attest && CGO_ENABLED=0 go test -c && popd && pushd pkg/common && CGO_ENABLED=0 go test -c
 
 # Run
-FROM mcr.microsoft.com/devcontainers/universal:linux AS app-run
+FROM mcr.microsoft.com/cbl-mariner/distroless/minimal:2.0 AS app-run
 COPY --from=builder-app /usr/local/bin/app /usr/local/bin/app
 
 FROM app-run AS app-dev
