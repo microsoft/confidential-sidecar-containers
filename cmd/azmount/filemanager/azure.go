@@ -30,7 +30,7 @@ func tokenRefresher(credential azblob.TokenCredential) (t time.Duration) {
 	// JWT tokens comprise three fields. the second field is the payload (or claims).
 	// we care about the `aud` attribute of the payload
 	curentTokenFields := strings.Split(currentToken, ".")
-	payload, _ := base64.StdEncoding.DecodeString(curentTokenFields[1])
+	payload, _ := base64.RawURLEncoding.DecodeString(curentTokenFields[1])
 	var payloadMap map[string]interface{}
 	json.Unmarshal([]byte(payload), &payloadMap)
 	audience := payloadMap["aud"].(string)
