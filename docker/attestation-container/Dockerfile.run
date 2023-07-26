@@ -1,0 +1,3 @@
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.19-fips-cbl-mariner2.0 AS builder-app
+RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/app ./cmd/attestation-container/
+CMD ["app"]
