@@ -1,0 +1,192 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "containerGroupName": {
+            "type": "string",
+            "defaultValue": "aciEncfsSidecarTestWrite",
+            "metadata": {
+                "description": "Encrypted filesystem sidecar example"
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[parameters('containerGroupName')]",
+            "type": "Microsoft.ContainerInstance/containerGroups",
+            "apiVersion": "2023-05-01",
+            "location": "[resourceGroup().location]",
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "<managed-identity-with-right-permissions-to-key-vault>": {}
+                }
+            },
+            "properties": {
+                "containers": [
+                    {
+                        "name": "encrypted-filesystem-sidecar-container",
+                        "properties": {
+                            "command": [
+                                "/encfs.sh"
+                            ],
+                            "environmentVariables": [
+                                {
+                                    "name": "EncfsSideCarArgs",
+                                    "value": "<base64-std-encodes-string-of-sidecar-args>"
+                                }
+                            ],
+                            "image": "mcr.microsoft.com/aci/encfs:2.2",
+                            "securityContext": {
+                                "privileged": true,
+                                "allowPrivilegeEscalation": true
+                            },
+                            "resources": {
+                                "requests": {
+                                    "cpu": 1,
+                                    "memoryInGb": 2
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "name": "remotemounts",
+                                    "mountPath": "/mnt/remote"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "test-encfs-container-write",
+                        "properties": {
+                            "command": [
+                                "/bin/sh",
+                                "-c",
+                                "COUNTER=0; while true; do echo Counter is $COUNTER > /mnt/remote/share/test_write.txt; let COUNTER++; sleep 1; done"
+                            ],
+                            "image": "docker.io/alpine:3.17.1",
+                            "resources": {
+                                "requests": {
+                                    "cpu": 0.5,
+                                    "memoryInGb": 1
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "name": "remotemounts",
+                                    "mountPath": "/mnt/remote"
+                                }
+                            ],
+                            "ports": [
+                                {
+                                    "port": 8000
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "test-encfs-container-write2",
+                        "properties": {
+                            "command": [
+                                "/bin/sh",
+                                "-c",
+                                "COUNTER2=0; while true; do echo Counter2 is $COUNTER2 > /mnt/remote/share/test_write.txt; let COUNTER2++; sleep 1; done"
+                            ],
+                            "image": "docker.io/alpine:3.17.1",
+                            "resources": {
+                                "requests": {
+                                    "cpu": 0.5,
+                                    "memoryInGb": 1
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "name": "remotemounts",
+                                    "mountPath": "/mnt/remote"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "test-encfs-container-write3",
+                        "properties": {
+                            "command": [
+                                "/bin/sh",
+                                "-c",
+                                "COUNTER3=0; while true; do echo Counter3 is $COUNTER3 >> /mnt/remote/share/test_write2.txt; let COUNTER3++; sleep 1; done"
+                            ],
+                            "image": "docker.io/alpine:3.17.1",
+                            "resources": {
+                                "requests": {
+                                    "cpu": 0.5,
+                                    "memoryInGb": 1
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "name": "remotemounts",
+                                    "mountPath": "/mnt/remote"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "test-encfs-container-read",
+                        "properties": {
+                            "command": [
+                                "/bin/sh",
+                                "-c",
+                                "while true; do cat /mnt/remote/share/test_write.txt | /usr/bin/head -n 20; sleep 1; done"
+                            ],
+                            "image": "docker.io/alpine:3.17.1",
+                            "resources": {
+                                "requests": {
+                                    "cpu": 0.5,
+                                    "memoryInGb": 1
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "name": "remotemounts",
+                                    "mountPath": "/mnt/remote"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "imageRegistryCredentials": [
+                    {
+                        "server": "<registry-name>",
+                        "username": "",
+                        "password": ""
+                    }
+                ],
+                "osType": "Linux",
+                "ipAddress": {
+                    "type": "Public",
+                    "ports": [
+                        {
+                            "protocol": "tcp",
+                            "port": 8000
+                        }
+                    ]
+                },
+                "sku": "confidential",
+                "confidentialComputeProperties": {
+                    "ccePolicy": "<base64-std-encoded-string-of-security-policy>"
+                },
+                "volumes": [
+                    {
+                        "name": "remotemounts",
+                        "emptyDir": {}
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "containerIPv4Address": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups/', parameters('containerGroupName'))).ipAddress.ip]"
+        }
+    }
+}
