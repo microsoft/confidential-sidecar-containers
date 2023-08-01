@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+	"strings"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -36,11 +37,14 @@ var (
 	_azmountRun                    = azmountRun
 	_containerMountAzureFilesystem = containerMountAzureFilesystem
 	_cryptsetupOpen                = cryptsetupOpen
+	_veritysetupFormat             = veritysetupFormat
+	_veritysetupOpen               = veritysetupOpen
 	ioutilWriteFile                = ioutil.WriteFile
 	osGetenv                       = os.Getenv
 	osMkdirAll                     = os.MkdirAll
 	osRemoveAll                    = os.RemoveAll
 	osStat                         = os.Stat
+	osCreate                       = os.Create
 	timeSleep                      = time.Sleep
 	unixMount                      = unix.Mount
 )
@@ -55,6 +59,12 @@ var (
 	// disabled.
 	allowTestingWithRawKey = false
 )
+
+// Constant
+// offset of "Roothash:"
+const ROOTHASH_OFFSET int = 9
+// length of roothash
+const ROOTHASH_LENGTH int = 64
 
 // azmountRun starts azmount with the specified arguments, and leaves it running
 // in the background.
@@ -102,6 +112,71 @@ func cryptsetupOpen(source string, deviceName string, keyFilePath string) error 
 		"--persistent"}
 
 	return cryptsetupCommand(openArgs)
+}
+
+// veritysetupCommand runs veritysetup with the provided arguments
+func veritysetupCommand(args []string) (string, error) {
+	cmd := exec.Command("veritysetup", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to execute veritysetup: %s", string(output))
+	}
+	return string(output), nil
+}
+
+// veritysetupOpen runs "veritysetup open" with right arguments
+func veritysetupOpen(dataDevicePath string, dmVerityName string, hashDevicePath string, rootHash string) (string, error) {
+	openArgs := []string{
+		"open", dataDevicePath, dmVerityName, hashDevicePath, rootHash}
+	return veritysetupCommand(openArgs)
+}
+
+// veritysetupFormat runs "veritysetup format" with right arguments
+func veritysetupFormat(dataDevicePath string, hashDevicePath string) (string, error) {
+	openArgs := []string{
+		"format", dataDevicePath, hashDevicePath}
+	return veritysetupCommand(openArgs)
+}
+
+// extract root hash from the veritysetup output
+func getRootHash(formatOutput string) (string, error) {
+	if len(formatOutput) < ROOTHASH_OFFSET + ROOTHASH_LENGTH {
+		return "", errors.New("Index Out of Bound")
+	}
+	// remove space and escape sequences
+	replacer := strings.NewReplacer(" ","", "\n", "", "\t", "")
+	replacedString := replacer.Replace(formatOutput)
+	index := strings.Index(replacedString,"Roothash:")
+	if index < 0 {
+		return "", errors.New("Incorrect Format Output")
+	}
+	rootHash := replacedString[index+ROOTHASH_OFFSET : index+ROOTHASH_OFFSET+ROOTHASH_LENGTH]
+	return rootHash, nil
+}
+
+// store root hash for future verification
+func storeRootHash(rootHash string, mountPoint string, index int) error {
+	rootHashPath, err := filepath.Abs(filepath.Join(mountPoint, fmt.Sprintf("../.dm-verity-root-hash-%d", index)))
+	if err != nil {
+		return errors.Wrapf(err, "failed to resolve absolute path of root hash file")
+	}
+	rootHashFile, err := osCreate(rootHashPath)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create root hash file")
+	}
+	defer func(){
+		err := rootHashFile.Close()
+		if err != nil {
+			logrus.WithError(err).Debugf("failed to close root hash file: %s", rootHashPath)
+		} else {
+			logrus.Debugf("Close root hash file: %s", rootHashPath)
+		}
+	}()
+	_, err = rootHashFile.WriteString(rootHash)
+	if err != nil {
+		return errors.Wrapf(err, "failed to write root hash")
+	}
+	return nil
 }
 
 func mountAzureFile(tempDir string, index int, azureImageUrl string, azureImageUrlPrivate bool, cacheBlockSize string, numBlocks string) (string, error) {
@@ -273,9 +348,11 @@ func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob skr.KeyDerivat
 //  3. Open encrypted filesystem with cryptsetup. The result is a block device in
 //     “/dev/mapper/remote-crypt-[filesystem-index]“.
 //
-// 4) Mount block device as a read-only filesystem.
+//  4. Config dm-verity on /dev/mapper/remote-crypt-[filesystem-index]
 //
-//  5. Create a symlink to the filesystem in the path shared between the UVM and
+//  5. Mount block device as a read-only filesystem.
+//
+//  6. Create a symlink to the filesystem in the path shared between the UVM and
 //     the container.
 func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem) (err error) {
 
@@ -324,7 +401,37 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 	}
 	logrus.Debugf("Device opened: %s", deviceName)
 
-	// 4) Mount block device as a read-only filesystem.
+	// 4) Config the decrypted filesystem in dm-verity format
+	hashDeviceName := fmt.Sprintf("hash-device-%d", index)
+	hashDevicePath := "/dev/mapper/" + hashDeviceName
+	verityDeviceName := fmt.Sprintf("remote-verity-%d", index)
+	verityDevicePath := "/dev/mapper/" + verityDeviceName
+	// format dm-verity
+	formatOutput, err := veritysetupFormat(deviceNamePath, hashDevicePath)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to Format dm-verity Device")
+	}
+	logrus.Debugf("veritysetup format output message: %s", formatOutput)
+	// get root hash
+	rootHash, err := getRootHash(string(formatOutput))
+	if err != nil {
+		return errors.Wrapf(err, "Wrong dm-verity format output")
+	}
+	logrus.Debugf("dm-verity root hash: %s", rootHash)
+	// open dm-verity device
+	openOutput, err := veritysetupOpen(deviceNamePath, verityDeviceName, hashDevicePath, rootHash)
+	if err != nil {
+		return errors.Wrapf(err, "Fail to open dm-verity device")
+	}
+	logrus.Debugf("veritysetup open output message: %s", openOutput)
+	logrus.Debugf("Successfully format and open dm-verity device")
+	// store root hash for future verification
+	err = storeRootHash(rootHash, fs.MountPoint, index)
+	if err != nil {
+		return errors.Wrapf(err, "Failed to store root hash as a file")
+	}
+
+	// 5) Mount dm-verity block device as a read-only filesystem.
 	tempMountFolder, err := filepath.Abs(filepath.Join(fs.MountPoint, fmt.Sprintf("../.filesystem-%d", index)))
 	if err != nil {
 		return errors.Wrapf(err, "failed to resolve absolute path")
@@ -339,11 +446,11 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 		return errors.Wrapf(err, "mkdir failed: %s", tempMountFolder)
 	}
 
-	if err := unixMount(deviceNamePath, tempMountFolder, "ext4", flags, data); err != nil {
-		return errors.Wrapf(err, "failed to mount filesystem: %s", deviceNamePath)
+	if err := unixMount(verityDevicePath, tempMountFolder, "ext4", flags, data); err != nil {
+		return errors.Wrapf(err, "failed to mount filesystem: %s", verityDevicePath)
 	}
 
-	// 5) Create a symlink to the folder where the filesystem is mounted.
+	// 6) Create a symlink to the folder where the filesystem is mounted.
 	destPath := fs.MountPoint
 	logrus.Debugf("Linking to: %s", destPath)
 
