@@ -38,8 +38,7 @@
               ],
               "image": "mcr.microsoft.com/aci/encfs:2.2",
               "securityContext": {
-                "privileged": true,
-                "allowPrivilegeEscalation": true  
+                "privileged": true
               },
               "resources": {
                 "requests": {
