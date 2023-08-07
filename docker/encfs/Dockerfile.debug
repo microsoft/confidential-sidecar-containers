@@ -1,8 +1,0 @@
-FROM alpine:3.17.1
-
-RUN apk update && apk add cryptsetup fuse curl
-
-COPY ./bin/azmount ./bin/remotefs ./bin/get-snp-report /bin/
-COPY encfs-debug.sh /
-
-RUN chmod +x /*.sh; date > /made-date
