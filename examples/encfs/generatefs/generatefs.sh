@@ -25,7 +25,6 @@ truncate -s 32 "$keyFilePath"
 echo "[!] Creating encrypted image..."
 
 rm -f "$encryptedImage"
-touch "$encryptedImage"
 truncate --size 64M "$encryptedImage"
 
 sudo cryptsetup luksFormat --type luks2 "$encryptedImage" \

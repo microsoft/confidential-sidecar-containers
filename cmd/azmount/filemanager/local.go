@@ -4,13 +4,20 @@
 package filemanager
 
 import (
+	"io"
 	"os"
 
 	"github.com/pkg/errors"
 )
 
-func LocalSetup(filePath string) error {
-	file, err := os.OpenFile(filePath, os.O_RDONLY, 0)
+func LocalSetup(filePath string, readWrite bool) error {
+	var file *os.File
+	var err error
+	if readWrite {
+		file, err = os.OpenFile(filePath, os.O_RDWR, 0)
+	} else {
+		file, err = os.OpenFile(filePath, os.O_RDONLY, 0)
+	}
 	if err != nil {
 		return errors.Wrapf(err, "failed to open file: %s", filePath)
 	}
@@ -29,6 +36,9 @@ func LocalSetup(filePath string) error {
 	// Setup data downloader
 	fm.downloadBlock = LocalDownloadBlock
 
+	// Setup data uploader
+	fm.uploadBlock = LocalUploadBlock
+
 	return nil
 }
 
@@ -44,7 +54,7 @@ func LocalDownloadBlock(blockIndex int64) (err error, b []byte) {
 	}
 	defer file.Close()
 
-	_, err = file.Seek(offset, os.SEEK_SET)
+	_, err = file.Seek(offset, io.SeekStart)
 	if err != nil {
 		var empty []byte
 		return errors.Wrapf(err, "failed to seek file: %s", fm.filePath), empty
@@ -57,5 +67,28 @@ func LocalDownloadBlock(blockIndex int64) (err error, b []byte) {
 		return errors.Wrapf(err, "failed to read source file"), empty
 	}
 
-	return nil, data
+	return err, data
+}
+
+func LocalUploadBlock(blockIndex int64, data []byte) error {
+	bytesInBlock := GetBlockSize()
+	var offset int64 = blockIndex * bytesInBlock
+
+	file, err := os.OpenFile(fm.filePath, os.O_RDWR, 0)
+	if err != nil {
+		return errors.Wrapf(err, "failed to open file: %s", fm.filePath)
+	}
+	defer file.Close()
+
+	_, err = file.Seek(offset, io.SeekStart)
+	if err != nil {
+		return errors.Wrapf(err, "failed to seek file: %s", fm.filePath)
+	}
+
+	_, err = file.Write(data)
+	if err != nil {
+		return errors.Wrapf(err, "failed to write to file")
+	}
+
+	return nil
 }

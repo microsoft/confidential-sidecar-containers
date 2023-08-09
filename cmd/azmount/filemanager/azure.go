@@ -30,9 +30,21 @@ func tokenRefresher(credential azblob.TokenCredential) (t time.Duration) {
 	// JWT tokens comprise three fields. the second field is the payload (or claims).
 	// we care about the `aud` attribute of the payload
 	curentTokenFields := strings.Split(currentToken, ".")
-	payload, _ := base64.RawURLEncoding.DecodeString(curentTokenFields[1])
+	logrus.Infof("current token fields: %v", curentTokenFields)
+
+	payload, err := base64.RawURLEncoding.DecodeString(curentTokenFields[1])
+	if err != nil {
+		logrus.Errorf("Error decoding base64 token payload: %v", err)
+		return 0
+	}
+	logrus.Infof("current token payload: %v", string(payload))
+
 	var payloadMap map[string]interface{}
-	json.Unmarshal([]byte(payload), &payloadMap)
+	err = json.Unmarshal([]byte(payload), &payloadMap)
+	if err != nil {
+		logrus.Errorf("Error unmarshalling token payload: %v", err)
+		return 0
+	}
 	audience := payloadMap["aud"].(string)
 
 	identity := common.Identity{
@@ -43,11 +55,15 @@ func tokenRefresher(credential azblob.TokenCredential) (t time.Duration) {
 	refreshToken, err := common.GetToken(audience, identity)
 
 	if err != nil {
+		logrus.Errorf("Error retrieving token: %v", err)
 		return 0
 	}
+	logrus.Infof("Retrieved new token: %v", refreshToken.AccessToken)
+
 	// Duration expects nanosecond count
 	ExpiresInSeconds, err := strconv.ParseInt(refreshToken.ExpiresIn, 10, 64)
 	if err != nil {
+		logrus.Errorf("Error parsing token expiration: %v", err)
 		return 0
 	}
 	credential.SetToken(refreshToken.AccessToken)
@@ -97,13 +113,17 @@ func AzureSetup(urlString string, urlPrivate bool, identity common.Identity) err
 		}
 
 		tokenCredential := azblob.NewTokenCredential(token.AccessToken, tokenRefresher)
+		logrus.Infof("token credential created: %s", tokenCredential.Token())
 		fm.blobURL = azblob.NewPageBlobURL(*u, azblob.NewPipeline(tokenCredential, azblob.PipelineOptions{}))
+		logrus.Infof("blob url created: %s", fm.blobURL)
 	} else {
 		// we can use anonymous credentials to access public azure blob storage
 		logrus.Infof("Using anonymous credentials")
 
 		anonCredential := azblob.NewAnonymousCredential()
+		logrus.Infof("anonymous credential created: %s", anonCredential)
 		fm.blobURL = azblob.NewPageBlobURL(*u, azblob.NewPipeline(anonCredential, azblob.PipelineOptions{}))
+		logrus.Infof("blob url created: %s", fm.blobURL)
 	}
 
 	// Use a never-expiring context
@@ -114,13 +134,28 @@ func AzureSetup(urlString string, urlPrivate bool, identity common.Identity) err
 	getMetadata, err := fm.blobURL.GetProperties(fm.ctx, azblob.BlobAccessConditions{},
 		azblob.ClientProvidedKeyOptions{})
 	if err != nil {
-		return errors.Wrapf(err, "can't get size")
+		return errors.Wrapf(err, "can't get blob file size")
 	}
 	fm.contentLength = getMetadata.ContentLength()
 	logrus.Infof("Size: %d bytes", fm.contentLength)
 
-	// Setup data downloader
+	// Setup data downloader and uploader
 	fm.downloadBlock = AzureDownloadBlock
+	fm.uploadBlock = AzureUploadBlock
+
+	return nil
+}
+
+func AzureUploadBlock(blockIndex int64, b []byte) (err error) {
+	bytesInBlock := GetBlockSize()
+	var offset int64 = blockIndex * bytesInBlock
+
+	r := bytes.NewReader(b)
+	_, err = fm.blobURL.UploadPages(fm.ctx, offset, r, azblob.PageBlobAccessConditions{},
+		nil, azblob.NewClientProvidedKeyOptions(nil, nil, nil))
+	if err != nil {
+		return errors.Wrapf(err, "can't upload block")
+	}
 
 	return nil
 }
