@@ -84,7 +84,7 @@ func cryptsetupCommand(args []string) error {
 	// --debug and -v are used to increase the information printed by
 	// cryptsetup. By default, it doesn't print much information, which makes it
 	// hard to debug it when there are problems.
-	cmd := exec.Command("sudo cryptsetup", append([]string{"--debug", "-v"}, args...)...)
+	cmd := exec.Command("cryptsetup", append([]string{"--debug", "-v"}, args...)...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "failed to execute cryptsetup: %s", string(output))
@@ -283,13 +283,14 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 	numBlocks := "32"
 
 	// 1) Mount remote image
+	logrus.Debugf("Mounting remote image %s", fs.AzureUrl)
 	imageLocalFile, err := mountAzureFile(tempDir, index, fs.AzureUrl, fs.AzureUrlPrivate, cacheBlockSize, numBlocks, fs.ReadWrite)
 	if err != nil {
 		return errors.Wrapf(err, "failed to mount remote file: %s", fs.AzureUrl)
 	}
 
 	// 2) Obtain keyfile
-
+	logrus.Debugf("Obtaining keyfile...")
 	var keyFilePath string
 	if fs.KeyBlob.KID != "" {
 		keyFilePath, err = releaseRemoteFilesystemKey(tempDir, fs.KeyDerivationBlob, fs.KeyBlob)
@@ -318,6 +319,7 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 	var deviceName = fmt.Sprintf("remote-crypt-%d", index)
 	var deviceNamePath = "/dev/mapper/" + deviceName
 
+	logrus.Debugf("Opening device at: %s", deviceNamePath)
 	err = _cryptsetupOpen(imageLocalFile, deviceName, keyFilePath)
 	if err != nil {
 		return errors.Wrapf(err, "luksOpen failed: %s", deviceName)
@@ -339,10 +341,12 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 		data = "noload"
 	}
 
+	logrus.Debugf("Creating mount folder: %s", tempMountFolder)
 	if err := osMkdirAll(tempMountFolder, 0755); err != nil {
 		return errors.Wrapf(err, "mkdir failed: %s", tempMountFolder)
 	}
 
+	logrus.Debugf("Mounting filesystem to mount folder")
 	if err := unixMount(deviceNamePath, tempMountFolder, "ext4", flags, data); err != nil {
 		return errors.Wrapf(err, "failed to mount filesystem: %s", deviceNamePath)
 	}
