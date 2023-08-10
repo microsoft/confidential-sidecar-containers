@@ -4,11 +4,9 @@
 package attest
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
-
-	"io/ioutil"
 	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -23,36 +21,6 @@ type CertState struct {
 	Tcbm        uint64      `json:"tcbm"`
 }
 
-func GetSNPReport(securityPolicy string, runtimeDataBytes []byte) ([]byte, []byte, error) {
-	// check if sev device exists on the platform; if not fetch fake snp report
-	fetchRealSNPReport := true
-	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
-		// dev/sev doesn't exist, check dev/sev-guest
-		if _, err := os.Stat("/dev/sev-guest"); errors.Is(err, os.ErrNotExist) {
-			// dev/sev-guest doesn't exist
-			fetchRealSNPReport = false
-		}
-	}
-
-	inittimeDataBytes, err := base64.StdEncoding.DecodeString(securityPolicy)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "decoding policy from Base64 format failed")
-	}
-	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
-
-	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, inittimeDataBytes)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "fetching snp report failed")
-	}
-
-	if common.GenerateTestData {
-		ioutil.WriteFile("snp_report.bin", SNPReportBytes, 0644)
-	}
-
-	logrus.Debugf("   SNPReportBytes:    %v", SNPReportBytes)
-	return SNPReportBytes, inittimeDataBytes, nil
-}
-
 func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]byte, error) {
 	// TCB values not the same, try refreshing cert first
 	vcekCertChain, thimTcbm, err := certState.CertFetcher.GetCertChain(SNPReport.ChipID, SNPReport.ReportedTCB)
@@ -63,26 +31,43 @@ func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]
 	return vcekCertChain, nil
 }
 
-// RawAttest returns the raw attestation report in hex string format
-func RawAttest(inittimeDataBytes []byte, runtimeDataBytes []byte) (string, error) {
-	// check if sev device exists on the platform; if not fetch fake snp report
-	fetchRealSNPReport := true
-	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
-		// dev/sev doesn't exist, check dev/sev-guest
-		if _, err := os.Stat("/dev/sev-guest"); errors.Is(err, os.ErrNotExist) {
-			// dev/sev-guest doesn't exist
-			fetchRealSNPReport = false
-		}
+// Takes bytes and generate report data that MAA expects (SHA256 hash of arbitrary data).
+func GenerateMAAReportData(inputBytes []byte) [REPORT_DATA_SIZE]byte {
+	runtimeData := sha256.New()
+	if inputBytes != nil {
+		runtimeData.Write(inputBytes)
 	}
-
-	SNPReportBytes, err := FetchSNPReport(fetchRealSNPReport, runtimeDataBytes, inittimeDataBytes)
-	if err != nil {
-		return "", errors.Wrapf(err, "fetching snp report failed")
+	reportData := [REPORT_DATA_SIZE]byte{}
+	runtimeDataBytes := runtimeData.Sum(nil)
+	const sha256len = 32
+	if len(runtimeDataBytes) != sha256len {
+		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(runtimeDataBytes)))
 	}
+	if sha256len > REPORT_DATA_SIZE {
+		panic(fmt.Errorf("Generated hash is too large for report data. hash length: %d bytes, report data size: %d", sha256len, REPORT_DATA_SIZE))
+	}
+	copy(reportData[:sha256len], runtimeDataBytes)
+	return reportData
+}
 
-	logrus.Debugf("   SNPReportBytes:    %v", SNPReportBytes)
-
-	return hex.EncodeToString(SNPReportBytes), nil
+// Takes bytes and generate host data that UVM creates at launch of SNP VM (SHA256 hash of arbitrary data).
+// It's only useful to create fake attestation report
+func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
+	inittimeData := sha256.New()
+	if inputBytes != nil {
+		inittimeData.Write(inputBytes)
+	}
+	hostData := [HOST_DATA_SIZE]byte{}
+	inittimeDataBytes := inittimeData.Sum(nil)
+	const sha256len = 32
+	if len(inittimeDataBytes) != sha256len {
+		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(inittimeDataBytes)))
+	}
+	if sha256len > HOST_DATA_SIZE {
+		panic(fmt.Errorf("Generated hash is too large for host data. hash length: %d bytes, report host size: %d", sha256len, REPORT_DATA_SIZE))
+	}
+	copy(hostData[:], inittimeDataBytes)
+	return hostData
 }
 
 // Attest interacts with maa services to fetch an MAA token
@@ -97,9 +82,28 @@ func RawAttest(inittimeDataBytes []byte, runtimeDataBytes []byte) (string, error
 // (E) runtime data: for example it may be a wrapping key blob that has been hashed during the attestation report
 //
 //	retrieval and has been reported by the PSP in the attestation report as REPORT DATA
+//
+// Note that it uses fake attestation report if it's not running inside SNP VM
 func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) (string, error) {
+	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedSecurityPolicy)
+	if err != nil {
+		return "", errors.Wrap(err, "decoding policy from Base64 format failed")
+	}
+	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
+
 	// Fetch the attestation report
-	SNPReportBytes, inittimeDataBytes, err := GetSNPReport(uvmInformation.EncodedSecurityPolicy, runtimeDataBytes)
+
+	var reportFetcher AttestationReportFetcher
+	// Use fake attestation report if it's not running inside SNP VM
+	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
+		hostData := GenerateMAAHostData(inittimeDataBytes)
+		reportFetcher = UnsafeNewFakeAttestationReportFetcher(hostData)
+	} else {
+		reportFetcher = NewAttestationReportFetcher()
+	}
+
+	reportData := GenerateMAAReportData(runtimeDataBytes)
+	SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to retrieve attestation report")
 	}
@@ -125,7 +129,7 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 
 		if SNPReport.ReportedTCB != certState.Tcbm {
 			// TCB values still don't match, try retrieving the SNP report again
-			SNPReportBytes, inittimeDataBytes, err = GetSNPReport(uvmInformation.EncodedSecurityPolicy, runtimeDataBytes)
+			SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 			if err != nil {
 				return "", errors.Wrapf(err, "failed to retrieve new attestation report")
 			}
