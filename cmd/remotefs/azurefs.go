@@ -84,8 +84,10 @@ func cryptsetupCommand(args []string) error {
 	// --debug and -v are used to increase the information printed by
 	// cryptsetup. By default, it doesn't print much information, which makes it
 	// hard to debug it when there are problems.
+	logrus.Debugf("Executing cryptsetup with args: %s", append([]string{"--debug", "-v"}, args...)
 	cmd := exec.Command("cryptsetup", append([]string{"--debug", "-v"}, args...)...)
 	output, err := cmd.CombinedOutput()
+	logrus.Debugf("cryptsetup output: %s", string(output))
 	if err != nil {
 		return errors.Wrapf(err, "failed to execute cryptsetup: %s", string(output))
 	}
