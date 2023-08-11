@@ -150,8 +150,26 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 			}
 		}
 	} else {
-		certString := uvmInformation.InitialCerts.VcekCert + uvmInformation.InitialCerts.CertificateChain
-		vcekCertChain = []byte(certString)
+		//In case the initialCerts are not properly configured, we should fall back on fetching the vcekCert remotely
+		if uvmInformation.InitialCerts.VcekCert == "" || uvmInformation.InitialCerts.CertificateChain == "" {
+			SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
+			if err != nil {
+				return "", errors.Wrapf(err, "failed to retrieve new attestation report")
+			}
+
+			if err = SNPReport.DeserializeReport(SNPReportBytes); err != nil {
+				return "", errors.Wrapf(err, "failed to deserialize new attestation report")
+			}
+
+			// refresh certs again
+			vcekCertChain, err = certState.RefreshCertChain(SNPReport)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			certString := uvmInformation.InitialCerts.VcekCert + uvmInformation.InitialCerts.CertificateChain
+			vcekCertChain = []byte(certString)
+		}
 	}
 
 	uvmReferenceInfoBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedUvmReferenceInfo)
