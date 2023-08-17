@@ -69,7 +69,6 @@ az account get-access-token --resource https://managedhsm.azure.net
 Replace [AAD token](importkeyconfig.json#L11) in `importkeyconfig.json` with the output accessToken.
 Replace [ENCFS AKV endpoint](encfs-sidecar-args.json#L15) in `enfcs-sidecar-args.json` with the mhsm endpoint.
 
-
 #### 5. Fill in Key Information
 
 After setting up an [Azure Key Vault resource](#import-key), fill in the `importkeyconfig.json` file with the name of the key to be created and imported into the key vault [Key name](importkeyconfig.json#L3). Additionally, fill in `encfs-sidecar-args.json` with the name of the key to be created and imported into the key vault [Key name](encfs-sidecar-args.json#L9).
@@ -77,48 +76,7 @@ After setting up an [Azure Key Vault resource](#import-key), fill in the `import
 Additionally, fill in the optional [key derivation](importkeyconfig.json#L14) for RSA keys and [Key type: `RSA-HSM` or `oct-HSM`](importkeyconfig.json#L4) fields or remove these fields from the `importkeyconfig.json` file. Fill in [key derivation](encfs-sidecar-args.json#L18) and [Key type: `RSA-HSM` or `oct-HSM`](encfs-sidecar-args.json#L10) in `encfs-sidecar-args.json` as well.
 
 
-#### 6. Generate Security Policy
-
-At this point, the `aci-arm-template.json` file should be filled out except for the `ccepolicy` field. After installing the [Azure `confcom` CLI extension](#policy-generation), run the following command to generate the security policy and include the `--debug-mode` option so that the policy allows users to shell into the container. 
-
-```
-az confcom acipolicygen -a aci-arm-template.json --debug-mode
-```
-
-This should prompt you to automatically populate the [cce policy](aci-arm-template.json#L106) field of `aci-arm-template.json.`
-
-
-#### 7. Generate Security Policy Hash 
-
-The security policy tool outputs the sha-256 hash of the policy upon completion. Copy this output and replace the [hash-digest-of-the-security-policy](importkeyconfig.json#L22) string of the `importkeyconfig.json` file.
-
-
-#### 8. Import Keys into mHSM/AKV
-
-Once the key vault resource is ready and the `importkeyconfig.json` file is completely filled out, the user can import `RSA-HSM` or `oct-HSM` keys into it using the `importkey` tool placed under `<parent_repo_dir>/tools/importkey` as discussed in the tools' [readme file](https://github.com/microsoft/confidential-sidecar-containers/tree/main/tools/importkey).
-
-A fake encryption key is used in the command below to see the key get released. To import the key into AKV/mHSM, use the following command:
-
-```
-go run /tools/importkey/main.go -c importkeyconfig.json -kh encryptionKey
-```
-
-Upon successful import completion, you should see something similar to the following: 
-
-```
-[34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
-https://accmhsm.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
-{"version":"0.2","anyOf":[{"authority":"https://sharedeus2.eus2.test.attest.azure.net","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
-```
-
-In this case, use the following commands to verify the key has been successfully imported: 
-
-```
-az account set --subscription "<SUBSCRIPTION>"
-az keyvault key list --hsm-name <MHSM NAME> -o table
-```
-
-#### 9. Encrypted Filesystem
+#### 6. Encrypted Filesystem
 The user needs to instantiate an [Azure Storage Container](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-create?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json&tabs=azure-portal) onto which the encrypted filesystem will be uploaded. The roles *Reader* and *Storage Blob Reader* roles need to be assigned to the user-assigned managed identity. Additionally, the role of *Storage Blob Contributor* needs to be assigned for a read-write filesystem.
 
 The script `generatefs/generatefs.sh` creates `encfs.img` with the contents of the `generatefs/filesystem` directory. You may need to adjust the size of the image in the script, as it isn't calculated automatically. 
@@ -161,7 +119,47 @@ The url of the uploaded blob needs to be copied into [`encfs-sidecar-args.json`]
 
 At this point, the `encfs-sidecar-args.json` file should be completely filled out and the user needs to base64 encode the contents and copy it to [`EncfsSideCarArgs`](aci-arm-template.json#L36).
 
-#### 10. Deployment
+
+#### 7. Generate Security Policy
+
+At this point, the `aci-arm-template.json` file should be filled out except for the `ccepolicy` field. After installing the [Azure `confcom` CLI extension](#policy-generation), run the following command to generate the security policy and include the `--debug-mode` option so that the policy allows users to shell into the container. The --debug-mode option is only needed for testing purposes and should not be used in production, as it allows users to shell into the containers.
+
+```
+az confcom acipolicygen -a aci-arm-template.json --debug-mode
+```
+
+This should  automatically populate the [cce policy](aci-arm-template.json#L106) field of `aci-arm-template.json.` If you run the tool on an arm template with the cce policy field already populated, the tool will prompt you to overwrite the existing policy.
+
+The security policy tool outputs the sha-256 hash of the policy upon completion. Copy this output and replace the [hash-digest-of-the-security-policy](importkeyconfig.json#L22) string of the `importkeyconfig.json` file.
+
+
+#### 8. Import Keys into mHSM/AKV
+
+Once the key vault resource is ready and the `importkeyconfig.json` file is completely filled out, the user can import `RSA-HSM` or `oct-HSM` keys into it using the `importkey` tool placed under `<parent_repo_dir>/tools/importkey` as discussed in the tools' [readme file](https://github.com/microsoft/confidential-sidecar-containers/tree/main/tools/importkey).
+
+A fake encryption key is used in the command below to see the key get released. To import the key into AKV/mHSM, use the following command:
+
+```
+go run /tools/importkey/main.go -c importkeyconfig.json -kh encryptionKey
+```
+
+Upon successful import completion, you should see something similar to the following: 
+
+```
+[34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
+https://accmhsm.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
+{"version":"0.2","anyOf":[{"authority":"https://sharedeus2.eus2.test.attest.azure.net","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
+```
+
+In this case, use the following commands to verify the key has been successfully imported: 
+
+```
+az account set --subscription "<SUBSCRIPTION>"
+az keyvault key list --hsm-name <MHSM NAME> -o table
+```
+
+
+#### 9. Deployment
 
 Go to Azure portal and click on `deploy a custom template`, then click `Build your own template in the editor`. By this time, the `aci-arm-template.json` file should be completely filled out. Copy and paste the ARM template into the field start a deployment. Once the deployment completes, the user can shell into the applicaiton container and execute the following commands:
 
