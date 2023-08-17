@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 
@@ -43,7 +44,7 @@ func main() {
 	pageBlobPrivate := flag.String("private", "false", "Page blob is private and thus requires credentials")
 	encodedIdentity := flag.String("identity", "", "base64-encoded string of identity information")
 	localFilePath := flag.String("localpath", "", "Path of a local file with the filesystem to mount.")
-	logLevel := flag.String("loglevel", "debug", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
+	logLevel := flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
 	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
 	blockSize := flag.Int("blocksize", 512, "Size of a cache block in KiB")
 	numBlocks := flag.Int("numblocks", 32, "Number of cache blocks")
@@ -53,53 +54,6 @@ func main() {
 
 	flag.Parse()
 
-	parseError := false
-
-	if *mountPoint == "" {
-		fmt.Printf("A mount point is needed\n")
-		parseError = true
-	}
-
-	if (*pageBlobUrl == "") && (*localFilePath == "") {
-		fmt.Printf("A URL or a local file path is needed\n")
-		parseError = true
-	}
-
-	if (*pageBlobUrl != "") && (*localFilePath != "") {
-		fmt.Printf("Only one of URL or a local file path must be supplied\n")
-		parseError = true
-	}
-
-	if *blockSize < 4 {
-		fmt.Printf("The block size must be bigger than 4 KB\n")
-		parseError = true
-	}
-
-	if (*blockSize % 4) != 0 {
-		fmt.Printf("The block size must be a multiple of 4 KB\n")
-		parseError = true
-	}
-
-	if *numBlocks < 1 {
-		fmt.Printf("Invalid number of cache blocks\n")
-		parseError = true
-	}
-
-	pageBlobPrivateBool, err := strconv.ParseBool(*pageBlobPrivate)
-	if err != nil {
-		fmt.Printf("The private attribute needs to be true or false")
-	}
-
-	readWriteBool, err := strconv.ParseBool(*readWrite)
-	if err != nil {
-		fmt.Printf("The readWrite attribute needs to be true or false")
-	}
-
-	if parseError {
-		usage()
-		os.Exit(1)
-	}
-
 	if *logFile != "" {
 		// If the file doesn't exist, create it. If it exists, append to it.
 		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
@@ -107,7 +61,8 @@ func main() {
 			logrus.Fatal(err)
 		}
 		defer file.Close()
-		logrus.SetOutput(file)
+		multi := io.MultiWriter(file, os.Stderr)
+		logrus.SetOutput(multi)
 	}
 
 	level, err := logrus.ParseLevel(*logLevel)
@@ -115,6 +70,54 @@ func main() {
 		logrus.Fatal(err)
 	}
 	logrus.SetLevel(level)
+	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: false, DisableQuote: true, DisableTimestamp: true})
+
+	parseError := false
+
+	if *mountPoint == "" {
+		logrus.Fatal("A mount point is needed\n")
+		parseError = true
+	}
+
+	if (*pageBlobUrl == "") && (*localFilePath == "") {
+		logrus.Fatal("A URL or a local file path is needed\n")
+		parseError = true
+	}
+
+	if (*pageBlobUrl != "") && (*localFilePath != "") {
+		logrus.Fatal("Only one of URL or a local file path must be supplied\n")
+		parseError = true
+	}
+
+	if *blockSize < 4 {
+		logrus.Fatal("The block size must be bigger than 4 KB\n")
+		parseError = true
+	}
+
+	if (*blockSize % 4) != 0 {
+		logrus.Fatal("The block size must be a multiple of 4 KB\n")
+		parseError = true
+	}
+
+	if *numBlocks < 1 {
+		logrus.Fatal("Invalid number of cache blocks\n")
+		parseError = true
+	}
+
+	pageBlobPrivateBool, err := strconv.ParseBool(*pageBlobPrivate)
+	if err != nil {
+		logrus.Fatal("The private attribute needs to be true or false")
+	}
+
+	readWriteBool, err := strconv.ParseBool(*readWrite)
+	if err != nil {
+		logrus.Fatal("The readWrite attribute needs to be true or false")
+	}
+
+	if parseError {
+		usage()
+		os.Exit(1)
+	}
 
 	logrus.Infof("Starting %s...", os.Args[0])
 
@@ -124,12 +127,13 @@ func main() {
 	logrus.Debugf("   Azure URL Private:   %s", *pageBlobPrivate)
 	logrus.Debugf("   Encoded Identity Info: %s", *encodedIdentity)
 	logrus.Debugf("   Local Path:  %s", *localFilePath)
-	logrus.Debugf("   Log Level:   %s", *logLevel)
-	logrus.Debugf("   Log File:    %s", *logFile)
+	logrus.Infof("   Log Level:   %s", *logLevel)
+	logrus.Infof("   Log File:    %s", *logFile)
 	logrus.Debugf("   Block Size:  %d KiB", *blockSize)
 	logrus.Debugf("   Num. Blocks: %d", *numBlocks)
 	logrus.Debugf("   ReadWrite:    %s", *readWrite)
 
+	logrus.Info("Initializing cache...")
 	if err := filemanager.InitializeCache(*blockSize*1024, *numBlocks, readWriteBool); err != nil {
 		logrus.Fatalf("Failed to initialize cache: " + err.Error())
 	}
@@ -151,21 +155,21 @@ func main() {
 		if err = filemanager.AzureSetup(*pageBlobUrl, pageBlobPrivateBool, identity); err != nil {
 			logrus.Fatalf("Azure connection setup error: " + err.Error())
 		}
-		logrus.Infof("Azure connection set up")
+		logrus.Info("Azure connection set up")
 	}
 
 	if *localFilePath != "" {
-		logrus.Infof("Setting up local filesystem...")
+		logrus.Info("Setting up local filesystem...")
 		if err = filemanager.LocalSetup(*localFilePath, readWriteBool); err != nil {
 			logrus.Fatalf("Local filesystem setup error: " + err.Error())
 		}
-		logrus.Infof("Local filesystem set up")
+		logrus.Info("Local filesystem set up")
 	}
 
-	logrus.Infof("Setting up FUSE...")
+	logrus.Info("Setting up FUSE...")
 	err = FuseSetup(*mountPoint, readWriteBool)
 	if err != nil {
 		logrus.Fatalf("FUSE error: " + err.Error())
 	}
-	logrus.Infof("FUSE ended")
+	logrus.Info("FUSE ended")
 }

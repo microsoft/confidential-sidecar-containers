@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 
@@ -38,7 +39,7 @@ func usage() {
 
 func main() {
 	azureInfoBase64string := flag.String("base64", "", "optional base64-encoded json string with azure information")
-	logLevel := flag.String("loglevel", "debug", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
+	logLevel := flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
 	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
 	port := flag.String("port", "8080", "Port on which to listen")
 	allowTestingMismatchedTCB := flag.Bool("allowTestingMismatchedTCB", false, "For TESTING purposes only. Corrupts the TCB value")
@@ -67,7 +68,8 @@ func main() {
 			logrus.Fatal(err)
 		}
 		defer file.Close()
-		logrus.SetOutput(file)
+		multi := io.MultiWriter(file, os.Stderr)
+		logrus.SetOutput(multi)
 	}
 
 	level, err := logrus.ParseLevel(*logLevel)
@@ -80,8 +82,8 @@ func main() {
 	logrus.Infof("Starting %s...", os.Args[0])
 
 	logrus.Infof("Args:")
-	logrus.Debugf("   Log Level:     %s", *logLevel)
-	logrus.Debugf("   Log File:      %s", *logFile)
+	logrus.Infof("   Log Level:     %s", *logLevel)
+	logrus.Infof("   Log File:      %s", *logFile)
 	logrus.Debugf("   Port:          %s", *port)
 	logrus.Debugf("   Hostname:      %s", *hostname)
 	logrus.Debugf("   azure info:    %s", *azureInfoBase64string)
@@ -95,21 +97,23 @@ func main() {
 	info := AzureInformation{}
 
 	// Decode base64 attestation information only if it s not empty
+	logrus.Info("Decoding base64 attestation information if not empty...")
 	if *azureInfoBase64string != "" {
 		bytes, err := base64.StdEncoding.DecodeString(*azureInfoBase64string)
 		if err != nil {
-			logrus.Fatalf("Failed to decode base64: %s", err.Error())
+			logrus.Fatalf("Failed to decode base64 attestation info: %s", err.Error())
 		}
 
 		err = json.Unmarshal(bytes, &info)
 		if err != nil {
-			logrus.Fatalf("Failed to unmarshal: %s", err.Error())
+			logrus.Fatalf("Failed to unmarshal attestion info json into AzureInformation: %s", err.Error())
 		}
 	}
 
 	// See above comment about hostname and risk of breaking confidentiality
 	url := *hostname + ":" + *port
 
+	logrus.Info("Getting initial TCBM value...")
 	var tcbm string
 	if *allowTestingMismatchedTCB {
 		logrus.Debugf("setting tcbm to CorruptedTCB value: %s\n", CorruptedTCB)
@@ -129,6 +133,7 @@ func main() {
 		Tcbm:        thimTcbm,
 	}
 
+	logrus.Info("Starting HTTP server...")
 	setupServer(&certState, &info.Identity, &EncodedUvmInformation, url)
 }
 

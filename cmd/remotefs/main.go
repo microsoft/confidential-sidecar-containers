@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
@@ -55,7 +55,7 @@ func usage() {
 
 func main() {
 	base64string := flag.String("base64", "", "base64-encoded json string with all information")
-	logLevel := flag.String("loglevel", "debug", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
+	logLevel := flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
 	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
 
 	flag.Usage = usage
@@ -69,7 +69,8 @@ func main() {
 			logrus.Fatal(err)
 		}
 		defer file.Close()
-		logrus.SetOutput(file)
+		multi := io.MultiWriter(file, os.Stderr)
+		logrus.SetOutput(multi)
 	}
 
 	level, err := logrus.ParseLevel(*logLevel)
@@ -77,16 +78,17 @@ func main() {
 		logrus.Fatal(err)
 	}
 	logrus.SetLevel(level)
+	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: false, DisableQuote: true, DisableTimestamp: true})
 
 	logrus.Infof("Starting %s...", os.Args[0])
 
 	logrus.Infof("Args:")
-	logrus.Debugf("   Log Level: %s", *logLevel)
-	logrus.Debugf("   Log File:  %s", *logFile)
+	logrus.Infof("   Log Level: %s", *logLevel)
+	logrus.Infof("   Log File:  %s", *logFile)
 	logrus.Debugf("   base64:    %s", *base64string)
 
-	logrus.Infof("Creating temporary directory")
-	tempDir, err := ioutil.TempDir("", "remotefs")
+	logrus.Info("Creating temporary directory")
+	tempDir, err := os.MkdirTemp("", "remotefs")
 	if err != nil {
 		logrus.Fatalf("Failed to create temp dir: %s", err.Error())
 	}
