@@ -30,6 +30,16 @@ if [ -n "${Port}" ]; then
   CmdlineArgs="${CmdlineArgs} -port ${Port}"
 fi
 
+if [[ -z "${LogLevel}" ]]; then
+  LogLevel=$3
+fi
+
+echo LogLevel = $LogLevel
+
+if [ -n "${LogLevel}" ]; then
+  CmdlineArgs="${CmdlineArgs} -port ${LogLevel}"
+fi
+
 echo CmdlineArgs = $CmdlineArgs
 
 if /bin/skr $CmdlineArgs; then

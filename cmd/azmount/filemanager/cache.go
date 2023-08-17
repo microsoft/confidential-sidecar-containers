@@ -48,12 +48,12 @@ func onEvict(key interface{}, value interface{}) {
 	blockIndex := key.(int64)
 	bytes, ok := value.(*[]byte)
 	if !ok {
-		panic(fmt.Errorf("cast failed for block"))
+		panic(fmt.Errorf("Cast failed for block"))
 	}
 
 	err := fm.uploadBlock(blockIndex, *bytes)
 	if err != nil {
-		panic(errors.Wrapf(err, "can't upload block %d", blockIndex))
+		panic(errors.Wrapf(err, "Can't upload block %d", blockIndex))
 	}
 }
 
@@ -71,7 +71,7 @@ func InitializeCache(blockSize int, numBlocks int, readWrite bool) error {
 	}
 
 	if err != nil {
-		return errors.Wrap(err, "failed to initialize RAM cache")
+		return errors.Wrap(err, "Failed to initialize RAM cache")
 	}
 	fm.cache = cache
 	fm.readWrite = readWrite
@@ -119,7 +119,7 @@ func GetBlockFromCache(blockIndex int64) ([]byte, error) {
 func DownloadBlock(blockIndex int64) ([]byte, error) {
 	err, dat := fm.downloadBlock(blockIndex)
 	if err != nil {
-		return []byte{}, errors.Wrapf(err, "can't download block")
+		return []byte{}, errors.Wrapf(err, "Can't download block")
 	}
 	return dat, nil
 }
@@ -130,13 +130,13 @@ func GetBlock(blockIndex int64) (error, []byte) {
 
 	// Check bounds
 	if blockIndex < 0 {
-		errorString := fmt.Sprintf("invalid block index (%d)", blockIndex)
+		errorString := fmt.Sprintf("Invalid block index (%d)", blockIndex)
 		return errors.New(errorString), []byte{}
 	}
 
 	maxIndex := (fm.contentLength - 1) / fm.blockSize
 	if blockIndex > maxIndex {
-		errorString := fmt.Sprintf("block index over limit (%d > %d)", blockIndex, maxIndex)
+		errorString := fmt.Sprintf("Block index over limit (%d > %d)", blockIndex, maxIndex)
 		return errors.New(errorString), []byte{}
 	}
 
@@ -199,13 +199,13 @@ func SetBlock(blockIndex int64, blockOffset int64, data []byte) error {
 
 	// Check bounds
 	if blockIndex < 0 {
-		errorString := fmt.Sprintf("invalid block index (%d)", blockIndex)
+		errorString := fmt.Sprintf("Invalid block index (%d)", blockIndex)
 		return errors.New(errorString)
 	}
 
 	maxIndex := (fm.contentLength - 1) / fm.blockSize
 	if blockIndex > maxIndex {
-		errorString := fmt.Sprintf("block index over limit (%d > %d)", blockIndex, maxIndex)
+		errorString := fmt.Sprintf("Block index over limit (%d > %d)", blockIndex, maxIndex)
 		return errors.New(errorString)
 	}
 

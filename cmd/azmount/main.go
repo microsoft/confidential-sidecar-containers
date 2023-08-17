@@ -121,7 +121,7 @@ func main() {
 
 	logrus.Infof("Starting %s...", os.Args[0])
 
-	logrus.Infof("Args:")
+	logrus.Info("Args:")
 	logrus.Debugf("   Mountpoint:  %s", *mountPoint)
 	logrus.Debugf("   Azure URL:   %s", *pageBlobUrl)
 	logrus.Debugf("   Azure URL Private:   %s", *pageBlobPrivate)
@@ -139,11 +139,11 @@ func main() {
 	}
 
 	if *pageBlobUrl != "" {
-		logrus.Infof("Setting up Azure connection...")
+		logrus.Info("Setting up Azure connection...")
 
 		identityBytes, err := base64.StdEncoding.DecodeString(*encodedIdentity)
 		if err != nil {
-			logrus.Infof("Could not decode identity string. Using empty ...")
+			logrus.Info("Could not decode identity string. Using empty ...")
 		}
 
 		identity := common.Identity{}

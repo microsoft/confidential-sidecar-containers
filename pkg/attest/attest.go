@@ -21,11 +21,15 @@ type CertState struct {
 	Tcbm        uint64      `json:"tcbm"`
 }
 
+const (
+	SHA256LEN = 32
+)
+
 func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]byte, error) {
-	// TCB values not the same, try refreshing cert first
+	logrus.Info("Refreshing CertChain...")
 	vcekCertChain, thimTcbm, err := certState.CertFetcher.GetCertChain(SNPReport.ChipID, SNPReport.ReportedTCB)
 	if err != nil {
-		return nil, errors.Wrap(err, "refreshing CertChain failed")
+		return nil, errors.Wrap(err, "Refreshing CertChain failed")
 	}
 	certState.Tcbm = thimTcbm
 	return vcekCertChain, nil
@@ -33,38 +37,38 @@ func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]
 
 // Takes bytes and generate report data that MAA expects (SHA256 hash of arbitrary data).
 func GenerateMAAReportData(inputBytes []byte) [REPORT_DATA_SIZE]byte {
+	logrus.Info("Generating MAA Report Data...")
 	runtimeData := sha256.New()
 	if inputBytes != nil {
 		runtimeData.Write(inputBytes)
 	}
 	reportData := [REPORT_DATA_SIZE]byte{}
 	runtimeDataBytes := runtimeData.Sum(nil)
-	const sha256len = 32
-	if len(runtimeDataBytes) != sha256len {
-		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(runtimeDataBytes)))
+	if len(runtimeDataBytes) != SHA256LEN {
+		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", SHA256LEN, len(runtimeDataBytes)))
 	}
-	if sha256len > REPORT_DATA_SIZE {
-		panic(fmt.Errorf("Generated hash is too large for report data. hash length: %d bytes, report data size: %d", sha256len, REPORT_DATA_SIZE))
+	if SHA256LEN > REPORT_DATA_SIZE {
+		panic(fmt.Errorf("Generated hash is too large for report data. hash length: %d bytes, report data size: %d", SHA256LEN, REPORT_DATA_SIZE))
 	}
-	copy(reportData[:sha256len], runtimeDataBytes)
+	copy(reportData[:SHA256LEN], runtimeDataBytes)
 	return reportData
 }
 
 // Takes bytes and generate host data that UVM creates at launch of SNP VM (SHA256 hash of arbitrary data).
 // It's only useful to create fake attestation report
 func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
+	logrus.Info("Generating MAA Host Data...")
 	inittimeData := sha256.New()
 	if inputBytes != nil {
 		inittimeData.Write(inputBytes)
 	}
 	hostData := [HOST_DATA_SIZE]byte{}
 	inittimeDataBytes := inittimeData.Sum(nil)
-	const sha256len = 32
-	if len(inittimeDataBytes) != sha256len {
-		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(inittimeDataBytes)))
+	if len(inittimeDataBytes) != SHA256LEN {
+		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", SHA256LEN, len(inittimeDataBytes)))
 	}
-	if sha256len > HOST_DATA_SIZE {
-		panic(fmt.Errorf("Generated hash is too large for host data. hash length: %d bytes, report host size: %d", sha256len, REPORT_DATA_SIZE))
+	if SHA256LEN > HOST_DATA_SIZE {
+		panic(fmt.Errorf("Generated hash is too large for host data. hash length: %d bytes, report host size: %d", SHA256LEN, REPORT_DATA_SIZE))
 	}
 	copy(hostData[:], inittimeDataBytes)
 	return hostData
@@ -85,17 +89,18 @@ func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
 //
 // Note that it uses fake attestation report if it's not running inside SNP VM
 func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) (string, error) {
+	logrus.Info("Decoding UVM encoded security policy...")
 	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedSecurityPolicy)
 	if err != nil {
-		return "", errors.Wrap(err, "decoding policy from Base64 format failed")
+		return "", errors.Wrap(err, "Decoding policy from Base64 format failed")
 	}
 	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
 
 	// Fetch the attestation report
-
 	var reportFetcher AttestationReportFetcher
 	// Use fake attestation report if it's not running inside SNP VM
 	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
+		logrus.Info("Not running inside SNP VM, using fake attestation report fetcher...")
 		hostData := GenerateMAAHostData(inittimeDataBytes)
 		reportFetcher = UnsafeNewFakeAttestationReportFetcher(hostData)
 	} else {
@@ -103,16 +108,18 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 	}
 
 	reportData := GenerateMAAReportData(runtimeDataBytes)
+	logrus.Info("Fetching Attestation Report...")
 	SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to retrieve attestation report")
+		return "", errors.Wrapf(err, "Failed to retrieve attestation report")
 	}
 
 	// Retrieve the certificate chain using the chip identifier and platform version
 	// fields of the attestation report
 	var SNPReport SNPAttestationReport
+	logrus.Info("Deserializing Attestation Report...")
 	if err = SNPReport.DeserializeReport(SNPReportBytes); err != nil {
-		return "", errors.Wrapf(err, "failed to deserialize attestation report")
+		return "", errors.Wrapf(err, "Failed to deserialize attestation report")
 	}
 
 	logrus.Debugf("SNP Report Reported TCB: %d\nCert Chain TCBM Value: %d\n", SNPReport.ReportedTCB, certState.Tcbm)
@@ -120,8 +127,10 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 	// At this point check that the TCB of the cert chain matches that reported so we fail early or
 	// fetch fresh certs by other means.
 	var vcekCertChain []byte
+	logrus.Info("Comparing TCB values...")
 	if SNPReport.ReportedTCB != certState.Tcbm {
 		// TCB values not the same, try refreshing cert cache first
+		logrus.Info("TCB values not the same, trying to refresh cert chain...")
 		vcekCertChain, err = certState.RefreshCertChain(SNPReport)
 		if err != nil {
 			return "", err
@@ -129,16 +138,18 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 
 		if SNPReport.ReportedTCB != certState.Tcbm {
 			// TCB values still don't match, try retrieving the SNP report again
+			logrus.Info("TCB values still don't match, trying to retrieve new attestation report...")
 			SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 			if err != nil {
-				return "", errors.Wrapf(err, "failed to retrieve new attestation report")
+				return "", errors.Wrapf(err, "Failed to retrieve new attestation report")
 			}
 
 			if err = SNPReport.DeserializeReport(SNPReportBytes); err != nil {
-				return "", errors.Wrapf(err, "failed to deserialize new attestation report")
+				return "", errors.Wrapf(err, "Failed to deserialize new attestation report")
 			}
 
 			// refresh certs again
+			logrus.Info("Comparing refreshing cert chain again...")
 			vcekCertChain, err = certState.RefreshCertChain(SNPReport)
 			if err != nil {
 				return "", err
@@ -155,15 +166,15 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 	}
 
 	uvmReferenceInfoBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedUvmReferenceInfo)
-
 	if err != nil {
-		return "", errors.Wrap(err, "decoding policy from Base64 format failed")
+		return "", errors.Wrap(err, "Decoding UVM encoded security policy from Base64 format failed")
 	}
 
 	// Retrieve the MAA token required by the request's MAA endpoint
+	logrus.Info("Retrieving MAA token...")
 	maaToken, err := maa.attest(SNPReportBytes, vcekCertChain, inittimeDataBytes, runtimeDataBytes, uvmReferenceInfoBytes)
 	if err != nil || maaToken == "" {
-		return "", errors.Wrapf(err, "retrieving MAA token from MAA endpoint failed")
+		return "", errors.Wrapf(err, "Retrieving MAA token from MAA endpoint failed")
 	}
 
 	return maaToken, nil

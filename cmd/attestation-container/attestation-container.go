@@ -140,12 +140,12 @@ func main() {
 
 	lis, err := net.Listen("unix", *socketAddress)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterAttestationContainerServer(s, &server{})
 	log.Printf("Server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		log.Fatalf("Failed to serve: %v", err)
 	}
 }
