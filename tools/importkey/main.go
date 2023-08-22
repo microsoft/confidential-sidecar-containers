@@ -106,7 +106,7 @@ func main() {
 	// create release policy
 	var releasePolicy skr.ReleasePolicy
 
-	releasePolicy.Version = "0.2"
+	releasePolicy.Version = "1.0.0"
 
 	for _, allOfStatement := range importKeyCfg.Claims {
 		// authority denotes authorized MAA endpoint that can present MAA tokens to the AKV
