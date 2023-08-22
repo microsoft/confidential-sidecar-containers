@@ -30,21 +30,10 @@ if [ -n "${Port}" ]; then
   CmdlineArgs="${CmdlineArgs} -port ${Port}"
 fi
 
-if [[ -z "${LogFile}" ]]; then
-  LogFile=$3
-fi
-
-echo LogFile = $LogFile
-
+# LogFile and LogLevel are expected to be passed in as environment variables
 if [ -n "${LogFile}" ]; then
   CmdlineArgs="${CmdlineArgs} -logFile ${LogFile}"
 fi
-
-if [[ -z "${LogLevel}" ]]; then
-  LogLevel=$4
-fi
-
-echo LogLevel = $LogLevel
 
 if [ -n "${LogLevel}" ]; then
   CmdlineArgs="${CmdlineArgs} -logLevel ${LogLevel}"
