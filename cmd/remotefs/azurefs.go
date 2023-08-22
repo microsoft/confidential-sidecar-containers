@@ -364,7 +364,7 @@ func MountAzureFilesystems(tempDir string, info RemoteFilesystemsInformation) (e
 	}
 
 	logrus.Debugf("EncodedUvmInformation.InitialCerts.Tcbm: %s\n", EncodedUvmInformation.InitialCerts.Tcbm)
-	thimTcbm, err = common.ParseTHIMTCBM(EncodedUvmInformation.InitialCerts.Tcbm)
+	thimTcbm, err := common.ParseTHIMTCBM(EncodedUvmInformation.InitialCerts.Tcbm)
 	if err != nil {
 		return nil, thimTcbm, errors.Wrapf(err, "failed to parse THIM TCBM")
 	}
