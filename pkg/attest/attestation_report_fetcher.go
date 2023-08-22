@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"unsafe"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -175,7 +175,7 @@ func (_ *realAttestationReportFetcher) FetchAttestationReportByte(reportData [RE
 	const SNP_REPORT_OFFSET = 32
 	reportBytes := reportRspBytes[SNP_REPORT_OFFSET : SNP_REPORT_OFFSET+ATTESTATION_REPORT_SIZE]
 	if common.GenerateTestData {
-		ioutil.WriteFile("snp_report.bin", reportBytes, 0644)
+		os.WriteFile("snp_report.bin", reportBytes, 0644)
 	}
 	return reportBytes, nil
 }

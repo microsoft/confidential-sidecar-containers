@@ -40,10 +40,11 @@ func GetToken(ResourceId string, i Identity) (r TokenResponse, err error) {
 		client_id_param = "&client_id=" + i.ClientId
 	}
 
-	httpResponse, err := HTTPGetRequest(TokenURITemplate+resource_param+client_id_param, true)
+	uri := TokenURITemplate + resource_param + client_id_param
+	httpResponse, err := HTTPGetRequest(uri, true)
 
 	if err != nil {
-		return r, errors.Wrapf(err, "http get authentication token failed")
+		return r, errors.Wrapf(err, "http get authentication token failed for %s", uri)
 	}
 
 	httpResponseBodyBytes, err := HTTPResponseBody(httpResponse)
@@ -54,7 +55,7 @@ func GetToken(ResourceId string, i Identity) (r TokenResponse, err error) {
 	// Unmarshall response body into struct
 	err = json.Unmarshal(httpResponseBodyBytes, &r)
 	if err != nil {
-		return r, errors.Wrapf(err, "unmarshalling authentication token response failed")
+		return r, errors.Wrapf(err, "unmarshalling authentication token response failed for %s", httpResponseBodyBytes)
 	}
 
 	return r, nil

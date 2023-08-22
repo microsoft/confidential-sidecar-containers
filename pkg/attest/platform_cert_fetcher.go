@@ -14,7 +14,7 @@ import (
 	"encoding/binary"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math"
 	"math/rand"
 	"net/http"
@@ -25,6 +25,7 @@ import (
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -52,17 +53,21 @@ const x509CertExtensionsValuePos = 2
 // parses the cached CertChain and returns the VCEK leaf certificate
 // Subject of the (x509) VCEK certificate (CN=SEV-VCEK)
 func GetVCEKFromCertChain(certChain []byte) (*x509.Certificate, error) {
+	logrus.Info("Getting VCEK from Cert Chain...")
 	currChain := certChain
 	// iterate through the certificates in the chain
+	logrus.Info("Iterating through certificates in the chain...")
 	for len(currChain) > 0 {
 		var block *pem.Block
 		block, currChain = pem.Decode(currChain)
 		if block.Type == "CERTIFICATE" {
+			logrus.Info("Parsing x509 certificate...")
 			certificate, err := x509.ParseCertificate(block.Bytes)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "failed to parse x509 certificate")
 			}
 			// check if this is the correct certificate
+			logrus.Info("Checking if certificate is SEV-VCEK...")
 			if certificate.Subject.CommonName == "SEV-VCEK" {
 				return certificate, nil
 			}
@@ -79,6 +84,7 @@ func ParseVCEK(certChain []byte) ( /*tcbVersion*/ uint64, error) {
 		return 0, err
 	}
 
+	logrus.Info("Parsing VCEK from Cert Chain...")
 	tcbValues := make([]byte, 8) // TCB version is 8 bytes
 	// parse extensions to update the THIM URL and get TCB Version
 	for _, ext := range vcekCert.Extensions {
@@ -151,8 +157,9 @@ const (
 )
 
 func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, error) {
+	logrus.Debugf("fetchWithRetry: requestURL=%s, baseSec=%d, maxRetries=%d", requestURL, baseSec, maxRetries)
 	if maxRetries < 0 {
-		return nil, fmt.Errorf("invalid `maxRetries` value")
+		return nil, errors.New("invalid `maxRetries` value")
 	}
 	var err error
 	retryCount := 0
@@ -166,33 +173,36 @@ func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, err
 		}
 		res, err := http.Get(requestURL)
 		if err != nil {
+			logrus.Debugf("fetch on retry %d: http.Get failed: %s", retryCount, err)
 			retryCount++
 			continue
 		}
 		if 200 <= res.StatusCode && res.StatusCode < 300 {
 			// Got successful status code 2xx
 			defer res.Body.Close()
-			resBody, err := ioutil.ReadAll(res.Body)
+			resBody, err := io.ReadAll(res.Body)
 			if err != nil {
+				logrus.Debugf("fetch on retry %d: http.Get failed: %s", retryCount, err)
 				retryCount++
 				continue
 			}
 			return resBody, nil
 		} else if res.StatusCode == 408 || res.StatusCode == 429 || 500 <= res.StatusCode {
 			// Got status code that is worth to retry
+			logrus.Debugf("fetch on retry %d: http.Get failed with a status code worth a retry", retryCount)
 			retryCount++
 			continue
 		} else {
 			// Got status code that is not worth to retry
 			defer res.Body.Close()
-			resBody, err := ioutil.ReadAll(res.Body)
+			resBody, err := io.ReadAll(res.Body)
 			if err != nil {
-				return nil, fmt.Errorf("got error while handling non successful response with status code %d: %s", res.StatusCode, err)
+				return nil, errors.Errorf("got error while handling non successful response with status code %d: %s", res.StatusCode, err)
 			}
-			return nil, fmt.Errorf("GET request failed with status code %d: %s", res.StatusCode, resBody)
+			return nil, errors.Errorf("GET request failed with status code %d: %s", res.StatusCode, resBody)
 		}
 	}
-	return nil, err
+	return nil, errors.Wrapf(err, "failed to fetch after %d retries", maxRetries)
 }
 
 // retrieveCertChain interacts with the cert cache service to fetch the cert chain of the
@@ -201,6 +211,7 @@ func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, err
 // Returns the cert chain as a bytes array, the TCBM from the local THIM cert cache is as a string
 // (only in the case of a local THIM endpoint), and any errors encountered
 func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint64) ([]byte, uint64, error) {
+	logrus.Info("Retrieving Cert Chain...")
 	// HTTP GET request to cert cache service
 	var uri string
 	var thimTcbm uint64
@@ -212,9 +223,11 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 	if certFetcher.Endpoint != "" {
 		switch certFetcher.EndpointType {
 		case "AMD":
+			logrus.Debugf("Retrieving Cert Chain from AMD Endpoint %s...", certFetcher.Endpoint)
 			// Fetch platform certificate from AMD endpoint
 			// https://www.amd.com/en/support/tech-docs/versioned-chip-endorsement-key-vcek-certificate-and-kds-interface-specification
 			// AMD cert cache endpoint returns the VCEK certificate in DER format
+			logrus.Info("Fetching VCEK cert from AMD endpoint...")
 			uri = fmt.Sprintf(AmdVCEKRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, reportedTCBBytes[UcodeSplTcbmByteIndex], reportedTCBBytes[SnpSplTcbmByteIndex], reportedTCBBytes[TeeSplTcbmByteIndex], reportedTCBBytes[BlSplTcbmByteIndex])
 			derBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
 			if err != nil {
@@ -224,28 +237,33 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			vcekPEMBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 
 			// now retrieve the cert chain
+			logrus.Info("Fetching cert chain from AMD endpoint...")
 			uri = fmt.Sprintf(AmdCertChainRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType)
 			certChainPEMBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
 			if err != nil {
-				return nil, reportedTCB, errors.Wrapf(err, "pulling AMD certchain response from get request failed")
+				return nil, reportedTCB, errors.Wrapf(err, "pulling AMD cert chain response from get request failed")
 			}
 
 			// constuct full chain by appending the VCEK cert to the cert chain
 			fullCertChain := append(vcekPEMBytes, certChainPEMBytes[:]...)
+			logrus.Debugf("Full Cert Chain: %s", string(fullCertChain))
 
 			return fullCertChain, reportedTCB, nil
 		case "LocalTHIM":
+			logrus.Debugf("Retrieving Cert Chain from Local THIM Endpoint %s...", certFetcher.Endpoint)
 			uri = fmt.Sprintf(LocalTHIMUriTemplate, certFetcher.Endpoint)
 			// local THIM cert cache endpoint returns THIM Certs object
 			THIMCertsBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
 			if err != nil {
-				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from get request failed")
+				return nil, thimTcbm, errors.Wrapf(err, "pulling cert chain response from get request failed")
 			}
 
+			logrus.Info("Parsing THIM Certs...")
 			thimCerts, err = common.ParseTHIMCerts(string(THIMCertsBytes))
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "certcache failed to get local certs")
 			}
+			logrus.Info("Parsing THIM TCBM...")
 			thimTcbm, err = common.ParseTHIMTCBM(thimCerts)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "failed to parse THIM TCBM")
@@ -253,11 +271,14 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 
 			return common.ConcatenateCerts(thimCerts), thimTcbm, nil
 		case "AzCache":
+			logrus.Debugf("Retrieving Cert Chain from AzCache Endpoint %s...", certFetcher.Endpoint)
 			uri = fmt.Sprintf(AzureCertCacheRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, strconv.FormatUint(reportedTCB, 16), certFetcher.APIVersion)
+			logrus.Info("Fetchging cert chain from AzCache endpoint...")
 			certChain, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from AzCache get request failed")
 			}
+			logrus.Info("Parsing VCEK from AzCache Cert Chain...")
 			thimTcbm, err = ParseVCEK(certChain)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "AzCache failed to parse VCEK from cert chain")

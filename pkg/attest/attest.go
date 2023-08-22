@@ -104,6 +104,7 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 		hostData := GenerateMAAHostData(inittimeDataBytes)
 		reportFetcher = UnsafeNewFakeAttestationReportFetcher(hostData)
 	} else {
+		logrus.Info("Running inside SNP VM, using real attestation report fetcher...")
 		reportFetcher = NewAttestationReportFetcher()
 	}
 
@@ -149,7 +150,7 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 			}
 
 			// refresh certs again
-			logrus.Info("Comparing refreshing cert chain again...")
+			logrus.Info("Refreshing cert chain again...")
 			vcekCertChain, err = certState.RefreshCertChain(SNPReport)
 			if err != nil {
 				return "", err
@@ -161,6 +162,7 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 			}
 		}
 	} else {
+		logrus.Info("TCB values match, using cached cert chain...")
 		certString := uvmInformation.InitialCerts.VcekCert + uvmInformation.InitialCerts.CertificateChain
 		vcekCertChain = []byte(certString)
 	}

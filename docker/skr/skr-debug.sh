@@ -8,7 +8,7 @@
 echo starting sshd
 /usr/sbin/sshd &
 
-CmdlineArgs="-logfile ./log.txt"
+CmdlineArgs=""
 
 if [ -z "${SkrSideCarArgs}" ]; then
   SkrSideCarArgs=$1
@@ -30,14 +30,24 @@ if [ -n "${Port}" ]; then
   CmdlineArgs="${CmdlineArgs} -port ${Port}"
 fi
 
+if [[ -z "${LogFile}" ]]; then
+  LogFile=$3
+fi
+
+echo LogFile = $LogFile
+
+if [ -n "${LogFile}" ]; then
+  CmdlineArgs="${CmdlineArgs} -logFile ${LogFile}"
+fi
+
 if [[ -z "${LogLevel}" ]]; then
-  LogLevel=$3
+  LogLevel=$4
 fi
 
 echo LogLevel = $LogLevel
 
 if [ -n "${LogLevel}" ]; then
-  CmdlineArgs="${CmdlineArgs} -port ${LogLevel}"
+  CmdlineArgs="${CmdlineArgs} -logLevel ${LogLevel}"
 fi
 
 echo CmdlineArgs = $CmdlineArgs
