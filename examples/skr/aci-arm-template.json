@@ -30,7 +30,16 @@
               "command": [
                 "/skr.sh"
               ],
-              "image": "mcr.microsoft.com/aci/skr:2.2",
+              "environmentVariables": [
+                {
+                  "name": "LogFile",
+                  "value": "/log.txt"
+                },
+                {
+                  "name": "LogLevel",
+                  "value": "debug"
+                }
+              ],
               "resources": {
                 "requests": {
                   "cpu": 1,

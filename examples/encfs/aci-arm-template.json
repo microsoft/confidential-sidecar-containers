@@ -34,6 +34,14 @@
                 {
                   "name": "EncfsSideCarArgs",
                   "value": "<base64-std-encodes-string-of-sidecar-args>"
+                },
+                {
+                  "name": "LogFile",
+                  "value": "/log.txt"
+                },
+                {
+                  "name": "LogLevel",
+                  "value": "debug"
                 }
               ],
               "image": "mcr.microsoft.com/aci/encfs:2.2",
