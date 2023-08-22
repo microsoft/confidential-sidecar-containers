@@ -175,5 +175,4 @@ Alternatively, the whitelisted command in test-encfs-container outputs the follo
 ```
 This is a file inside the filesystem.
 This is a file inside the filesystem.
-
 ```
