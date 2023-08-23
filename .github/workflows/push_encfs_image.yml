@@ -12,6 +12,7 @@ on:
       - docker/encfs/**
       - tools/get-snp-report/bin/get-snp-report
       - tools/get-snp-report/bin/get-fake-snp-report
+      - vendor/**
   push:
     branches:
       - main
@@ -22,6 +23,7 @@ on:
       - docker/encfs/**
       - tools/get-snp-report/bin/get-snp-report
       - tools/get-snp-report/bin/get-fake-snp-report
+      - vendor/**
 
 jobs:
   push-encfs-image:
