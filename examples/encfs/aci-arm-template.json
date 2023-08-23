@@ -36,7 +36,7 @@
                   "value": "<base64-std-encodes-string-of-sidecar-args>"
                 }
               ],
-              "image": "mcr.microsoft.com/aci/encfs:2.2",
+              "image": "mcr.microsoft.com/aci/encfs:2.3",
               "securityContext": {
                 "privileged": true
               },
