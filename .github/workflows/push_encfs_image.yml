@@ -51,6 +51,7 @@ jobs:
           else  
             branch_name=${{ github.head_ref }}
           fi
+          branch_name=$(echo $branch_name | sed 's/[^a-zA-Z0-9]/-/g')
           docker/encfs/push.sh \
             ${{ secrets.REGISTRY_NAME }} \
             ${{ secrets.REGISTRY_DOMAIN }} \

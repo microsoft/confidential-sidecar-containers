@@ -46,7 +46,9 @@ jobs:
           if [ ${{ github.event_name }} == "push" ]; then
             echo "branch_name=main" >> $GITHUB_OUTPUT
           else  
-            echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+            branch_name=${{ github.head_ref }}
+            branch_name=$(echo $branch_name | sed 's/[^a-zA-Z0-9]/-/g')
+            echo "branch_name=$branch_name" >> $GITHUB_OUTPUT
           fi
 
       - name: Build and Push Docker Image
