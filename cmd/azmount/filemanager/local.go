@@ -50,7 +50,7 @@ func LocalDownloadBlock(blockIndex int64) (err error, b []byte) {
 	logrus.Info("Downloading block...")
 	bytesInBlock := GetBlockSize()
 	var offset int64 = blockIndex * bytesInBlock
-	logrus.Infof("Block offset %d = block index %d * bytes in blck %d", offset, blockIndex, bytesInBlock)
+	logrus.Infof("Block offset %d = block index %d * bytes in block %d", offset, blockIndex, bytesInBlock)
 	var count int64 = bytesInBlock
 
 	file, err := os.OpenFile(fm.filePath, os.O_RDONLY, 0)

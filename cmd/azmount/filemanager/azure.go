@@ -152,7 +152,7 @@ func AzureUploadBlock(blockIndex int64, b []byte) (err error) {
 	logrus.Info("Uploading block...")
 	bytesInBlock := GetBlockSize()
 	var offset int64 = blockIndex * bytesInBlock
-	logrus.Infof("Block offset %d = block index %d * bytes in blck %d", offset, blockIndex, bytesInBlock)
+	logrus.Infof("Block offset %d = block index %d * bytes in block %d", offset, blockIndex, bytesInBlock)
 
 	r := bytes.NewReader(b)
 	_, err = fm.blobURL.UploadPages(fm.ctx, offset, r, azblob.PageBlobAccessConditions{},
@@ -168,7 +168,7 @@ func AzureDownloadBlock(blockIndex int64) (err error, b []byte) {
 	logrus.Info("Downloading block...")
 	bytesInBlock := GetBlockSize()
 	var offset int64 = blockIndex * bytesInBlock
-	logrus.Infof("Block offset %d = block index %d * bytes in blck %d", offset, blockIndex, bytesInBlock)
+	logrus.Infof("Block offset %d = block index %d * bytes in block %d", offset, blockIndex, bytesInBlock)
 	var count int64 = bytesInBlock
 
 	get, err := fm.blobURL.Download(fm.ctx, offset, count, azblob.BlobAccessConditions{},
