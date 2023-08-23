@@ -33,11 +33,11 @@
               "environmentVariables": [
                 {
                   "name": "LogFile",
-                  "value": "/log.txt"
+                  "value": "<optional-logfile-path>"
                 },
                 {
                   "name": "LogLevel",
-                  "value": "debug"
+                  "value": "<optional-loglevel-trace-debug-info-warning-error-fatal-panic>"
                 }
               ],
               "image": "mcr.microsoft.com/aci/skr:2.3",
