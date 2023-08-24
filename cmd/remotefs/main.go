@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
@@ -69,8 +68,7 @@ func main() {
 			logrus.Fatal(err)
 		}
 		defer file.Close()
-		multi := io.MultiWriter(file, os.Stderr)
-		logrus.SetOutput(multi)
+		logrus.SetOutput(file)
 	}
 
 	level, err := logrus.ParseLevel(*logLevel)

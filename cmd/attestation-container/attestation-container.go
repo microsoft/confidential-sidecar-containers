@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"flag"
-	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -112,8 +111,7 @@ func main() {
 			logrus.Fatal(err)
 		}
 		defer file.Close()
-		multi := io.MultiWriter(file, os.Stderr)
-		logrus.SetOutput(multi)
+		logrus.SetOutput(file)
 	}
 
 	level, err := logrus.ParseLevel(*logLevel)

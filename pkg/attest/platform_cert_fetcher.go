@@ -28,6 +28,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const MaxResponseBodySize = 1024 * 1024 // 1MB
+
 const (
 	AzureCertCacheRequestURITemplate = "https://%s/%s/certificates/%s/%s?%s"
 	AmdVCEKRequestURITemplate        = "https://%s/%s/%s?ucodeSPL=%d&snpSPL=%d&teeSPL=%d&blSPL=%d"
@@ -180,7 +182,8 @@ func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, err
 		if 200 <= res.StatusCode && res.StatusCode < 300 {
 			// Got successful status code 2xx
 			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
+			limitedReader := io.LimitReader(res.Body, MaxResponseBodySize)
+			resBody, err := io.ReadAll(limitedReader)
 			if err != nil {
 				logrus.Debugf("fetch on retry %d: http.Get failed: %s", retryCount, err)
 				retryCount++
@@ -195,7 +198,8 @@ func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, err
 		} else {
 			// Got status code that is not worth to retry
 			defer res.Body.Close()
-			resBody, err := io.ReadAll(res.Body)
+			limitedReader := io.LimitReader(res.Body, MaxResponseBodySize)
+			resBody, err := io.ReadAll(limitedReader)
 			if err != nil {
 				return nil, errors.Errorf("got error while handling non successful response with status code %d: %s", res.StatusCode, err)
 			}
@@ -241,7 +245,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			uri = fmt.Sprintf(AmdCertChainRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType)
 			certChainPEMBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
 			if err != nil {
-				return nil, reportedTCB, errors.Wrapf(err, "pulling AMD cert chain response from get request failed")
+				return nil, reportedTCB, errors.Wrapf(err, "pulling AMD cert chain response from URL '%s' failed", uri)
 			}
 
 			// constuct full chain by appending the VCEK cert to the cert chain
@@ -255,7 +259,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			// local THIM cert cache endpoint returns THIM Certs object
 			THIMCertsBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
 			if err != nil {
-				return nil, thimTcbm, errors.Wrapf(err, "pulling cert chain response from get request failed")
+				return nil, thimTcbm, errors.Wrapf(err, "pulling cert chain response from URL '%s' failed", uri)
 			}
 
 			logrus.Trace("Parsing THIM Certs...")
@@ -276,7 +280,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			logrus.Trace("Fetchging cert chain from AzCache endpoint...")
 			certChain, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
 			if err != nil {
-				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from AzCache get request failed")
+				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from AzCache URL '%s' failed", uri)
 			}
 			logrus.Trace("Parsing VCEK from AzCache Cert Chain...")
 			thimTcbm, err = ParseVCEK(certChain)

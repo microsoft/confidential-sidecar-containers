@@ -29,10 +29,10 @@ func tokenRefresher(credential azblob.TokenCredential) (t time.Duration) {
 	currentToken := credential.Token()
 	// JWT tokens comprise three fields. the second field is the payload (or claims).
 	// we care about the `aud` attribute of the payload
-	curentTokenFields := strings.Split(currentToken, ".")
-	logrus.Debugf("Current token fields: %v", curentTokenFields)
+	currentTokenFields := strings.Split(currentToken, ".")
+	logrus.Debugf("Current token fields: %v", currentTokenFields)
 
-	payload, err := base64.RawURLEncoding.DecodeString(curentTokenFields[1])
+	payload, err := base64.RawURLEncoding.DecodeString(currentTokenFields[1])
 	if err != nil {
 		logrus.Errorf("Error decoding base64 token payload: %s", err)
 		return 0

@@ -22,7 +22,7 @@ type CertState struct {
 }
 
 const (
-	SHA256LEN = 32
+	sha256len = 32
 )
 
 func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]byte, error) {
@@ -44,13 +44,13 @@ func GenerateMAAReportData(inputBytes []byte) [REPORT_DATA_SIZE]byte {
 	}
 	reportData := [REPORT_DATA_SIZE]byte{}
 	runtimeDataBytes := runtimeData.Sum(nil)
-	if len(runtimeDataBytes) != SHA256LEN {
-		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", SHA256LEN, len(runtimeDataBytes)))
+	if len(runtimeDataBytes) != sha256len {
+		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(runtimeDataBytes)))
 	}
-	if SHA256LEN > REPORT_DATA_SIZE {
-		panic(fmt.Errorf("Generated hash is too large for report data. hash length: %d bytes, report data size: %d", SHA256LEN, REPORT_DATA_SIZE))
+	if sha256len > REPORT_DATA_SIZE {
+		panic(fmt.Errorf("Generated hash is too large for report data. hash length: %d bytes, report data size: %d", sha256len, REPORT_DATA_SIZE))
 	}
-	copy(reportData[:SHA256LEN], runtimeDataBytes)
+	copy(reportData[:sha256len], runtimeDataBytes)
 	return reportData
 }
 
@@ -64,11 +64,11 @@ func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
 	}
 	hostData := [HOST_DATA_SIZE]byte{}
 	inittimeDataBytes := inittimeData.Sum(nil)
-	if len(inittimeDataBytes) != SHA256LEN {
-		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", SHA256LEN, len(inittimeDataBytes)))
+	if len(inittimeDataBytes) != sha256len {
+		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(inittimeDataBytes)))
 	}
-	if SHA256LEN > HOST_DATA_SIZE {
-		panic(fmt.Errorf("Generated hash is too large for host data. hash length: %d bytes, report host size: %d", SHA256LEN, REPORT_DATA_SIZE))
+	if sha256len > HOST_DATA_SIZE {
+		panic(fmt.Errorf("Generated hash is too large for host data. hash length: %d bytes, report host size: %d", sha256len, REPORT_DATA_SIZE))
 	}
 	copy(hostData[:], inittimeDataBytes)
 	return hostData

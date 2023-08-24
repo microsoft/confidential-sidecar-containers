@@ -55,7 +55,7 @@ func GetToken(ResourceId string, i Identity) (r TokenResponse, err error) {
 	// Unmarshall response body into struct
 	err = json.Unmarshal(httpResponseBodyBytes, &r)
 	if err != nil {
-		return r, errors.Wrapf(err, "unmarshalling authentication token response failed for %s", httpResponseBodyBytes)
+		return r, errors.Wrapf(err, "unmarshalling authentication token response failed")
 	}
 
 	return r, nil

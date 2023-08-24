@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 
@@ -61,8 +60,7 @@ func main() {
 			logrus.Fatal(err)
 		}
 		defer file.Close()
-		multi := io.MultiWriter(file, os.Stderr)
-		logrus.SetOutput(multi)
+		logrus.SetOutput(file)
 	}
 
 	level, err := logrus.ParseLevel(*logLevel)
