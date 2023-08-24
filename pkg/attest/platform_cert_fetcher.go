@@ -28,7 +28,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const MaxResponseBodySize = 1024 * 1024 // 1MB
+const MaxResponseBodySize = 100 * 1024 * 1024 // 100MB
 
 const (
 	AzureCertCacheRequestURITemplate = "https://%s/%s/certificates/%s/%s?%s"
