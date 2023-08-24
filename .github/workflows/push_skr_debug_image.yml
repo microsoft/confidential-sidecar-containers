@@ -48,7 +48,7 @@ jobs:
           if [ ${{ github.event_name }} == "push" ]; then
             branch_name=main
           else  
-            branch_name=${{ github.head_ref }}
+            branch_name=$(echo ${{ github.head_ref }})
           fi
           docker/skr/push.sh \
             ${{ secrets.REGISTRY_NAME }} \
