@@ -47,7 +47,7 @@ jobs:
             echo "branch_name=main" >> $GITHUB_OUTPUT
           else  
             branch_name=${{ github.head_ref }}
-            image_tag=$(echo $branch_name | sed 's/[^a-zA-Z0-9]/-/g')
+            image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')
             echo "image_tag=$image_tag" >> $GITHUB_OUTPUT
           fi
 
