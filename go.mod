@@ -10,7 +10,7 @@ require (
 	github.com/lestrrat-go/jwx v1.2.7
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
-	golang.org/x/crypto v0.1.0
+	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 	golang.org/x/sys v0.6.0
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.30.0
