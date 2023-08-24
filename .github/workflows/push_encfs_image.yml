@@ -51,9 +51,8 @@ jobs:
           else  
             branch_name=${{ github.head_ref }}
           fi
-          image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')
           docker/encfs/push.sh \
             ${{ secrets.REGISTRY_NAME }} \
             ${{ secrets.REGISTRY_DOMAIN }} \
-            encfs:$image_tag \
+            encfs:$branch_name \
             --skip-login

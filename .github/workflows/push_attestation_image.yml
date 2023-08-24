@@ -46,9 +46,7 @@ jobs:
           if [ ${{ github.event_name }} == "push" ]; then
             echo "branch_name=main" >> $GITHUB_OUTPUT
           else  
-            branch_name=${{ github.head_ref }}
-            image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')
-            echo "image_tag=$image_tag" >> $GITHUB_OUTPUT
+            echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Build and Push Docker Image
@@ -57,4 +55,4 @@ jobs:
           file: docker/attestation-container/Dockerfile.run
           push: true
           tags: |
-            ${{ secrets.REGISTRY_NAME }}.${{ secrets.REGISTRY_DOMAIN }}/attestation:${{ steps.get_image_tag.outputs.image_tag }}
+            ${{ secrets.REGISTRY_NAME }}.${{ secrets.REGISTRY_DOMAIN }}/attestation:${{ steps.get_image_tag.outputs.branch_name }}
