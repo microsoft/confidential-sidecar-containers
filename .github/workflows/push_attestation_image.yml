@@ -12,6 +12,7 @@ on:
       - pkg/attest
       - pkg/common
       - vendor/**
+      - internal/**
 
   push:
     branches:
@@ -23,6 +24,7 @@ on:
       - pkg/attest
       - pkg/common
       - vendor/**
+      - internal/**
 
 jobs:
   push-attestation-image:
