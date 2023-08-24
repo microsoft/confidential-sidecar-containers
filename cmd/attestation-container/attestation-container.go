@@ -53,41 +53,41 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 	}
 	copy(reportData[:], in.GetReportData())
 	if *insecureVirtual {
-		logrus.Info("Serving virtual attestation report")
+		logrus.Trace("Serving virtual attestation report")
 		return &pb.FetchAttestationReply{}, nil
 	}
 
-	logrus.Info("Fetching attestation report...")
+	logrus.Trace("Fetching attestation report...")
 	reportFetcher := attest.NewAttestationReportFetcher()
 	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to fetch attestation report: %s", err)
 	}
 
-	logrus.Info("Setting platform certificate...")
+	logrus.Trace("Setting platform certificate...")
 	var platformCertificate []byte
 	if platformCertificateValue == nil {
-		logrus.Info("Deserializing attestation report...")
+		logrus.Trace("Deserializing attestation report...")
 		var SNPReport attest.SNPAttestationReport
 		if err = SNPReport.DeserializeReport(reportBytes); err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to deserialize attestation report: %s", err)
 		}
 		var certFetcher attest.CertFetcher
 		if *platformCertificateServer == "AMD" {
-			logrus.Info("Setting AMD Certificate Fetcher...")
+			logrus.Trace("Setting AMD Certificate Fetcher...")
 			certFetcher = attest.DefaultAMDMilanCertFetcherNew()
 		} else {
 			// Use "Azure". The value of platformCertificateServer should be already checked.
-			logrus.Info("Setting Azure Certificate Fetcher...")
+			logrus.Trace("Setting Azure Certificate Fetcher...")
 			certFetcher = attest.DefaultAzureCertFetcherNew()
 		}
-		logrus.Info("Fetching platform certificate...")
+		logrus.Trace("Fetching platform certificate...")
 		platformCertificate, _, err = certFetcher.GetCertChain(SNPReport.ChipID, SNPReport.ReportedTCB)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to fetch platform certificate: %s", err)
 		}
 	} else {
-		logrus.Info("Using platform certificate from UVM info...")
+		logrus.Trace("Using platform certificate from UVM info...")
 		platformCertificate = append(platformCertificate, platformCertificateValue.VcekCert...)
 		platformCertificate = append(platformCertificate, platformCertificateValue.CertificateChain...)
 	}
@@ -107,7 +107,7 @@ func main() {
 	// if logFile is not set, logrus defaults to stderr
 	if *logFile != "" {
 		// If the file doesn't exist, create it. If it exists, append to it.
-		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -130,29 +130,29 @@ func main() {
 	if *insecureVirtual {
 		logrus.Warn("Warning: INSECURE virtual: do not use in production!")
 	} else {
-		logrus.Info("Checking if SNP device is detected...")
+		logrus.Trace("Checking if SNP device is detected...")
 		if _, err := os.Stat(attest.SNP_DEVICE_PATH); err == nil {
-			logrus.Infof("%s is detected\n", attest.SNP_DEVICE_PATH)
+			logrus.Tracef("%s is detected\n", attest.SNP_DEVICE_PATH)
 		} else if errors.Is(err, os.ErrNotExist) {
 			logrus.Fatalf("%s is not detected", attest.SNP_DEVICE_PATH)
 		} else {
 			logrus.Fatalf("Unknown error: %s", err)
 		}
 
-		logrus.Info("Getting UVM Information...")
+		logrus.Trace("Getting UVM Information...")
 		uvmInfo, err := common.GetUvmInformation()
 		if err != nil {
 			logrus.Fatalf("Failed to get UVM information: %s", err)
 		}
 
-		logrus.Info("Setting platform certificate server...")
+		logrus.Trace("Setting platform certificate server...")
 		if *platformCertificateServer == "" {
 			platformCertificateValue = &uvmInfo.InitialCerts
 		} else {
-			logrus.Infof("Platform certificates will be retrieved from server %s", *platformCertificateServer)
+			logrus.Tracef("Platform certificates will be retrieved from server %s", *platformCertificateServer)
 		}
 
-		logrus.Info("Decoding UVM reference info...")
+		logrus.Trace("Decoding UVM reference info...")
 		uvmEndorsementValue, err = base64.StdEncoding.DecodeString(uvmInfo.EncodedUvmReferenceInfo)
 		if err != nil {
 			logrus.Fatalf("Failed to decode base64 string: %s", err)

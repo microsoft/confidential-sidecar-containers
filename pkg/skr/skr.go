@@ -68,7 +68,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 	// expects the public wrapping key to be formatted as a JSON Web Key (JWK).
 
 	// generate rsa key pair
-	logrus.Info("Generating RSA key pair...")
+	logrus.Trace("Generating RSA key pair...")
 	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, RSASize)
 	if err != nil {
 		return nil, errors.Wrapf(err, "rsa key pair generation failed")
@@ -128,7 +128,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 	logrus.Debugf("Key Type: %s Key %v", kty, keyBytes)
 
 	if kty == "oct" || kty == "oct-HSM" {
-		logrus.Info("Encoding OCT key as JWK...")
+		logrus.Trace("Encoding OCT key as JWK...")
 		jwKey := jwk.NewSymmetricKey()
 		err := jwKey.FromRaw(keyBytes)
 		if err != nil {
@@ -136,7 +136,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 		}
 		return jwKey, nil
 	} else if kty == "RSA-HSM" || kty == "RSA" {
-		logrus.Info("Parsing RSA key...")
+		logrus.Trace("Parsing RSA key...")
 		key, err := x509.ParsePKCS8PrivateKey(keyBytes)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not parse RSA key")
@@ -144,7 +144,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 
 		var privateRSAKey *rsa.PrivateKey = key.(*rsa.PrivateKey)
 
-		logrus.Info("Encoding RSA key as JWK...")
+		logrus.Trace("Encoding RSA key as JWK...")
 		jwKey := jwk.NewRSAPrivateKey()
 		err = jwKey.FromRaw(privateRSAKey)
 		if err != nil {

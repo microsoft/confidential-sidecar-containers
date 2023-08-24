@@ -63,7 +63,7 @@ func main() {
 
 	if *logFile != "" {
 		// If the file doesn't exist, create it. If it exists, append to it.
-		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -113,7 +113,7 @@ func main() {
 	// See above comment about hostname and risk of breaking confidentiality
 	url := *hostname + ":" + *port
 
-	logrus.Info("Getting initial TCBM value...")
+	logrus.Trace("Getting initial TCBM value...")
 	var tcbm string
 	if *allowTestingMismatchedTCB {
 		logrus.Debugf("setting tcbm to CorruptedTCB value: %s\n", CorruptedTCB)

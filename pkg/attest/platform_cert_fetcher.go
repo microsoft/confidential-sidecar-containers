@@ -53,21 +53,21 @@ const x509CertExtensionsValuePos = 2
 // parses the cached CertChain and returns the VCEK leaf certificate
 // Subject of the (x509) VCEK certificate (CN=SEV-VCEK)
 func GetVCEKFromCertChain(certChain []byte) (*x509.Certificate, error) {
-	logrus.Info("Getting VCEK from Cert Chain...")
+	logrus.Trace("Getting VCEK from Cert Chain...")
 	currChain := certChain
 	// iterate through the certificates in the chain
-	logrus.Info("Iterating through certificates in the chain...")
+	logrus.Trace("Iterating through certificates in the chain...")
 	for len(currChain) > 0 {
 		var block *pem.Block
 		block, currChain = pem.Decode(currChain)
 		if block.Type == "CERTIFICATE" {
-			logrus.Info("Parsing x509 certificate...")
+			logrus.Trace("Parsing x509 certificate...")
 			certificate, err := x509.ParseCertificate(block.Bytes)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to parse x509 certificate")
 			}
 			// check if this is the correct certificate
-			logrus.Info("Checking if certificate is SEV-VCEK...")
+			logrus.Trace("Checking if certificate is SEV-VCEK...")
 			if certificate.Subject.CommonName == "SEV-VCEK" {
 				return certificate, nil
 			}
@@ -84,7 +84,7 @@ func ParseVCEK(certChain []byte) ( /*tcbVersion*/ uint64, error) {
 		return 0, err
 	}
 
-	logrus.Info("Parsing VCEK from Cert Chain...")
+	logrus.Trace("Parsing VCEK from Cert Chain...")
 	tcbValues := make([]byte, 8) // TCB version is 8 bytes
 	// parse extensions to update the THIM URL and get TCB Version
 	for _, ext := range vcekCert.Extensions {
@@ -227,7 +227,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			// Fetch platform certificate from AMD endpoint
 			// https://www.amd.com/en/support/tech-docs/versioned-chip-endorsement-key-vcek-certificate-and-kds-interface-specification
 			// AMD cert cache endpoint returns the VCEK certificate in DER format
-			logrus.Info("Fetching VCEK cert from AMD endpoint...")
+			logrus.Trace("Fetching VCEK cert from AMD endpoint...")
 			uri = fmt.Sprintf(AmdVCEKRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, reportedTCBBytes[UcodeSplTcbmByteIndex], reportedTCBBytes[SnpSplTcbmByteIndex], reportedTCBBytes[TeeSplTcbmByteIndex], reportedTCBBytes[BlSplTcbmByteIndex])
 			derBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
 			if err != nil {
@@ -237,7 +237,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			vcekPEMBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 
 			// now retrieve the cert chain
-			logrus.Info("Fetching cert chain from AMD endpoint...")
+			logrus.Trace("Fetching cert chain from AMD endpoint...")
 			uri = fmt.Sprintf(AmdCertChainRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType)
 			certChainPEMBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
 			if err != nil {
@@ -258,12 +258,12 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 				return nil, thimTcbm, errors.Wrapf(err, "pulling cert chain response from get request failed")
 			}
 
-			logrus.Info("Parsing THIM Certs...")
+			logrus.Trace("Parsing THIM Certs...")
 			thimCerts, err = common.ParseTHIMCerts(string(THIMCertsBytes))
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "certcache failed to get local certs")
 			}
-			logrus.Info("Parsing THIM TCBM...")
+			logrus.Trace("Parsing THIM TCBM...")
 			thimTcbm, err = common.ParseTHIMTCBM(thimCerts)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "failed to parse THIM TCBM")
@@ -273,12 +273,12 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 		case "AzCache":
 			logrus.Debugf("Retrieving Cert Chain from AzCache Endpoint %s...", certFetcher.Endpoint)
 			uri = fmt.Sprintf(AzureCertCacheRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, strconv.FormatUint(reportedTCB, 16), certFetcher.APIVersion)
-			logrus.Info("Fetchging cert chain from AzCache endpoint...")
+			logrus.Trace("Fetchging cert chain from AzCache endpoint...")
 			certChain, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from AzCache get request failed")
 			}
-			logrus.Info("Parsing VCEK from AzCache Cert Chain...")
+			logrus.Trace("Parsing VCEK from AzCache Cert Chain...")
 			thimTcbm, err = ParseVCEK(certChain)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "AzCache failed to parse VCEK from cert chain")

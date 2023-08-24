@@ -16,10 +16,10 @@ func LocalSetup(filePath string, readWrite bool) error {
 	var file *os.File
 	var err error
 	if readWrite {
-		logrus.Info("Opening file for read/write")
+		logrus.Trace("Opening file for read/write")
 		file, err = os.OpenFile(filePath, os.O_RDWR, 0)
 	} else {
-		logrus.Info("Opening file for read only")
+		logrus.Trace("Opening file for read only")
 		file, err = os.OpenFile(filePath, os.O_RDONLY, 0)
 	}
 	if err != nil {
@@ -50,7 +50,7 @@ func LocalDownloadBlock(blockIndex int64) (err error, b []byte) {
 	logrus.Info("Downloading block...")
 	bytesInBlock := GetBlockSize()
 	var offset int64 = blockIndex * bytesInBlock
-	logrus.Infof("Block offset %d = block index %d * bytes in block %d", offset, blockIndex, bytesInBlock)
+	logrus.Tracef("Block offset %d = block index %d * bytes in block %d", offset, blockIndex, bytesInBlock)
 	var count int64 = bytesInBlock
 
 	file, err := os.OpenFile(fm.filePath, os.O_RDONLY, 0)
@@ -80,7 +80,7 @@ func LocalUploadBlock(blockIndex int64, data []byte) error {
 	logrus.Info("Uploading block...")
 	bytesInBlock := GetBlockSize()
 	var offset int64 = blockIndex * bytesInBlock
-	logrus.Infof("Block offset %d = block index %d * bytes in blck %d", offset, blockIndex, bytesInBlock)
+	logrus.Tracef("Block offset %d = block index %d * bytes in blck %d", offset, blockIndex, bytesInBlock)
 
 	file, err := os.OpenFile(fm.filePath, os.O_RDWR, 0)
 	if err != nil {

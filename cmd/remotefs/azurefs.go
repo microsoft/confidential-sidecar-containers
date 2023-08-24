@@ -207,7 +207,7 @@ func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob skr.KeyDerivat
 		}
 		// use sha256 as hashing function for HKDF
 		hash := sha256.New
-		logrus.Info("Using SHA256 as hashing function for HKDF")
+		logrus.Trace("Using SHA256 as hashing function for HKDF")
 
 		// public salt and label
 		var labelString string
@@ -225,11 +225,11 @@ func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob skr.KeyDerivat
 		}
 
 		// setup derivation function using secret D exponent, salt, and label
-		logrus.Info("Setup symmetric key derivation function using HKDF with secret D exponent, salt, and label...")
+		logrus.Trace("Setup symmetric key derivation function using HKDF with secret D exponent, salt, and label...")
 		hkdf := hkdf.New(hash, rawKey.D.Bytes(), salt, []byte(labelString))
 
 		// derive key
-		logrus.Info("Deriving symmetric key...")
+		logrus.Trace("Deriving symmetric key...")
 		if _, err := io.ReadFull(hkdf, octetKeyBytes); err != nil {
 			return "", errors.Wrapf(err, "failed to derive oct key")
 		}
