@@ -12,7 +12,6 @@ on:
       - tools/get-snp-report/bin/get-snp-report
       - tools/get-snp-report/bin/get-fake-snp-report
       - tools/get-snp-report/bin/verbose-report
-      - vendor/**
       
   push:
     branches:
@@ -24,7 +23,6 @@ on:
       - tools/get-snp-report/bin/get-snp-report
       - tools/get-snp-report/bin/get-fake-snp-report
       - tools/get-snp-report/bin/verbose-report
-      - vendor/**
       
 jobs:
   push-skr-debug-image: 
