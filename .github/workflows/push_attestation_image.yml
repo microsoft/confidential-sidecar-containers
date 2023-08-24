@@ -44,12 +44,11 @@ jobs:
         id: get_image_tag
         run: |
           if [ ${{ github.event_name }} == "push" ]; then
-            echo "branch_name=main" >> $GITHUB_OUTPUT
+            branch_name=main
           else  
             branch_name=${{ github.head_ref }}
-            image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')
-            echo "image_tag=$image_tag" >> $GITHUB_OUTPUT
           fi
+          echo "image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')" >> $GITHUB_OUTPUT
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v3
