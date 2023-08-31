@@ -31,7 +31,7 @@ func TestFetchReport(t *testing.T) {
 
 	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
-		t.Fatalf("Fetching report failed: %v", err)
+		t.Fatalf("fetching report failed: %v", err)
 	}
 	expectedByteString := hex.EncodeToString(reportData[:])
 	// Confirm `report data` (user provided 64 byte data) is correct

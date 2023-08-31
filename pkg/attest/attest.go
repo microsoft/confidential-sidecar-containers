@@ -40,10 +40,10 @@ func GenerateMAAReportData(inputBytes []byte) [REPORT_DATA_SIZE]byte {
 	runtimeDataBytes := runtimeData.Sum(nil)
 	const sha256len = 32
 	if len(runtimeDataBytes) != sha256len {
-		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(runtimeDataBytes)))
+		panic(fmt.Errorf("length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(runtimeDataBytes)))
 	}
 	if sha256len > REPORT_DATA_SIZE {
-		panic(fmt.Errorf("Generated hash is too large for report data. hash length: %d bytes, report data size: %d", sha256len, REPORT_DATA_SIZE))
+		panic(fmt.Errorf("generated hash is too large for report data. hash length: %d bytes, report data size: %d", sha256len, REPORT_DATA_SIZE))
 	}
 	copy(reportData[:sha256len], runtimeDataBytes)
 	return reportData
@@ -60,10 +60,10 @@ func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
 	inittimeDataBytes := inittimeData.Sum(nil)
 	const sha256len = 32
 	if len(inittimeDataBytes) != sha256len {
-		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(inittimeDataBytes)))
+		panic(fmt.Errorf("length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(inittimeDataBytes)))
 	}
 	if sha256len > HOST_DATA_SIZE {
-		panic(fmt.Errorf("Generated hash is too large for host data. hash length: %d bytes, report host size: %d", sha256len, REPORT_DATA_SIZE))
+		panic(fmt.Errorf("generated hash is too large for host data. hash length: %d bytes, report host size: %d", sha256len, REPORT_DATA_SIZE))
 	}
 	copy(hostData[:], inittimeDataBytes)
 	return hostData
