@@ -99,7 +99,7 @@ func PostRawAttest(c *gin.Context) {
 		attestationReportFetcher = attest.NewAttestationReportFetcher()
 	}
 	reportData := attest.GenerateMAAReportData(runtimeDataBytes)
-	rawReport, err := attestationReportFetcher.FetchAttestationReportByte(reportData)
+	rawReport, err := attestationReportFetcher.FetchAttestationReportHex(reportData)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	}

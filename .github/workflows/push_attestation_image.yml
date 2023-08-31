@@ -12,6 +12,7 @@ on:
       - pkg/attest
       - pkg/common
       - vendor/**
+      - internal/**
 
   push:
     branches:
@@ -23,6 +24,7 @@ on:
       - pkg/attest
       - pkg/common
       - vendor/**
+      - internal/**
 
 jobs:
   push-attestation-image:
@@ -44,10 +46,11 @@ jobs:
         id: get_image_tag
         run: |
           if [ ${{ github.event_name }} == "push" ]; then
-            echo "branch_name=main" >> $GITHUB_OUTPUT
+            branch_name=main
           else  
-            echo "branch_name=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+            branch_name=${{ github.head_ref }}
           fi
+          echo "image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')" >> $GITHUB_OUTPUT
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v3
@@ -55,4 +58,4 @@ jobs:
           file: docker/attestation-container/Dockerfile.run
           push: true
           tags: |
-            ${{ secrets.REGISTRY_NAME }}.${{ secrets.REGISTRY_DOMAIN }}/attestation:${{ steps.get_image_tag.outputs.branch_name }}
+            ${{ secrets.REGISTRY_NAME }}.${{ secrets.REGISTRY_DOMAIN }}/attestation:${{ steps.get_image_tag.outputs.image_tag }}
