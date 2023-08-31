@@ -6,6 +6,10 @@ import (
 	"github.com/lestrrat-go/jwx/jwa"
 )
 
+type DecodeCtx interface {
+	CollectRaw() bool
+}
+
 // Message represents a full JWS encoded message. Flattened serialization
 // is not supported as a struct, but rather it's represented as a
 // Message struct with only one `signature` element.
@@ -46,15 +50,18 @@ import (
 //
 // To sign and verify, use the appropriate `Sign()` and `Verify()` functions.
 type Message struct {
+	dc         DecodeCtx
 	payload    []byte
 	signatures []*Signature
 	b64        bool // true if payload should be base64 encoded
 }
 
 type Signature struct {
+	dc        DecodeCtx
 	headers   Headers // Unprotected Headers
 	protected Headers // Protected Headers
 	signature []byte  // Signature
+	detached  bool
 }
 
 type Visitor = iter.MapVisitor
