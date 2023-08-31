@@ -23,3 +23,7 @@ func IsSNPVM6() bool {
 	_, err := os.Stat(SNP_DEVICE_PATH_6)
 	return !errors.Is(err, os.ErrNotExist)
 }
+
+func IsSNPVM() bool {
+	return IsSNPVM5() || IsSNPVM6()
+}

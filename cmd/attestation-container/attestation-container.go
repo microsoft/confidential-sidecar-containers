@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"flag"
 	"log"
 	"net"
@@ -53,7 +52,15 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 		return &pb.FetchAttestationReply{}, nil
 	}
 
-	reportFetcher := attest.NewAttestationReportFetcher()
+	var reportFetcher attest.AttestationReportFetcher
+	if attest.IsSNPVM5() {
+		reportFetcher = attest.NewAttestationReportFetcher()
+	} else if attest.IsSNPVM6() {
+		reportFetcher = attest.NewAttestationReportFetcher6()
+	} else {
+		return nil, status.Errorf(codes.Internal, "attestation-container is not running in SNP enabled VM")
+	}
+
 	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to fetch attestation report: %s", err)
@@ -99,12 +106,12 @@ func main() {
 	if *insecureVirtual {
 		log.Printf("Warning: INSECURE virtual: do not use in production!")
 	} else {
-		if _, err := os.Stat(attest.SNP_DEVICE_PATH); err == nil {
-			log.Printf("%s is detected\n", attest.SNP_DEVICE_PATH)
-		} else if errors.Is(err, os.ErrNotExist) {
-			log.Fatalf("%s is not detected", attest.SNP_DEVICE_PATH)
+		if attest.IsSNPVM5() {
+			log.Printf("%s is detected\n", attest.SNP_DEVICE_PATH_5)
+		} else if attest.IsSNPVM6() {
+			log.Printf("%s is detected\n", attest.SNP_DEVICE_PATH_6)
 		} else {
-			log.Fatalf("Unknown error: %s", err)
+			log.Fatalf("attestation-container is not running in SNP enabled VM")
 		}
 
 		uvmInfo, err := common.GetUvmInformation()
