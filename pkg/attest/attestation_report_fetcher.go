@@ -50,14 +50,17 @@ const (
 			uint8_t  data[4000];
 		} snp_report_resp;
 	*/
-	// MYTODO: check actual size of the struct
 	// It will have the conteints of MSG_REPORT_RSP in the first REPORT_RSP_SIZE bytes
 	REPORT_RSP_CONTAINER_SIZE_6 = 4000
 
-	// MYTODO: check. size of snp_guest_request_ioctl
+	// Size of snp_guest_request_ioctl
 	PAYLOAD_SIZE_6 = 32
-	// MYTODO: check the actual value
-	SEV_SNP_GUEST_MSG_REPORT_6 = SEV_SNP_GUEST_MSG_REPORT
+	/* From sev-snp driver include/uapi/linux/sev-guest.h
+
+	#define SNP_GUEST_REQ_IOC_TYPE	'S'
+	#define SNP_GET_REPORT _IOWR(SNP_GUEST_REQ_IOC_TYPE, 0x0, struct snp_guest_request_ioctl)
+	*/
+	SNP_GET_REPORT = 3223343872
 )
 
 /*
@@ -173,12 +176,10 @@ func createPayloadBytes6(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_
 	if err := binary.Write(&buf, binary.LittleEndian, [7]uint8{}); err != nil {
 		return payload, err
 	}
-	// MYTODO: Check difference between req_data and request_uaddr (any difference between two castings `(uint64_t)` and `(uint64_t)(void*)`?)
 	// req_data
 	if err := binary.Write(&buf, binary.LittleEndian, uint64(reportReqPtr)); err != nil {
 		return payload, err
 	}
-	// MYTODO: Check difference between resp_data and response_uaddr
 	// resp_data
 	if err := binary.Write(&buf, binary.LittleEndian, uint64(ReportRespPtr)); err != nil {
 		return payload, err
@@ -277,7 +278,7 @@ func (f *realAttestationReportFetcher6) FetchAttestationReportByte(reportData [R
 	_, _, errno := unix.Syscall(
 		unix.SYS_IOCTL,
 		uintptr(fd),
-		uintptr(SEV_SNP_GUEST_MSG_REPORT_6),
+		uintptr(SNP_GET_REPORT),
 		uintptr(unsafe.Pointer(&payload[0])),
 	)
 
