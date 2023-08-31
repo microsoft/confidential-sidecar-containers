@@ -42,12 +42,8 @@ const (
 // From sev-snp driver include/uapi/linux/psp-sev-guest.h
 const SEV_SNP_GUEST_MSG_REPORT = 3223868161
 
-const SNP_DEVICE_PATH = "/dev/sev"
-
 // Linux kernel 6.1
 const (
-	SDP_DEVICE_PATH_6 = "/dev/sev-guest"
-
 	/*
 		typedef struct {
 			// response data, see SEV-SNP spec for the format
@@ -214,9 +210,9 @@ type realAttestationReportFetcher struct {
 }
 
 func (f *realAttestationReportFetcher) FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error) {
-	fd, err := unix.Open(SNP_DEVICE_PATH, unix.O_RDWR|unix.O_CLOEXEC, 0)
+	fd, err := unix.Open(SNP_DEVICE_PATH_5, unix.O_RDWR|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return nil, fmt.Errorf("error opening SNP device %s: %s", SNP_DEVICE_PATH, err)
+		return nil, fmt.Errorf("error opening SNP device %s: %s", SNP_DEVICE_PATH_5, err)
 	}
 
 	reportReqBytes := createReportReqBytes(reportData)
@@ -257,7 +253,7 @@ func (f *realAttestationReportFetcher) FetchAttestationReportHex(reportData [REP
 	return hex.EncodeToString(report), nil
 }
 
-func NewAttestationReport6Fetcher() AttestationReportFetcher {
+func NewAttestationReportFetcher6() AttestationReportFetcher {
 	return &realAttestationReportFetcher6{}
 }
 
@@ -265,9 +261,9 @@ type realAttestationReportFetcher6 struct {
 }
 
 func (f *realAttestationReportFetcher6) FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error) {
-	fd, err := unix.Open(SDP_DEVICE_PATH_6, unix.O_RDWR|unix.O_CLOEXEC, 0)
+	fd, err := unix.Open(SNP_DEVICE_PATH_5, unix.O_RDWR|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return nil, fmt.Errorf("error opening SNP device %s: %s", SDP_DEVICE_PATH_6, err)
+		return nil, fmt.Errorf("error opening SNP device %s: %s", SNP_DEVICE_PATH_5, err)
 	}
 
 	reportReqBytes := createReportReqBytes(reportData)

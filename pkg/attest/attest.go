@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
@@ -95,11 +94,13 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 
 	var reportFetcher AttestationReportFetcher
 	// Use fake attestation report if it's not running inside SNP VM
-	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
+	if IsSNPVM5() {
+		reportFetcher = NewAttestationReportFetcher()
+	} else if IsSNPVM6() {
+		reportFetcher = NewAttestationReportFetcher6()
+	} else {
 		hostData := GenerateMAAHostData(inittimeDataBytes)
 		reportFetcher = UnsafeNewFakeAttestationReportFetcher(hostData)
-	} else {
-		reportFetcher = NewAttestationReportFetcher()
 	}
 
 	reportData := GenerateMAAReportData(runtimeDataBytes)
