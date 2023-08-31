@@ -16,7 +16,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -77,7 +76,7 @@ func main() {
 	}
 
 	importKeyCfg := new(importKeyConfig)
-	if configBytes, err := ioutil.ReadFile(configFile); err != nil {
+	if configBytes, err := os.ReadFile(configFile); err != nil {
 		fmt.Println("Error reading Azure services configuration")
 		os.Exit(1)
 	} else if err = json.Unmarshal(configBytes, importKeyCfg); err != nil {
@@ -170,7 +169,7 @@ func main() {
 			key = jwKey
 		} else {
 
-			privateRSAKeyBytes, err := ioutil.ReadFile(keyRSAPEMFile)
+			privateRSAKeyBytes, err := os.ReadFile(keyRSAPEMFile)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -245,7 +244,7 @@ func main() {
 			rand.Read(octKey)
 		} else {
 			// read string from file keyHexFile as hexstring
-			octKey, err = ioutil.ReadFile(keyHexFile)
+			octKey, err = os.ReadFile(keyHexFile)
 			if err != nil {
 				fmt.Println(err)
 				return
