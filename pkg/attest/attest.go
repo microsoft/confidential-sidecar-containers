@@ -93,12 +93,14 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 	// Fetch the attestation report
 
 	var reportFetcher AttestationReportFetcher
-	// Use fake attestation report if it's not running inside SNP VM
-	if IsSNPVM5() {
-		reportFetcher = NewAttestationReportFetcher()
-	} else if IsSNPVM6() {
-		reportFetcher = NewAttestationReportFetcher6()
+	if IsSNPVM() {
+
+		reportFetcher, err = NewAttestationReportFetcher()
+		if err != nil {
+			return "", errors.Wrapf(err, "failed to create attestation report fetcher")
+		}
 	} else {
+		// Use fake attestation report if it's not running inside SNP VM
 		hostData := GenerateMAAHostData(inittimeDataBytes)
 		reportFetcher = UnsafeNewFakeAttestationReportFetcher(hostData)
 	}

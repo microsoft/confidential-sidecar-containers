@@ -91,14 +91,18 @@ func PostRawAttest(c *gin.Context) {
 	}
 
 	var attestationReportFetcher attest.AttestationReportFetcher
-	if attest.IsSNPVM5() {
-		attestationReportFetcher = attest.NewAttestationReportFetcher()
-	} else if attest.IsSNPVM6() {
-		attestationReportFetcher = attest.NewAttestationReportFetcher6()
+	if attest.IsSNPVM() {
+
+		attestationReportFetcher, err = attest.NewAttestationReportFetcher()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 	} else {
+		// Use dummy report if SEV device is not available
 		hostData := attest.GenerateMAAHostData(inittimeDataBytes)
 		attestationReportFetcher = attest.UnsafeNewFakeAttestationReportFetcher(hostData)
 	}
+
 	reportData := attest.GenerateMAAReportData(runtimeDataBytes)
 	rawReport, err := attestationReportFetcher.FetchAttestationReportHex(reportData)
 	if err != nil {

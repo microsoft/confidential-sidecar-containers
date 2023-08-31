@@ -203,7 +203,17 @@ type AttestationReportFetcher interface {
 	FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error)
 }
 
-func NewAttestationReportFetcher() AttestationReportFetcher {
+func NewAttestationReportFetcher() (AttestationReportFetcher, error) {
+	if IsSNPVM5() {
+		return NewAttestationReportFetcher5(), nil
+	} else if IsSNPVM6() {
+		return NewAttestationReportFetcher6(), nil
+	} else {
+		return nil, fmt.Errorf("SEV device is not found")
+	}
+}
+
+func NewAttestationReportFetcher5() AttestationReportFetcher {
 	return &realAttestationReportFetcher{}
 }
 

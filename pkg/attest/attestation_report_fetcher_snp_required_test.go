@@ -20,12 +20,8 @@ func TestFetchReport(t *testing.T) {
 		reportData[i] = byte(i)
 	}
 
-	var reportFetcher AttestationReportFetcher
-	if IsSNPVM5() {
-		reportFetcher = NewAttestationReportFetcher()
-	} else if IsSNPVM6() {
-		reportFetcher = NewAttestationReportFetcher6()
-	} else {
+	reportFetcher, err := NewAttestationReportFetcher()
+	if err != nil {
 		t.Fatalf("attestation-container is not running in SNP enabled VM")
 	}
 
