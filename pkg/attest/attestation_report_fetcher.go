@@ -275,9 +275,9 @@ type realAttestationReportFetcher6 struct {
 }
 
 func (f *realAttestationReportFetcher6) FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error) {
-	fd, err := unix.Open(SNP_DEVICE_PATH_5, unix.O_RDWR|unix.O_CLOEXEC, 0)
+	fd, err := unix.Open(SNP_DEVICE_PATH_6, unix.O_RDWR|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return nil, fmt.Errorf("error opening SNP device %s: %s", SNP_DEVICE_PATH_5, err)
+		return nil, fmt.Errorf("error opening SNP device %s: %s", SNP_DEVICE_PATH_6, err)
 	}
 
 	reportReqBytes := createReportReqBytes(reportData)
