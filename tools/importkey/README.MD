@@ -18,7 +18,7 @@ When importing a key to the key vault, a release policy is coupled with the key.
         },
         "akv": {
             "endpoint": "myhsm.managedhsm.azure.net", 
-            "api_version": "api-version=7.3-preview",
+            "api_version": "api-version=7.4",
             "bearer_token": ""
         }
     },
@@ -30,6 +30,14 @@ When importing a key to the key vault, a release policy is coupled with the key.
         {
             "claim":  "x-ms-sevsnpvm-hostdata",
             "equals": "99e1abd344fc0989288c44fde8de3b2a248b1b95814df8955d0c305a7db46680"
+        },
+        {
+            "claim": "x-ms-compliance-status",
+            "equals": "azure-compliant-uvm"
+        },
+        {
+            "claim": "x-ms-sevsnpvm-is-debuggable",
+            "equals": "false"
         }            
     ]
 }
