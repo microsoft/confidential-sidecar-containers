@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
@@ -41,10 +40,10 @@ func GenerateMAAReportData(inputBytes []byte) [REPORT_DATA_SIZE]byte {
 	runtimeDataBytes := runtimeData.Sum(nil)
 	const sha256len = 32
 	if len(runtimeDataBytes) != sha256len {
-		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(runtimeDataBytes)))
+		panic(fmt.Errorf("length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(runtimeDataBytes)))
 	}
 	if sha256len > REPORT_DATA_SIZE {
-		panic(fmt.Errorf("Generated hash is too large for report data. hash length: %d bytes, report data size: %d", sha256len, REPORT_DATA_SIZE))
+		panic(fmt.Errorf("generated hash is too large for report data. hash length: %d bytes, report data size: %d", sha256len, REPORT_DATA_SIZE))
 	}
 	copy(reportData[:sha256len], runtimeDataBytes)
 	return reportData
@@ -61,10 +60,10 @@ func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
 	inittimeDataBytes := inittimeData.Sum(nil)
 	const sha256len = 32
 	if len(inittimeDataBytes) != sha256len {
-		panic(fmt.Errorf("Length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(inittimeDataBytes)))
+		panic(fmt.Errorf("length of sha256 hash should be %d bytes, but it is actually %d bytes", sha256len, len(inittimeDataBytes)))
 	}
 	if sha256len > HOST_DATA_SIZE {
-		panic(fmt.Errorf("Generated hash is too large for host data. hash length: %d bytes, report host size: %d", sha256len, REPORT_DATA_SIZE))
+		panic(fmt.Errorf("generated hash is too large for host data. hash length: %d bytes, report host size: %d", sha256len, REPORT_DATA_SIZE))
 	}
 	copy(hostData[:], inittimeDataBytes)
 	return hostData
@@ -94,12 +93,16 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 	// Fetch the attestation report
 
 	var reportFetcher AttestationReportFetcher
-	// Use fake attestation report if it's not running inside SNP VM
-	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
+	if IsSNPVM() {
+
+		reportFetcher, err = NewAttestationReportFetcher()
+		if err != nil {
+			return "", errors.Wrapf(err, "failed to create attestation report fetcher")
+		}
+	} else {
+		// Use fake attestation report if it's not running inside SNP VM
 		hostData := GenerateMAAHostData(inittimeDataBytes)
 		reportFetcher = UnsafeNewFakeAttestationReportFetcher(hostData)
-	} else {
-		reportFetcher = NewAttestationReportFetcher()
 	}
 
 	reportData := GenerateMAAReportData(runtimeDataBytes)

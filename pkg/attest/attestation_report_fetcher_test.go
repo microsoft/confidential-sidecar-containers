@@ -36,5 +36,5 @@ func TestFetchFakeReport(t *testing.T) {
 	assertEqual(t, "Check report data", expectedReportDataByteString, hex.EncodeToString(reportBytes[REPORT_DATA_OFFSET:REPORT_DATA_OFFSET+REPORT_DATA_SIZE]))
 	expectedHostDataByteString := hex.EncodeToString(hostData[:])
 	// Confirm `report data` (user provided 64 byte data) is correct
-	assertEqual(t, "Check report data", expectedHostDataByteString, hex.EncodeToString(reportBytes[HOST_DATA_OFFSET:HOST_DATA_OFFSET+HOST_DATA_SIZE]))
+	assertEqual(t, "Check host data", expectedHostDataByteString, hex.EncodeToString(reportBytes[HOST_DATA_OFFSET:HOST_DATA_OFFSET+HOST_DATA_SIZE]))
 }
