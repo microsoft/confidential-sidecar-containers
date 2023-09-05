@@ -53,7 +53,6 @@ jobs:
           else
             branch_name=${{ github.head_ref }}
           fi
-          echo $branch_name
           echo "image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')" >> $GITHUB_OUTPUT
 
       - name: Build and Push Docker Image

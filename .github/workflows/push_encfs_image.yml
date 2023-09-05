@@ -50,6 +50,9 @@ jobs:
         run: |
           if [ ${{ github.event_name }} == "push" ]; then
             branch_name=main
+          elif [ ${{ github.event_name }} == "workflow_dispatch" ]; then
+            branch_name=${{ github.ref }}
+            branch_name=${branch_name:11}
           else  
             branch_name=${{ github.head_ref }}
           fi
