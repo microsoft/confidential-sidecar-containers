@@ -16,7 +16,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -57,14 +56,14 @@ type OctKey struct {
 func main() {
 	// variables declaration
 	var configFile string
-	var keyHexString string
+	var keyHexFile string
 	var keyRSAPEMFile string
 	var runInsideAzure bool
 	var outputOctetKeyfile bool
 
 	// flags declaration using flag package
 	flag.StringVar(&configFile, "c", "", "Specify config file to process")
-	flag.StringVar(&keyHexString, "kh", "", "Specify oct key bytes in hexstring [optional]")
+	flag.StringVar(&keyHexFile, "kh", "", "Specify path to oct key file [optional]")
 	flag.StringVar(&keyRSAPEMFile, "kp", "", "Specify path to RSA key PEM file [optional]")
 	flag.BoolVar(&runInsideAzure, "a", false, "Run within Azure VM [optional]")
 	flag.BoolVar(&outputOctetKeyfile, "out", false, "Output octet key binary file")
@@ -77,7 +76,7 @@ func main() {
 	}
 
 	importKeyCfg := new(importKeyConfig)
-	if configBytes, err := ioutil.ReadFile(configFile); err != nil {
+	if configBytes, err := os.ReadFile(configFile); err != nil {
 		fmt.Println("Error reading Azure services configuration")
 		os.Exit(1)
 	} else if err = json.Unmarshal(configBytes, importKeyCfg); err != nil {
@@ -170,7 +169,7 @@ func main() {
 			key = jwKey
 		} else {
 
-			privateRSAKeyBytes, err := ioutil.ReadFile(keyRSAPEMFile)
+			privateRSAKeyBytes, err := os.ReadFile(keyRSAPEMFile)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -240,11 +239,12 @@ func main() {
 
 		var err error
 
-		if keyHexString == "" {
+		if keyHexFile == "" {
 			octKey = make([]byte, 32)
 			rand.Read(octKey)
 		} else {
-			octKey, err = hex.DecodeString(keyHexString)
+			// read string from file keyHexFile as hexstring
+			octKey, err = os.ReadFile(keyHexFile)
 			if err != nil {
 				fmt.Println(err)
 				return

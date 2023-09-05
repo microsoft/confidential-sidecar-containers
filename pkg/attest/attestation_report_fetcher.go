@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"unsafe"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -16,7 +16,7 @@ import (
 )
 
 // Data structures are based on SEV-SNP Firmware ABI Specification
-// https://www.amd.com/en/support/tech-docs/sev-secure-nested-paging-firmware-abi-specification
+// https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56860.pdf
 
 const (
 	ATTESTATION_REPORT_SIZE = 1184 // Size of ATTESTATION_REPORT (Table 21)
@@ -39,10 +39,24 @@ const (
 	MSG_REPORT_RSP = 6
 )
 
-// From sev-snp driver include/uapi/linux/psp-sev-guest.h
-const SEV_SNP_GUEST_MSG_REPORT = 3223868161
+type AttestationReportFetcher interface {
+	// Fetches attestation report as []byte.
+	// reportData is guest-provided data defined in SEV-SNP Firmware ABI Specification.
+	FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error)
+	// Fetches attestation report as hex.
+	// reportData is guest-provided data defined in SEV-SNP Firmware ABI Specification.
+	FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error)
+}
 
-const SNP_DEVICE_PATH = "/dev/sev"
+func NewAttestationReportFetcher() (AttestationReportFetcher, error) {
+	if IsSNPVM5() {
+		return NewAttestationReportFetcher5(), nil
+	} else if IsSNPVM6() {
+		return NewAttestationReportFetcher6(), nil
+	} else {
+		return nil, fmt.Errorf("SEV device is not found")
+	}
+}
 
 /*
 Creates and returns MSG_REPORT_REQ message bytes (SEV-SNP Firmware ABI Specification Table 20)
@@ -52,6 +66,13 @@ func createReportReqBytes(reportData [REPORT_DATA_SIZE]byte) [REPORT_REQ_SIZE]by
 	copy(reportReqBytes[0:REPORT_DATA_SIZE], reportData[:])
 	return reportReqBytes
 }
+
+// ------------ Linux kernel 5.x ------------
+
+const (
+	// Value of SEV_SNP_GUEST_MSG_REPORT in sev-snp driver include/uapi/linux/psp-sev-guest.h
+	SNP_GET_REPORT_IOCTL_REQ_CODE_5 = 3223868161
+)
 
 /*
 Creates and returns byte array of the following C struct
@@ -71,7 +92,7 @@ Creates and returns byte array of the following C struct
 The padding is based on Section 3.1.2 of System V ABI for AMD64
 https://www.uclibc.org/docs/psABI-x86_64.pdf
 */
-func createPayloadBytes(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_SIZE]byte, error) {
+func createPayloadBytes5(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_SIZE]byte, error) {
 	payload := [PAYLOAD_SIZE]byte{}
 	var buf bytes.Buffer
 	// req_msg_type
@@ -128,32 +149,23 @@ func createPayloadBytes(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_S
 	return payload, nil
 }
 
-type AttestationReportFetcher interface {
-	// Fetches attestation report as []byte.
-	// reportData is guest-provided data defined in SEV-SNP Firmware ABI Specification.
-	FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error)
-	// Fetches attestation report as hex.
-	// reportData is guest-provided data defined in SEV-SNP Firmware ABI Specification.
-	FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error)
+func NewAttestationReportFetcher5() AttestationReportFetcher {
+	return &realAttestationReportFetcher5{}
 }
 
-func NewAttestationReportFetcher() AttestationReportFetcher {
-	return &realAttestationReportFetcher{}
+type realAttestationReportFetcher5 struct {
 }
 
-type realAttestationReportFetcher struct {
-}
-
-func (_ *realAttestationReportFetcher) FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error) {
-	fd, err := unix.Open(SNP_DEVICE_PATH, unix.O_RDWR|unix.O_CLOEXEC, 0)
+func (f *realAttestationReportFetcher5) FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error) {
+	fd, err := unix.Open(SNP_DEVICE_PATH_5, unix.O_RDWR|unix.O_CLOEXEC, 0)
 	if err != nil {
-		return nil, fmt.Errorf("Error opening SNP device %s: %s", SNP_DEVICE_PATH, err)
+		return nil, fmt.Errorf("error opening SNP device %s: %s", SNP_DEVICE_PATH_5, err)
 	}
 
 	reportReqBytes := createReportReqBytes(reportData)
 	// MSG_REPORT_RSP message bytes (SEV-SNP Firmware Firmware ABI Specification Table 23)
 	reportRspBytes := [REPORT_RSP_SIZE]byte{}
-	payload, err := createPayloadBytes(uintptr(unsafe.Pointer(&reportReqBytes[0])), uintptr(unsafe.Pointer(&reportRspBytes[0])))
+	payload, err := createPayloadBytes5(uintptr(unsafe.Pointer(&reportReqBytes[0])), uintptr(unsafe.Pointer(&reportRspBytes[0])))
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +173,7 @@ func (_ *realAttestationReportFetcher) FetchAttestationReportByte(reportData [RE
 	_, _, errno := unix.Syscall(
 		unix.SYS_IOCTL,
 		uintptr(fd),
-		uintptr(SEV_SNP_GUEST_MSG_REPORT),
+		uintptr(SNP_GET_REPORT_IOCTL_REQ_CODE_5),
 		uintptr(unsafe.Pointer(&payload[0])),
 	)
 
@@ -175,18 +187,142 @@ func (_ *realAttestationReportFetcher) FetchAttestationReportByte(reportData [RE
 	const SNP_REPORT_OFFSET = 32
 	reportBytes := reportRspBytes[SNP_REPORT_OFFSET : SNP_REPORT_OFFSET+ATTESTATION_REPORT_SIZE]
 	if common.GenerateTestData {
-		ioutil.WriteFile("snp_report.bin", reportBytes, 0644)
+		os.WriteFile("snp_report.bin", reportBytes, 0644)
 	}
 	return reportBytes, nil
 }
 
-func (f *realAttestationReportFetcher) FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error) {
+func (f *realAttestationReportFetcher5) FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error) {
 	report, err := f.FetchAttestationReportByte(reportData)
 	if err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(report), nil
 }
+
+// ------------ Linux kernel 6.x ------------
+
+// Linux kernel 6.x specific values
+const (
+	/*
+		Size of the following struct in include/uapi/linux/sev-guest.h.
+		It will have the conteints of MSG_REPORT_RSP (Table 23) in the first REPORT_RSP_SIZE bytes.
+			typedef struct {
+				// response data, see SEV-SNP spec for the format
+				uint8_t  data[4000];
+			} snp_report_resp;
+	*/
+	REPORT_RSP_CONTAINER_SIZE_6 = 4000
+
+	// Size of snp_guest_request_ioctl
+	PAYLOAD_SIZE_6 = 32
+	// Value of SNP_GET_REPORT in sev-snp driver include/uapi/linux/sev-guest.h
+	SNP_GET_REPORT_IOCTL_REQ_CODE_6 = 3223343872
+)
+
+/*
+Creates and returns byte array of the following C struct
+
+	typedef struct {
+	    // message version number (must be non-zero)
+	    uint8_t msg_version;
+
+	    // Request and response structure address
+	    uint64_t req_data;
+	    uint64_t resp_data;
+
+	    // firmware error code on failure (see psp-sev.h)
+	    uint64_t fw_err;
+	} snp_guest_request_ioctl;
+
+The padding is based on Section 3.1.2 of System V ABI for AMD64
+https://www.uclibc.org/docs/psABI-x86_64.pdf
+*/
+func createPayloadBytes6(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_SIZE_6]byte, error) {
+	payload := [PAYLOAD_SIZE_6]byte{}
+	var buf bytes.Buffer
+	// msg_version
+	if err := binary.Write(&buf, binary.LittleEndian, uint8(1)); err != nil {
+		return payload, err
+	}
+	// Padding
+	if err := binary.Write(&buf, binary.LittleEndian, [7]uint8{}); err != nil {
+		return payload, err
+	}
+	// req_data
+	if err := binary.Write(&buf, binary.LittleEndian, uint64(reportReqPtr)); err != nil {
+		return payload, err
+	}
+	// resp_data
+	if err := binary.Write(&buf, binary.LittleEndian, uint64(ReportRespPtr)); err != nil {
+		return payload, err
+	}
+	// fw_err
+	if err := binary.Write(&buf, binary.LittleEndian, uint64(0)); err != nil {
+		return payload, err
+	}
+	for i, x := range buf.Bytes() {
+		payload[i] = x
+	}
+	return payload, nil
+}
+
+func NewAttestationReportFetcher6() AttestationReportFetcher {
+	return &realAttestationReportFetcher6{}
+}
+
+type realAttestationReportFetcher6 struct {
+}
+
+func (f *realAttestationReportFetcher6) FetchAttestationReportByte(reportData [REPORT_DATA_SIZE]byte) ([]byte, error) {
+	fd, err := unix.Open(SNP_DEVICE_PATH_6, unix.O_RDWR|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return nil, fmt.Errorf("error opening SNP device %s: %s", SNP_DEVICE_PATH_6, err)
+	}
+
+	reportReqBytes := createReportReqBytes(reportData)
+	// MSG_REPORT_RSP message bytes (SEV-SNP Firmware Firmware ABI Specification Table 23)
+	reportRspContainerBytes := [REPORT_RSP_CONTAINER_SIZE_6]byte{}
+	payload, err := createPayloadBytes6(uintptr(unsafe.Pointer(&reportReqBytes[0])), uintptr(unsafe.Pointer(&reportRspContainerBytes[0])))
+	if err != nil {
+		return nil, err
+	}
+
+	_, _, errno := unix.Syscall(
+		unix.SYS_IOCTL,
+		uintptr(fd),
+		uintptr(SNP_GET_REPORT_IOCTL_REQ_CODE_6),
+		uintptr(unsafe.Pointer(&payload[0])),
+	)
+
+	if errno != 0 {
+		return nil, fmt.Errorf("ioctl failed:%v", errno)
+	}
+
+	// It has contents of MSG_REPORT_RSP in SEV-SNP spec
+	reportRspBytes := reportRspContainerBytes[0:REPORT_RSP_SIZE]
+
+	if status := binary.LittleEndian.Uint32(reportRspBytes[0:4]); status != 0 {
+		return nil, fmt.Errorf("fetching attestation report failed. status: %v", status)
+	}
+
+	const SNP_REPORT_OFFSET = 32
+	reportBytes := reportRspBytes[SNP_REPORT_OFFSET : SNP_REPORT_OFFSET+ATTESTATION_REPORT_SIZE]
+	if common.GenerateTestData {
+		os.WriteFile("snp_report.bin", reportBytes, 0644)
+	}
+	return reportBytes, nil
+}
+
+func (f *realAttestationReportFetcher6) FetchAttestationReportHex(reportData [REPORT_DATA_SIZE]byte) (string, error) {
+	report, err := f.FetchAttestationReportByte(reportData)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(report), nil
+}
+
+// ------------ Fake report ------------
 
 // Not SECURE. It returns fake attestation report.
 // hostDataBytes is data provided by the hypervisor at launch defined in SEV-SNP Firmware ABI Specification.
