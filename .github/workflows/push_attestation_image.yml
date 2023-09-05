@@ -48,7 +48,8 @@ jobs:
           if [ ${{ github.event_name }} == "push" ]; then
             branch_name=main
           else
-            branch_name=${{ github.ref:11 }}
+            branch_name=${{ github.ref }}
+            branch_name=${branch_name:11}
           fi
           echo $branch_name
           echo "image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')" >> $GITHUB_OUTPUT
