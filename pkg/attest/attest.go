@@ -4,6 +4,8 @@
 package attest
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -67,6 +69,55 @@ func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
 	}
 	copy(hostData[:], inittimeDataBytes)
 	return hostData
+}
+
+func GetSNPAttestationReportHostData(uvmInformation *common.UvmInformation) (string, error) {
+	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedSecurityPolicy)
+	if err != nil {
+		return "", errors.Wrap(err, "decoding policy from Base64 format failed")
+	}
+
+	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
+
+	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		logrus.Fatalf("rsa key pair generation failed")
+	}
+
+	// construct the key blob
+	jwkSetBytes, err := common.GenerateJWKSet(privateWrappingKey)
+	if err != nil {
+		logrus.Fatalf("generating key blob failed")
+	}
+
+	// Fetch the attestation report
+
+	var reportFetcher AttestationReportFetcher
+	if IsSNPVM() {
+
+		reportFetcher, err = NewAttestationReportFetcher()
+		if err != nil {
+			return "", errors.Wrapf(err, "failed to create attestation report fetcher")
+		}
+	} else {
+		// Use fake attestation report if it's not running inside SNP VM
+		hostData := GenerateMAAHostData(inittimeDataBytes)
+		reportFetcher = UnsafeNewFakeAttestationReportFetcher(hostData)
+	}
+
+	reportData := GenerateMAAReportData(jwkSetBytes)
+	SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to retrieve attestation report")
+	}
+
+	// Retrieve the certificate chain using the chip identifier and platform version
+	// fields of the attestation report
+	var SNPReport SNPAttestationReport
+	if err = SNPReport.DeserializeReport(SNPReportBytes); err != nil {
+		return "", errors.Wrapf(err, "failed to deserialize attestation report")
+	}
+	return SNPReport.HostData, nil
 }
 
 // Attest interacts with maa services to fetch an MAA token

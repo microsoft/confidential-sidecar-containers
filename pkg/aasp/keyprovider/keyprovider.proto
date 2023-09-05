@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+option go_package = "./keyprovider";
+
+package keyprovider;
+
+message keyProviderKeyWrapProtocolInput {
+    bytes KeyProviderKeyWrapProtocolInput = 1;
+}
+
+message keyProviderKeyWrapProtocolOutput {
+    bytes KeyProviderKeyWrapProtocolOutput = 1;
+}
+
+message keyProviderGetReportInput {
+  string reportDataHexString = 1;
+}
+
+message keyProviderGetReportOutput {
+  string reportHexString = 1;
+}
+
+service KeyProviderService {
+    rpc WrapKey(keyProviderKeyWrapProtocolInput) returns (keyProviderKeyWrapProtocolOutput) {};
+    rpc UnWrapKey(keyProviderKeyWrapProtocolInput) returns (keyProviderKeyWrapProtocolOutput) {};
+    rpc GetReport(keyProviderGetReportInput) returns (keyProviderGetReportOutput) {};
+    rpc SayHello (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
+}

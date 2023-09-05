@@ -1,0 +1,16 @@
+FROM alpine:3.17.1
+
+RUN apk update && apk add wget
+
+COPY ./scripts/unwrap.sh /bin/
+COPY ./examples/secret_provisioning/wrapped /
+RUN wget -q https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -O /bin/jq &&\
+        chmod +x /bin/jq &&\
+        wget -q https://github.com/fullstorydev/grpcurl/releases/download/v1.8.7/grpcurl_1.8.7_linux_x86_64.tar.gz &&\
+        tar xfz grpcurl_1.8.7_linux_x86_64.tar.gz &&\
+        chmod +x grpcurl &&\
+        cp grpcurl /bin/ &&\
+        rm -f grpcurl*
+
+# set the start command
+CMD [ "/bin/sh", "-c", "unwrap.sh /wrapped /plaintext && cat /plaintext && sleep infinity" ]
