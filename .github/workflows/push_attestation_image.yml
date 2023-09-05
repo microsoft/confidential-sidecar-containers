@@ -47,7 +47,10 @@ jobs:
         run: |
           if [ ${{ github.event_name }} == "push" ]; then
             branch_name=main
-          else  
+          elif [ ${{ github.event_name }} == "workflow_dispatch" ]; then
+            branch_name=${{ github.ref }}
+            echo $branch_name
+          else
             branch_name=${{ github.head_ref }}
           fi
           echo "image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')" >> $GITHUB_OUTPUT
