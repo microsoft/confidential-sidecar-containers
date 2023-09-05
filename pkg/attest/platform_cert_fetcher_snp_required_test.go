@@ -20,7 +20,11 @@ func TestCertFetcherWithRealAttestationReport(t *testing.T) {
 		reportData[i] = byte(i)
 	}
 
-	reportFetcher := NewAttestationReportFetcher()
+	reportFetcher, err := NewAttestationReportFetcher()
+	if err != nil {
+		t.Fatalf("attestation-container is not running in SNP enabled VM")
+	}
+
 	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		t.Fatalf("failed to fetch report for test")

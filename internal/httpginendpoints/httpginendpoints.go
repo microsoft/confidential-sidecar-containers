@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
-	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -92,14 +91,20 @@ func PostRawAttest(c *gin.Context) {
 	}
 
 	var attestationReportFetcher attest.AttestationReportFetcher
-	if _, err := os.Stat("/dev/sev"); errors.Is(err, os.ErrNotExist) {
+	if attest.IsSNPVM() {
+
+		attestationReportFetcher, err = attest.NewAttestationReportFetcher()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+	} else {
+		// Use dummy report if SEV device is not available
 		hostData := attest.GenerateMAAHostData(inittimeDataBytes)
 		attestationReportFetcher = attest.UnsafeNewFakeAttestationReportFetcher(hostData)
-	} else {
-		attestationReportFetcher = attest.NewAttestationReportFetcher()
 	}
+
 	reportData := attest.GenerateMAAReportData(runtimeDataBytes)
-	rawReport, err := attestationReportFetcher.FetchAttestationReportByte(reportData)
+	rawReport, err := attestationReportFetcher.FetchAttestationReportHex(reportData)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	}

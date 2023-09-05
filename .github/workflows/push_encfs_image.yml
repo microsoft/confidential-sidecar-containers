@@ -12,6 +12,8 @@ on:
       - docker/encfs/**
       - tools/get-snp-report/bin/get-snp-report
       - tools/get-snp-report/bin/get-fake-snp-report
+      - vendor/**
+      - internal/**
   push:
     branches:
       - main
@@ -22,12 +24,14 @@ on:
       - docker/encfs/**
       - tools/get-snp-report/bin/get-snp-report
       - tools/get-snp-report/bin/get-fake-snp-report
+      - vendor/**
+      - internal/**
 
 jobs:
   push-encfs-image:
     name: Push Encrypted FS Image
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -46,11 +50,15 @@ jobs:
         run: |
           if [ ${{ github.event_name }} == "push" ]; then
             branch_name=main
+          elif [ ${{ github.event_name }} == "workflow_dispatch" ]; then
+            branch_name=${{ github.ref }}
+            branch_name=${branch_name:11}
           else  
             branch_name=${{ github.head_ref }}
           fi
+          image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')
           docker/encfs/push.sh \
             ${{ secrets.REGISTRY_NAME }} \
             ${{ secrets.REGISTRY_DOMAIN }} \
-            encfs:$branch_name \
+            encfs:$image_tag \
             --skip-login

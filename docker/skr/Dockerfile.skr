@@ -1,11 +1,10 @@
-FROM alpine:3.17.1
+FROM alpine:3.17.5
 
-RUN apk update && apk add curl
+RUN apk update && apk add --no-cache curl
 
 COPY ./bin/skr ./bin/get-snp-report /bin/
 COPY skr.sh tests/*_client.sh tests/skr_test.sh /
-RUN mkdir -p /tests/skr; mv *_client.sh /tests/skr; mv skr_test.sh /tests/skr
-RUN chmod +x /*.sh /tests/skr/*.sh; date > /made-date
+RUN mkdir -p /tests/skr; mv *_client.sh /tests/skr; mv skr_test.sh /tests/skr && chmod +x /*.sh /tests/skr/*.sh
 
 # set the start command
 CMD [ "sleep", "1000000" ]
