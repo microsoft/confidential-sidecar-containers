@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"flag"
 	"net"
 	"os"
@@ -57,7 +56,11 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 	}
 
 	logrus.Trace("Fetching attestation report...")
-	reportFetcher := attest.NewAttestationReportFetcher()
+	reportFetcher, err := attest.NewAttestationReportFetcher()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get attestation report fetcher: %s", err)
+	}
+
 	reportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to fetch attestation report: %s", err)
@@ -129,12 +132,12 @@ func main() {
 		logrus.Warn("Warning: INSECURE virtual: do not use in production!")
 	} else {
 		logrus.Trace("Checking if SNP device is detected...")
-		if _, err := os.Stat(attest.SNP_DEVICE_PATH); err == nil {
-			logrus.Tracef("%s is detected\n", attest.SNP_DEVICE_PATH)
-		} else if errors.Is(err, os.ErrNotExist) {
-			logrus.Fatalf("%s is not detected", attest.SNP_DEVICE_PATH)
+		if attest.IsSNPVM5() {
+			logrus.Tracef("%s is detected\n", attest.SNP_DEVICE_PATH_5)
+		} else if attest.IsSNPVM6() {
+			logrus.Tracef("%s is detected\n", attest.SNP_DEVICE_PATH_6)
 		} else {
-			logrus.Fatalf("Unknown error: %s", err)
+			logrus.Fatalf("attestation-container is not running in SNP enabled VM")
 		}
 
 		logrus.Trace("Getting UVM Information...")

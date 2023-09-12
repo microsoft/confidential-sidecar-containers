@@ -1,4 +1,4 @@
-//go:generate go run internal/cmd/genheader/main.go
+//go:generate ./gen.sh
 
 // Package jwk implements JWK as described in https://tools.ietf.org/html/rfc7517
 package jwk
@@ -240,6 +240,10 @@ func PublicRawKeyOf(v interface{}) (interface{}, error) {
 // contents of the object with the data at the remote resource,
 // consider using `jwk.AutoRefresh`, which automatically refreshes
 // jwk.Set objects asynchronously.
+//
+// See the list of `jwk.FetchOption`s for various options to tweak the
+// behavior, including providing alternate HTTP Clients, setting a backoff,
+// and using whitelists.
 func Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, error) {
 	res, err := fetch(ctx, urlstring, options...)
 	if err != nil {
@@ -255,6 +259,7 @@ func Fetch(ctx context.Context, urlstring string, options ...FetchOption) (Set, 
 }
 
 func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http.Response, error) {
+	var wl Whitelist
 	var httpcl HTTPClient = http.DefaultClient
 	bo := backoff.Null()
 	for _, option := range options {
@@ -264,6 +269,14 @@ func fetch(ctx context.Context, urlstring string, options ...FetchOption) (*http
 			httpcl = option.Value().(HTTPClient)
 		case identFetchBackoff{}:
 			bo = option.Value().(backoff.Policy)
+		case identFetchWhitelist{}:
+			wl = option.Value().(Whitelist)
+		}
+	}
+
+	if wl != nil {
+		if !wl.IsAllowed(urlstring) {
+			return nil, errors.New(`url rejected by whitelist`)
 		}
 	}
 
@@ -367,6 +380,15 @@ func parsePEMEncodedRawKey(src []byte) (interface{}, []byte, error) {
 	}
 }
 
+type setDecodeCtx struct {
+	json.DecodeCtx
+	ignoreParseError bool
+}
+
+func (ctx *setDecodeCtx) IgnoreParseError() bool {
+	return ctx.ignoreParseError
+}
+
 // ParseKey parses a single key JWK. Unlike `jwk.Parse` this method will
 // report failure if you attempt to pass a JWK set. Only use this function
 // when you know that the data is a single JWK.
@@ -397,6 +419,8 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 				localReg = json.NewRegistry()
 			}
 			localReg.Register(pair.Name, pair.Value)
+		case identIgnoreParseError{}:
+			return nil, errors.Errorf(`jwk.WithIgnoreParseError() cannot be used for ParseKey()`)
 		}
 	}
 
@@ -444,7 +468,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	}
 
 	if localReg != nil {
-		dcKey, ok := key.(KeyWithDecodeCtx)
+		dcKey, ok := key.(json.DecodeCtxContainer)
 		if !ok {
 			return nil, errors.Errorf(`typed field was requested, but the key (%T) does not support DecodeCtx`, key)
 		}
@@ -466,7 +490,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 // call `json.Unmarshal` against an empty set created by `jwk.NewSet()`
 // to parse a JSON buffer into a `jwk.Set`.
 //
-// This method exists because many times the user does not know before hand
+// This function exists because many times the user does not know before hand
 // if a JWK(s) resource at a remote location contains a single JWK key or
 // a JWK set, and `jwk.Parse()` can handle either case, returning a JWK Set
 // even if the data only contains a single JWK key
@@ -477,11 +501,14 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var parsePEM bool
 	var localReg *json.Registry
+	var ignoreParseError bool
 	for _, option := range options {
 		//nolint:forcetypeassert
 		switch option.Ident() {
 		case identPEM{}:
 			parsePEM = option.Value().(bool)
+		case identIgnoreParseError{}:
+			ignoreParseError = option.Value().(bool)
 		case identTypedField{}:
 			pair := option.Value().(typedFieldPair)
 			if localReg == nil {
@@ -510,12 +537,15 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		return s, nil
 	}
 
-	if localReg != nil {
+	if localReg != nil || ignoreParseError {
 		dcKs, ok := s.(KeyWithDecodeCtx)
 		if !ok {
 			return nil, errors.Errorf(`typed field was requested, but the key set (%T) does not support DecodeCtx`, s)
 		}
-		dc := json.NewDecodeCtx(localReg)
+		dc := &setDecodeCtx{
+			DecodeCtx:        json.NewDecodeCtx(localReg),
+			ignoreParseError: ignoreParseError,
+		}
 		dcKs.SetDecodeCtx(dc)
 		defer func() { dcKs.SetDecodeCtx(nil) }()
 	}
@@ -594,8 +624,10 @@ func cloneKey(src Key) (Key, error) {
 	}
 
 	for _, pair := range src.makePairs() {
-		if err := dst.Set(pair.Key.(string), pair.Value); err != nil {
-			return nil, errors.Wrapf(err, `failed to set %s`, pair.Key.(string))
+		//nolint:forcetypeassert
+		key := pair.Key.(string)
+		if err := dst.Set(key, pair.Value); err != nil {
+			return nil, errors.Wrapf(err, `failed to set %q`, key)
 		}
 	}
 	return dst, nil

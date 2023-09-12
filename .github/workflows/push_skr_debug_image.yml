@@ -13,7 +13,8 @@ on:
       - tools/get-snp-report/bin/get-fake-snp-report
       - tools/get-snp-report/bin/verbose-report
       - vendor/**
-      
+      - internal/**
+
   push:
     branches:
       - main
@@ -25,12 +26,13 @@ on:
       - tools/get-snp-report/bin/get-fake-snp-report
       - tools/get-snp-report/bin/verbose-report
       - vendor/**
-      
+      - internal/**
+
 jobs:
-  push-skr-debug-image: 
+  push-skr-debug-image:
     name: Push SKR Debug Image
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -44,16 +46,20 @@ jobs:
 
       - name: Build Image
         run: docker/skr/build-debug.sh
-        
+
       - name: Push Image
         run: |
           if [ ${{ github.event_name }} == "push" ]; then
             branch_name=main
+          elif [ ${{ github.event_name }} == "workflow_dispatch" ]; then
+            branch_name=${{ github.ref }}
+            branch_name=${branch_name:11}
           else  
             branch_name=${{ github.head_ref }}
           fi
+          image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')
           docker/skr/push.sh \
             ${{ secrets.REGISTRY_NAME }} \
             ${{ secrets.REGISTRY_DOMAIN }} \
-            skr_debug:$branch_name \
+            skr_debug:$image_tag \
             --skip-login
