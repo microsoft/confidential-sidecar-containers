@@ -2,20 +2,36 @@
 
 
 - [Introduction](#introduction)
+- [Export Environment Variables](#export-environment-variables)
 - [Prerequisites](#prerequisites)
-- [Secret Provisioning Workflow](#secret-provisioning-workflow)
-    - [Generate a private/public key pair and prepare for the key release policy](#generate-a-key-pair-and-prepare-for-the-key-release-policy)
-    - [Generate a wrapped secret using the public key using the aasp binary](#generate-a-wrapped-secret-using-the-public-key-using-the-aasp-binary)
-    - [Running the AASP container in a TEE](#running-the-aasp-container-in-a-tee)
-    - [Unwrap the secret using grpcurl](#unwrap-the-secret-using-grpcurl)
+- [Secret Provisioning Workflow Step By Step](#secret-provisioning-workflow-step-by-step)
+    - [Step 1 Generate a private/public key pair and prepare for the key release policy](#step-1-generate-a-key-pair-and-prepare-for-the-key-release-policy)
+    - [Step 2 Generate a wrapped secret using the public key using the aasp binary](#step-2-generate-a-wrapped-secret-using-the-public-key-using-the-aasp-binary)
+    - [Step 3 Create a federated identity credential](#step-3-create-a-federated-identity-credential)
+    - [Step 4 Running the AASP container in a TEE](#step-4-running-the-aasp-container-in-a-tee)
+    - [Step 5 Unwrap the secret using grpcurl](#step-5-unwrap-the-secret-using-grpcurl)
 
 
 # Introduction:
 
 This guide provides instructions on how to perform secret provisioning using AASP container. 
 The secret provisioning workflow involves generating a private/public key pair in mhsm, downloading the public key and generating a wrapped secret using AASP binary as a command line tool, and then unwrapping the secret using AASP as a GRPC service during runtime. 
-This guide provides a step-by-step instructions for the steps above. By following these instructions, users can ensure that their secrets are securely stored and can be used by the application. 
+This guide provides a step-by-step instruction for the steps above. By following these instructions, users can ensure that their secrets are securely stored and can be used by the application. 
 This guide assumes a working mhsm and maa endpoint. See [prerequisites](#Prerequisites). 
+
+# Export Environment Variables 
+
+```bash
+export AASP_IMAGE=<aasp-image-name>
+export SAMPLE_UNWRAP_IMAGE=<sample-unwrap-image-name>
+export RESOURCE_GROUP=<resource-group-name>
+export USER_ASSIGNED_IDENTITY_NAME=<identity-name>
+export LOCATION=<location>
+export SUBSCRIPTION="$(az account show --query id --output tsv)"
+export SERVICE_ACCOUNT_NAME=<service-account-name>
+export SERVICE_ACCOUNT_NAMESPACE="default"
+export FEDERATED_IDENTITY_CREDENTIAL_NAME=<federated-identity-credential-name>
+```
 
 # Prerequisites:
 Before performing secret provisioning using AASP container, ensure that the following prerequisites are met:
@@ -29,21 +45,16 @@ You can follow the installation instructions for Azure CLI [here](https://learn.
 
 Users must have a working maa endpoint to interact with the mhsm.
 
-In order to use grpcurl to call the exposed grpc APIs and unwrap secrets, users must build the following two images: 
+In order to use grpcurl to call the exposed grpc APIs to unwrap secrets, users must build the following two images: 
 
 1. The `AASP container` image that hosts grpc server. See [Dockerfile.build](../../docker/aasp/Dockerfile.build)
-2. An `sample-unwrap container` image that has grpcurl installed and allows users to unwrap secrets. [Dockerfile.sample](../../docker/aasp/Dockerfile.sample)
+2. A `sample-unwrap` container image that has grpcurl installed and allows users to unwrap secrets. [Dockerfile.sample](../../docker/aasp/Dockerfile.sample)
 
-These two images can be built using the existing Dockerfiles above. To build the images, cd into the directory of these Dockerfiles and run the following commands:
+These two images can be built using the existing Dockerfiles above. To build the images, make sure you are in the root of confidential-sidecar-containers repo and run the following commands:
 
-```
-cd ../../docker/aasp
-
-export AASP_IMAGE=<aasp-image-name>
-export SAMPLE_UNWRAP_IMAGE=<sample-unwrap-image-name>
-docker build -t $AASP_IMAGE -f Dockerfile.build . 
-docker build -t $SAMPLE_UNWRAP_IMAGE -f Dockerfile.sample .
-
+```bash
+docker build -t $AASP_IMAGE -f docker/aasp/Dockerfile.build . 
+docker build -t $SAMPLE_UNWRAP_IMAGE -f docker/aasp/Dockerfile.sample .
 ```
 
 We will use Azure Container Registry as an example here for deployment. Push the container image to your ACR. 
@@ -51,7 +62,7 @@ We will use Azure Container Registry as an example here for deployment. Push the
 
 # Secret Provisioning Workflow:
 
-## Generate a key pair and prepare for the key release policy:
+## Step 1 generate a key pair and prepare for the key release policy:
 
 This is a one time effort.
 Once the key is created, it can be used to protect as many secrets as desired. 
@@ -72,10 +83,11 @@ For a mhsm instance with the full URL: `samplemhsm.managedhsm.azure.net`, the `m
 
 ```bash
 # Create a managed identity for accessing MHSM. Note the Principle ID of the identity
-az identity create -g <resource-group-name> -n <identity-name>
+az identity create -g $RESOURCE_GROUP -n $USER_ASSIGNED_IDENTITY_NAME | grep "id"
+# The following two exported env vars are used by the setup-key-mhsm.sh script
 export MANAGED_IDENTITY=<principle-id>
-# Choose a MAA instance for the attestation service, e.g. e.g. sharedeus2.eus2.attest.azure.net
-export MAA_ENDPOINT=<maa-endpoint>
+export MAA_ENDPOINT=<maa-endpoint> # Choose a MAA instance for the attestation service, e.g. sharedeus2.eus2.attest.azure.net
+
 # Login 
 az login 
 # Set account context to the subscription where the mhsm resides 
@@ -86,7 +98,7 @@ chmod +x setup-key-mhsm.sh
 bash setup-key-mhsm.sh <key-name> <mhsm>
 ```
 
-## Generate a wrapped secret using the public key using the aasp binary:
+## Step 2 generate a wrapped secret using the public key using the aasp binary:
 
 Build AASP binary first: 
 
@@ -103,17 +115,33 @@ The wrapped file will be used to generate an argument that gets passed into grpc
 ```bash
 aasp --infile plaintext --keypath ./testkey000 --outfile wrapped 
 ```
- 
-# Running the AASP container in a TEE:
+
+## Step 3 create a federated identity credential:
+
+```bash
+export AKS_OIDC_ISSUER="$(az aks show -n clusterName -g "${RESOURCE_GROUP}" --query "oidcIssuerProfile.issuerUrl" -otsv)"
+
+export USER_ASSIGNED_CLIENT_ID="$(az identity show --resource-group "${RESOURCE_GROUP}" --name "${USER_ASSIGNED_IDENTITY_NAME}" --query 'clientId' -otsv)"
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    azure.workload.identity/client-id: ${USER_ASSIGNED_CLIENT_ID}
+  name: ${SERVICE_ACCOUNT_NAME}
+  namespace: ${SERVICE_ACCOUNT_NAMESPACE}
+EOF
+#Create the federated identity credential between the managed identity, service account issuer, and subject using the az identity federated-credential create command.
+az identity federated-credential create --name ${FEDERATED_IDENTITY_CREDENTIAL_NAME} --identity-name ${USER_ASSIGNED_IDENTITY_NAME} --resource-group ${RESOURCE_GROUP} --issuer ${AKS_OIDC_ISSUER} --subject system:serviceaccount:${SERVICE_ACCOUNT_NAMESPACE}:${SERVICE_ACCOUNT_NAME}
+```
+
+## Step 4 running the AASP container in a TEE:
 Use the AASP container as a GRPC service during runtime to unwrap the secret with the private key stored in mhsm. 
 This step ensures that the private key is securely retrieved in AASP container and used for unwrapping the wrapped secret. 
-Before unwrapping the secret, the images for AASP container and another container that has grpcurl command installed for querying the aasp container need to be built, see [prerequisites](#Prerequisites). 
+Before unwrapping the secret, the AASP container image and the sample-unwrap container image with grpcurl command installed need to be built, see [prerequisites](#Prerequisites). 
 
-Check [here](https://github.com/container-investigations/kata-verity/tree/kata-cc-based/katacc-bootstrap)
-for instructions on setting up an environment for running AASP container. 
-The instruction sets up an Azure VM, installs and configures a single node Kubernetes cluster, and sets up the network and kata runtimeClass in it. 
-Once you can run a sample pod with SEV-SNP support and cloud-api-adaptor. 
-You can run a sample deployment of a confidential pod with the AASP container and a container that can invokes the secret provisioning API of the AASP container. Use the following [sample pod yaml file](aasp-sample.yaml) to run the pod. But create an image pull secret first with the following command. 
+You can run a sample deployment of a confidential pod with the `AASP` container and a `sample-unwrap` container that invokes the secret provisioning APIs of the `AASP` container. Use the following [sample pod yaml file](aasp-sample-template.yaml) to run the pod. But create an image pull secret first with the following command. 
 
 ```
 export $ACR_SECRET=<secret-name>
@@ -147,7 +175,7 @@ grpcurl -v -plaintext -d '{"reportDataHexString":""}' 127.0.0.1:50000  keyprovid
 
 ```
 
-# Unwrap the secret using grpcurl. 
+## Step 5 unwrap the secret using grpcurl. 
 
 Make sure you are in the same directory as the `wrapped` file. 
 Issue the following command in the sample-unwrapped container to test whether key can be released.

@@ -2,36 +2,35 @@ apiVersion: v1
 kind: Pod
 metadata:
  name: aasp-secret-provisioning
+ labels:
+    azure.workload.identity/use: "true"
 spec:
-  runtimeClassName: kata
+  runtimeClassName: kata-cc
+  serviceAccountName: workload-identity-sa
   containers:
   - image: $AASP_IMAGE
     imagePullPolicy: Always
     name: aasp
     command: [/bin/aasp]
     env:
-    - name: CertCacheEndpoint
-      value: "ewogICAgImNlcnRjYWNoZSI6IHsKCQkiZW5kcG9pbnRfdHlwZSI6ICJBekNhY2hlIiwKCQkiZW5kcG9pbnQiOiAiYW1lcmljYXMudGVzdC5hY2NjYWNoZS5henVyZS5uZXQiLAoJCSJ0ZWVfdHlwZSI6ICJTZXZTbnBWTSIsCgkJImFwaV92ZXJzaW9uIjogImFwaS12ZXJzaW9uPTIwMjAtMTAtMTUtcHJldmlldyIKCX0gIAp9"
+    - name: AaspSideCarArgs
+      value: ewogICAgImNlcnRjYWNoZSI6IHsKCQkiZW5kcG9pbnRfdHlwZSI6ICJMb2NhbFRISU0iLAoJCSJlbmRwb2ludCI6ICIxNjkuMjU0LjE2OS4yNTQvbWV0YWRhdGEvVEhJTS9hbWQvY2VydGlmaWNhdGlvbiIKCX0gIAp9
+    - name: UVM_SECURITY_CONTEXT_DIR
+      value: /opt/confidential-containers/share/kata-containers
     volumeMounts:
-    - mountPath: /dev/sev
-      name: dev-sev
-    - mountPath: /common
-      name: common
-    securityContext:
-      privileged: true
+    - mountPath: /opt/confidential-containers/share/kata-containers/reference-info-base64
+      name: endorsement-location
   - image: $SAMPLE_UNWRAP_IMAGE
     imagePullPolicy: Always
     name: sample-unwrap
-    command: ["/bin/sh","-c"]
-    args: ["sleep infinity"]
-    volumeMounts:
-    - mountPath: /common
-      name: common
+    command: 
+      - /bin/sh
+      - "-c"
+    args: 
+      - until netstat -anpe | grep 50000; do sleep 3; done; /bin/unwrap.sh /wrapped /plaintext && cat /plaintext && sleep infinity
   imagePullSecrets:
     - name: $ACR_SECRET
   volumes:
-  - name: dev-sev
-    hostPath:
-      path: /dev/sev
-  - name: common
-    emptyDir: {}
+    - name: endorsement-location
+      hostPath:
+        path: /opt/confidential-containers/share/kata-containers/reference-info-base64
