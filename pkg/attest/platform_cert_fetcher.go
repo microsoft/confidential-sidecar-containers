@@ -31,7 +31,7 @@ const (
 	AzureCertCacheRequestURITemplate = "https://%s/%s/certificates/%s/%s?%s"
 	AmdVCEKRequestURITemplate        = "https://%s/%s/%s?ucodeSPL=%d&snpSPL=%d&teeSPL=%d&blSPL=%d"
 	AmdCertChainRequestURITemplate   = "https://%s/%s/cert_chain"
-	LocalTHIMUriTemplate             = "https://%s" // To-Do update once we know what this looks like
+	LocalTHIMUriTemplate             = "http://%s" // To-Do update once we know what this looks like
 )
 
 const (
@@ -150,11 +150,12 @@ const (
 	defaultRetryMaxRetries = 2
 )
 
-func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, error) {
+func fetchWithRetry(requestURL string, baseSec int, maxRetries int, httpRequestFunc func(string) (*http.Response, error)) ([]byte, error) {
 	if maxRetries < 0 {
 		return nil, fmt.Errorf("invalid `maxRetries` value")
 	}
 	var err error
+	var res *http.Response
 	retryCount := 0
 	for retryCount <= maxRetries {
 		if retryCount > 0 {
@@ -164,7 +165,11 @@ func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, err
 			delaySecInt := math.Min(math.MaxInt64, delaySec)
 			time.Sleep(time.Duration(delaySecInt) * time.Second)
 		}
-		res, err := http.Get(requestURL)
+		if httpRequestFunc != nil {
+			res, err = httpRequestFunc(requestURL)
+		} else {
+			res, err = http.Get(requestURL)
+		}
 		if err != nil {
 			retryCount++
 			continue
@@ -216,7 +221,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			// https://www.amd.com/en/support/tech-docs/versioned-chip-endorsement-key-vcek-certificate-and-kds-interface-specification
 			// AMD cert cache endpoint returns the VCEK certificate in DER format
 			uri = fmt.Sprintf(AmdVCEKRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, reportedTCBBytes[UcodeSplTcbmByteIndex], reportedTCBBytes[SnpSplTcbmByteIndex], reportedTCBBytes[TeeSplTcbmByteIndex], reportedTCBBytes[BlSplTcbmByteIndex])
-			derBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
+			derBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, nil)
 			if err != nil {
 				return nil, reportedTCB, err
 			}
@@ -225,7 +230,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 
 			// now retrieve the cert chain
 			uri = fmt.Sprintf(AmdCertChainRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType)
-			certChainPEMBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
+			certChainPEMBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, nil)
 			if err != nil {
 				return nil, reportedTCB, errors.Wrapf(err, "pulling AMD certchain response from get request failed")
 			}
@@ -236,16 +241,16 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			return fullCertChain, reportedTCB, nil
 		case "LocalTHIM":
 			uri = fmt.Sprintf(LocalTHIMUriTemplate, certFetcher.Endpoint)
-			// local THIM cert cache endpoint returns THIM Certs object
-			THIMCertsBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
+			THIMCertsBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, getThimCertsHttp)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from get request failed")
 			}
 
-			thimCerts, err = common.ParseTHIMCerts(string(THIMCertsBytes))
+			thimCerts, err = common.ParseTHIMCertsFromByte(THIMCertsBytes)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "certcache failed to get local certs")
 			}
+
 			thimTcbm, err = common.ParseTHIMTCBM(thimCerts)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "failed to parse THIM TCBM")
@@ -254,7 +259,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			return common.ConcatenateCerts(thimCerts), thimTcbm, nil
 		case "AzCache":
 			uri = fmt.Sprintf(AzureCertCacheRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, strconv.FormatUint(reportedTCB, 16), certFetcher.APIVersion)
-			certChain, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
+			certChain, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, nil)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from AzCache get request failed")
 			}
@@ -281,4 +286,29 @@ It also returns TCB as uint64 (useful only when "LocalTHIM" is used for Endpoint
 */
 func (certFetcher CertFetcher) GetCertChain(chipID string, reportedTCB uint64) ([]byte, uint64, error) {
 	return certFetcher.retrieveCertChain(chipID, reportedTCB)
+}
+
+func getThimCertsHttp(uri string) (*http.Response, error) {
+	httpResponse, err := common.HTTPGetRequest(uri, true)
+	if err != nil {
+		return nil, errors.Wrapf(err, "pulling thim certs request failed")
+	}
+
+	return httpResponse, nil
+}
+
+func (certFetcher CertFetcher) GetThimCerts(uri string) (*common.THIMCerts, error) {
+	uri = fmt.Sprintf(LocalTHIMUriTemplate, uri)
+	THIMCertsBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, getThimCertsHttp)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Fetching THIM Certs with retries failed.")
+	}
+	fmt.Println("length of thim certbytes is", len(THIMCertsBytes))
+	fmt.Println("actually print out the bytes\n", THIMCertsBytes)
+	thimCerts, err := common.ParseTHIMCertsFromByte(THIMCertsBytes)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Parse THIM Certs from bytes failed.")
+	}
+
+	return &thimCerts, nil
 }
