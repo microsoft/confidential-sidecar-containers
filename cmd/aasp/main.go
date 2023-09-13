@@ -333,17 +333,17 @@ func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetRepo
 
 	var reportFetcher attest.AttestationReportFetcher
 	if !attest.IsSNPVM() {
-		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing.")
+		return nil, status.Error(codes.FailedPrecondition, "SEV guest driver is missing.")
 	}
 	reportFetcher, err := attest.NewAttestationReportFetcher()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report", err)
+		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report, %s", err)
 	}
 
 	reportData := attest.GenerateMAAReportData([]byte(reportDataStr))
 	SNPReportHex, err := reportFetcher.FetchAttestationReportHex(reportData)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report", err)
+		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report, %s", err)
 	}
 
 	return &keyprovider.KeyProviderGetReportOutput{
