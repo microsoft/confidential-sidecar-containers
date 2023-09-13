@@ -34,7 +34,7 @@ const (
 	AzureCertCacheRequestURITemplate = "https://%s/%s/certificates/%s/%s?%s"
 	AmdVCEKRequestURITemplate        = "https://%s/%s/%s?ucodeSPL=%d&snpSPL=%d&teeSPL=%d&blSPL=%d"
 	AmdCertChainRequestURITemplate   = "https://%s/%s/cert_chain"
-	LocalTHIMUriTemplate             = "https://%s" // To-Do update once we know what this looks like
+	LocalTHIMUriTemplate             = "http://%s" // To-Do update once we know what this looks like
 )
 
 const (
@@ -158,12 +158,13 @@ const (
 	defaultRetryMaxRetries = 2
 )
 
-func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, error) {
-	logrus.Debugf("fetchWithRetry: requestURL=%s, baseSec=%d, maxRetries=%d", requestURL, baseSec, maxRetries)
+func fetchWithRetry(requestURL string, baseSec int, maxRetries int, httpRequestFunc func(string) (*http.Response, error)) ([]byte, error) {
+  logrus.Debugf("fetchWithRetry: requestURL=%s, baseSec=%d, maxRetries=%d", requestURL, baseSec, maxRetries)
 	if maxRetries < 0 {
 		return nil, errors.New("invalid `maxRetries` value")
 	}
 	var err error
+	var res *http.Response
 	retryCount := 0
 	for retryCount <= maxRetries {
 		if retryCount > 0 {
@@ -173,7 +174,11 @@ func fetchWithRetry(requestURL string, baseSec int, maxRetries int) ([]byte, err
 			delaySecInt := math.Min(math.MaxInt64, delaySec)
 			time.Sleep(time.Duration(delaySecInt) * time.Second)
 		}
-		res, err := http.Get(requestURL)
+		if httpRequestFunc != nil {
+			res, err = httpRequestFunc(requestURL)
+		} else {
+			res, err = http.Get(requestURL)
+		}
 		if err != nil {
 			logrus.Debugf("fetch on retry %d: http.Get failed: %s", retryCount, err)
 			retryCount++
@@ -233,7 +238,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			// AMD cert cache endpoint returns the VCEK certificate in DER format
 			logrus.Trace("Fetching VCEK cert from AMD endpoint...")
 			uri = fmt.Sprintf(AmdVCEKRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, reportedTCBBytes[UcodeSplTcbmByteIndex], reportedTCBBytes[SnpSplTcbmByteIndex], reportedTCBBytes[TeeSplTcbmByteIndex], reportedTCBBytes[BlSplTcbmByteIndex])
-			derBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
+			derBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, nil)
 			if err != nil {
 				return nil, reportedTCB, err
 			}
@@ -243,7 +248,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			// now retrieve the cert chain
 			logrus.Trace("Fetching cert chain from AMD endpoint...")
 			uri = fmt.Sprintf(AmdCertChainRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType)
-			certChainPEMBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
+			certChainPEMBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, nil)
 			if err != nil {
 				return nil, reportedTCB, errors.Wrapf(err, "pulling AMD cert chain response from URL '%s' failed", uri)
 			}
@@ -256,18 +261,18 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 		case "LocalTHIM":
 			logrus.Debugf("Retrieving Cert Chain from Local THIM Endpoint %s...", certFetcher.Endpoint)
 			uri = fmt.Sprintf(LocalTHIMUriTemplate, certFetcher.Endpoint)
-			// local THIM cert cache endpoint returns THIM Certs object
-			THIMCertsBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
+			THIMCertsBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, getThimCertsHttp)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "pulling cert chain response from URL '%s' failed", uri)
 			}
 
 			logrus.Trace("Parsing THIM Certs...")
-			thimCerts, err = common.ParseTHIMCerts(string(THIMCertsBytes))
+			thimCerts, err = common.ParseTHIMCertsFromByte(THIMCertsBytes)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "certcache failed to get local certs")
 			}
-			logrus.Trace("Parsing THIM TCBM...")
+      logrus.Trace("Parsing THIM TCBM...")
+      
 			thimTcbm, err = common.ParseTHIMTCBM(thimCerts)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "failed to parse THIM TCBM")
@@ -277,8 +282,9 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 		case "AzCache":
 			logrus.Debugf("Retrieving Cert Chain from AzCache Endpoint %s...", certFetcher.Endpoint)
 			uri = fmt.Sprintf(AzureCertCacheRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, strconv.FormatUint(reportedTCB, 16), certFetcher.APIVersion)
+
 			logrus.Trace("Fetchging cert chain from AzCache endpoint...")
-			certChain, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries)
+			certChain, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, nil)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from AzCache URL '%s' failed", uri)
 			}
@@ -306,4 +312,29 @@ It also returns TCB as uint64 (useful only when "LocalTHIM" is used for Endpoint
 */
 func (certFetcher CertFetcher) GetCertChain(chipID string, reportedTCB uint64) ([]byte, uint64, error) {
 	return certFetcher.retrieveCertChain(chipID, reportedTCB)
+}
+
+func getThimCertsHttp(uri string) (*http.Response, error) {
+	httpResponse, err := common.HTTPGetRequest(uri, true)
+	if err != nil {
+		return nil, errors.Wrapf(err, "pulling thim certs request failed")
+	}
+
+	return httpResponse, nil
+}
+
+func (certFetcher CertFetcher) GetThimCerts(uri string) (*common.THIMCerts, error) {
+	uri = fmt.Sprintf(LocalTHIMUriTemplate, uri)
+	THIMCertsBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, getThimCertsHttp)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Fetching THIM Certs with retries failed.")
+	}
+	fmt.Println("length of thim certbytes is", len(THIMCertsBytes))
+	fmt.Println("actually print out the bytes\n", THIMCertsBytes)
+	thimCerts, err := common.ParseTHIMCertsFromByte(THIMCertsBytes)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Parse THIM Certs from bytes failed.")
+	}
+
+	return &thimCerts, nil
 }

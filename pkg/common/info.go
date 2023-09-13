@@ -30,7 +30,7 @@ type THIMCerts struct {
 	CacheControl     string `json:"cacheControl"`
 }
 
-func ParseTHIMCerts(base64EncodedHostCertsFromTHIM string) (THIMCerts, error) {
+func ParseTHIMCertsFromString(base64EncodedHostCertsFromTHIM string) (THIMCerts, error) {
 	certificatesRaw, err := base64.StdEncoding.DecodeString(base64EncodedHostCertsFromTHIM)
 	if err != nil {
 		return THIMCerts{}, errors.Wrapf(err, "base64 decoding platform certs failed")
@@ -39,7 +39,16 @@ func ParseTHIMCerts(base64EncodedHostCertsFromTHIM string) (THIMCerts, error) {
 	certificates := THIMCerts{}
 	err = json.Unmarshal([]byte(certificatesRaw), &certificates)
 	if err != nil {
-		return THIMCerts{}, errors.Wrapf(err, "failed to unmarshal JSON ACI certificates")
+		return THIMCerts{}, errors.Wrapf(err, "failed to unmarshal THIM certificate")
+	}
+	return certificates, nil
+}
+
+func ParseTHIMCertsFromByte(base64EncodedHostCertsFromTHIM []byte) (THIMCerts, error) {
+	certificates := THIMCerts{}
+	err := json.Unmarshal(base64EncodedHostCertsFromTHIM, &certificates)
+	if err != nil {
+		return THIMCerts{}, errors.Wrapf(err, "failed to unmarshal THIM certificate")
 	}
 	return certificates, nil
 }
@@ -73,14 +82,21 @@ type UvmInformation struct {
 
 // Matching PR https://github.com/microsoft/hcsshim/pull/1708
 
-func GetUvmInformation() (UvmInformation, error) {
+func GetUvmSecurityCtxDir() (string, error) {
 	securityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
-	if securityContextDir != "" {
-		logrus.Info("UVM_SECURITY_CONTEXT_DIR is not set, using files")
-		return GetUvmInformationFromFiles(securityContextDir)
-	} else {
-		logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s, using environment variables", securityContextDir)
+	if securityContextDir == "" {
+		return "", errors.New("UVM_SECURITY_CONTEXT_DIR not set")
+	}
+  logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s", securityContextDir)
+	return securityContextDir, nil
+}
+
+func GetUvmInformation() (UvmInformation, error) {
+	_, err := GetUvmSecurityCtxDir()
+	if err != nil {
 		return GetUvmInformationFromEnv()
+	} else {
+		return GetUvmInformationFromFiles()
 	}
 }
 
@@ -95,7 +111,7 @@ func GetUvmInformationFromEnv() (UvmInformation, error) {
 
 	if encodedHostCertsFromTHIM != "" {
 		var err error
-		encodedUvmInformation.InitialCerts, err = ParseTHIMCerts(encodedHostCertsFromTHIM)
+		encodedUvmInformation.InitialCerts, err = ParseTHIMCertsFromString(encodedHostCertsFromTHIM)
 		if err != nil {
 			return encodedUvmInformation, err
 		}
@@ -132,6 +148,11 @@ func readSecurityContextFile(dir string, filename string) (string, error) {
 func GetUvmInformationFromFiles(securityContextDir string) (UvmInformation, error) {
 	var encodedUvmInformation UvmInformation
 
+	securityContextDir, err := GetUvmSecurityCtxDir()
+	if err != nil {
+		return encodedUvmInformation, err
+	}
+
 	encodedHostCertsFromTHIM, err := readSecurityContextFile(securityContextDir, HostAMDCertFilename)
 	if err != nil {
 		return encodedUvmInformation, errors.Wrapf(err, "reading host amd cert failed")
@@ -143,7 +164,7 @@ func GetUvmInformationFromFiles(securityContextDir string) (UvmInformation, erro
 
 	if encodedHostCertsFromTHIM != "" {
 		var err error
-		encodedUvmInformation.InitialCerts, err = ParseTHIMCerts(encodedHostCertsFromTHIM)
+		encodedUvmInformation.InitialCerts, err = ParseTHIMCertsFromString(encodedHostCertsFromTHIM)
 		if err != nil {
 			return encodedUvmInformation, err
 		}
@@ -154,9 +175,9 @@ func GetUvmInformationFromFiles(securityContextDir string) (UvmInformation, erro
 		return encodedUvmInformation, errors.Wrapf(err, "reading security policy failed")
 	}
 
-	encodedUvmInformation.EncodedUvmReferenceInfo, err = readSecurityContextFile(securityContextDir, ReferenceInfoFilename)
+	encodedUvmInformation.EncodedUvmReferenceInfo, err = GetReferenceInfoFile(securityContextDir, ReferenceInfoFilename)
 	if err != nil {
-		return encodedUvmInformation, errors.Wrapf(err, "reading uvm reference info failed")
+		return encodedUvmInformation, err
 	}
 
 	if GenerateTestData {
@@ -165,4 +186,34 @@ func GetUvmInformationFromFiles(securityContextDir string) (UvmInformation, erro
 	}
 
 	return encodedUvmInformation, nil
+}
+
+func GetReferenceInfoFile(securityContextDir string, ReferenceInfoFilename string) (string, error) {
+	encodedUvmReferenceInfo, err := readSecurityContextFile(securityContextDir, ReferenceInfoFilename)
+	if err != nil {
+		return encodedUvmReferenceInfo, errors.Wrapf(err, "reading uvm reference info failed")
+	}
+	return encodedUvmReferenceInfo, nil
+}
+
+func GetUvmInformationAASP(UvmInfo *UvmInformation) {
+	securityContextDir, err := GetUvmSecurityCtxDir()
+	if err != nil {
+		logrus.Fatalf(err.Error())
+	}
+
+	UvmInfo.EncodedUvmReferenceInfo, err = GetReferenceInfoFile(securityContextDir, ReferenceInfoFilename)
+	if err != nil {
+		logrus.Fatalf(err.Error())
+	}
+
+	if GenerateTestData {
+		os.WriteFile("uvm_reference_info.base64", []byte(UvmInfo.EncodedUvmReferenceInfo), 0644)
+	}
+
+	if GenerateTestData {
+		THIMCertsBytes, _ := json.Marshal(UvmInfo.InitialCerts)
+		certificatesRaw := base64.StdEncoding.EncodeToString(THIMCertsBytes)
+		os.WriteFile("uvm_host_amd_certificate.base64", []byte(certificatesRaw), 0644)
+	}
 }

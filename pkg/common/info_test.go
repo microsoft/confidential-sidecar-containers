@@ -23,26 +23,26 @@ func Test_ParseTHIMCerts(t *testing.T) {
 	}
 
 	// Valid
-	ce, err := ParseTHIMCerts(string(certificate))
+	ce, err := ParseTHIMCertsFromString(string(certificate))
 	if err != nil {
 		t.Fatalf("Could not parse THIM certificate: %s", err)
 	}
 	log.Printf("%#v\n", ce)
 
 	// Empty
-	_, err = ParseTHIMCerts("")
+	_, err = ParseTHIMCertsFromString("")
 	if !strings.Contains(err.Error(), "unexpected end of JSON input") {
 		t.Fatalf("Could not parse THIM certificate: %s", err)
 	}
 
 	// Invalid base64
-	_, err = ParseTHIMCerts(string(certificate[:len(certificate)-1]))
+	_, err = ParseTHIMCertsFromString(string(certificate[:len(certificate)-1]))
 	if !strings.Contains(err.Error(), "illegal base64 data") {
 		t.Fatalf("Could not parse THIM certificate: %s", err)
 	}
 
 	// Invalid JSON
-	_, err = ParseTHIMCerts(string(certificate[:len(certificate)-4]))
+	_, err = ParseTHIMCertsFromString(string(certificate[:len(certificate)-4]))
 	if !strings.Contains(err.Error(), "unexpected end of JSON input") {
 		t.Fatalf("Could not parse THIM certificate: %s", err)
 	}

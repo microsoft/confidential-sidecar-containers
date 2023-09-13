@@ -4,16 +4,26 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/msi"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var ready bool
+
+const (
+	AZURE_CLIENT_ID            = "AZURE_CLIENT_ID"
+	AZURE_TENANT_ID            = "AZURE_TENANT_ID"
+	AZURE_FEDERATED_TOKEN_FILE = "AZURE_FEDERATED_TOKEN_FILE"
+)
 
 type MAAAttestData struct {
 	// MAA endpoint which authors the MAA token
@@ -215,6 +225,21 @@ func PostKeyRelease(c *gin.Context) {
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("uvmInfo is not set")})
 		return
+	}
+
+	if skrKeyBlob.AKV.BearerToken == "" && os.Getenv(AZURE_FEDERATED_TOKEN_FILE) != "" {
+		bearerToken := ""
+		var err error
+		clientID := os.Getenv(AZURE_CLIENT_ID)
+		tenantID := os.Getenv(AZURE_TENANT_ID)
+		tokenFile := os.Getenv(AZURE_FEDERATED_TOKEN_FILE)
+		if clientID != "" && tenantID != "" && tokenFile != "" {
+			bearerToken, err = msi.GetAccessTokenFromFederatedToken(c, tokenFile, clientID, tenantID, "https://managedhsm.azure.net")
+			if err != nil {
+				c.JSON(http.StatusForbidden, gin.H{"error": status.Errorf(codes.Internal, "Failed to obtain access token to MHSM: %v", err)})
+			}
+		}
+		skrKeyBlob.AKV.BearerToken = bearerToken
 	}
 
 	jwKey, err := skr.SecureKeyRelease(*identity, *certState, skrKeyBlob, *uvmInfo)
