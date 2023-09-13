@@ -6,7 +6,7 @@ metadata:
     azure.workload.identity/use: "true"
 spec:
   runtimeClassName: kata-cc
-  serviceAccountName: workload-identity-sa
+  serviceAccountName: $SERVICE_ACCOUNT_NAME
   containers:
   - image: $AASP_IMAGE
     imagePullPolicy: Always
