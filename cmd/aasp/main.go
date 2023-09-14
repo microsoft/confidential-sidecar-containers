@@ -438,8 +438,6 @@ func main() {
 
 	EncodedUvmInformation.InitialCerts = *thimCerts
 
-	logrus.Debugf("Printing vcek %s", EncodedUvmInformation.InitialCerts.VcekCert)
-	logrus.Debugf("Printing tcbm %s", EncodedUvmInformation.InitialCerts.Tcbm)
 	// pass in EncodedUvmInformation because ciruclar reference is created if we have the following func to retrieve THIM Cert
 	common.GetUvmInformationAASP(&EncodedUvmInformation)
 	if err != nil {
@@ -492,7 +490,6 @@ func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo
 	logrus.Debugf("Setting platform certs to %s", certString)
 
 	server := gin.Default()
-	logrus.Debugf("Right before registering global state the tcbm value %d", certState.Tcbm)
 	server.Use(httpginendpoints.RegisterGlobalStates(certState, identity, uvmInfo))
 	server.GET("/status", httpginendpoints.GetStatus)
 	server.POST("/attest/raw", httpginendpoints.PostRawAttest)
