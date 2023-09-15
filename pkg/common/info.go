@@ -145,7 +145,7 @@ func readSecurityContextFile(dir string, filename string) (string, error) {
 	return string(blob), nil
 }
 
-func GetUvmInformationFromFiles(securityContextDir string) (UvmInformation, error) {
+func GetUvmInformationFromFiles() (UvmInformation, error) {
 	var encodedUvmInformation UvmInformation
 
 	securityContextDir, err := GetUvmSecurityCtxDir()
