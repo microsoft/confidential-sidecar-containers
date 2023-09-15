@@ -38,7 +38,7 @@ func FuseSetup(mountpoint string, readWrite bool) error {
 	}
 
 	if err != nil {
-		return errors.Wrapf(err, "can't start fuse")
+		return errors.Wrapf(err, "Can't start fuse")
 	}
 	defer c.Close()
 
@@ -46,7 +46,7 @@ func FuseSetup(mountpoint string, readWrite bool) error {
 	// a crash or the filesystem is unmounted by the user.
 	err = fs.Serve(c, FS{readWrite: readWrite})
 	if err != nil {
-		return errors.Wrapf(err, "can't serve fuse")
+		return errors.Wrapf(err, "Can't serve fuse")
 	}
 	return nil
 }

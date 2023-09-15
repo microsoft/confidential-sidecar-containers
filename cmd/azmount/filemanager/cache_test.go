@@ -207,7 +207,7 @@ func Test_GetBlock_TestBounds(t *testing.T) {
 	ClearCache()
 
 	err, _ := GetBlock(-1)
-	if err.Error() != "invalid block index (-1)" {
+	if err.Error() != "Invalid block index (-1)" {
 		t.Errorf("GetBlock(-1) should have failed")
 	}
 	err, _ = GetBlock(0)
@@ -219,7 +219,7 @@ func Test_GetBlock_TestBounds(t *testing.T) {
 		t.Errorf("GetBlock(255) should have succeeded: %s", err.Error())
 	}
 	err, _ = GetBlock(256)
-	if err.Error() != "block index over limit (256 > 255)" {
+	if err.Error() != "Block index over limit (256 > 255)" {
 		t.Errorf("GetBlock(-1) should have failed")
 	}
 }
@@ -340,7 +340,7 @@ func Test_SetBlock_TestBounds(t *testing.T) {
 	data := GenerateRandomData(BLOCK_SIZE)
 
 	err := SetBlock(-1, 0, data)
-	if err.Error() != "invalid block index (-1)" {
+	if err.Error() != "Invalid block index (-1)" {
 		t.Errorf("SetBlock(-1) should have failed")
 	}
 	err = SetBlock(0, 0, data)
@@ -352,7 +352,7 @@ func Test_SetBlock_TestBounds(t *testing.T) {
 		t.Errorf("SetBlock(255) should have succeeded: %s", err.Error())
 	}
 	err = SetBlock(256, 0, data)
-	if err.Error() != "block index over limit (256 > 255)" {
+	if err.Error() != "Block index over limit (256 > 255)" {
 		t.Errorf("SetBlock(-1) should have failed")
 	}
 }

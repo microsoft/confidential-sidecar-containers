@@ -34,9 +34,17 @@
                                 {
                                     "name": "EncfsSideCarArgs",
                                     "value": "<base64-std-encodes-string-of-sidecar-args>"
+                                },
+                                {
+                                    "name": "LogFile",
+                                    "value": "<optional-logfile-path>"
+                                },
+                                {
+                                    "name": "LogLevel",
+                                    "value": "<optional-loglevel-trace-debug-info-warning-error-fatal-panic>"
                                 }
                             ],
-                            "image": "mcr.microsoft.com/aci/encfs:2.2",
+                            "image": "mcr.microsoft.com/aci/encfs:2.3",
                             "securityContext": {
                                 "privileged": true
                             },

@@ -129,12 +129,12 @@ func validateJWSToken(token string, key interface{}, alg jwa.SignatureAlgorithm)
 func parseX509Certificate(certstring string) (*x509.Certificate, error) {
 	certBytes, err := base64.StdEncoding.DecodeString(certstring)
 	if err != nil {
-		return nil, errors.Wrapf(err, "decoding certificate from string failed")
+		return nil, errors.Wrapf(err, "decoding x509 certificate from string failed: %s", certstring)
 	}
 
 	cert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "parsing certificate failed")
+		return nil, errors.Wrapf(err, "parsing certificate failed from %s", certBytes)
 	}
 
 	return cert, err

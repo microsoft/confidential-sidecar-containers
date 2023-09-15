@@ -30,6 +30,16 @@
               "command": [
                 "/skr.sh"
               ],
+              "environmentVariables": [
+                {
+                  "name": "LogFile",
+                  "value": "<optional-logfile-path>"
+                },
+                {
+                  "name": "LogLevel",
+                  "value": "<optional-loglevel-trace-debug-info-warning-error-fatal-panic>"
+                }
+              ],
               "image": "mcr.microsoft.com/aci/skr:2.3",
               "resources": {
                 "requests": {

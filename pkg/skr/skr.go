@@ -58,29 +58,31 @@ type KeyBlob struct {
 //
 // The return type is a JWK key
 func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRKeyBlob KeyBlob, uvmInformation common.UvmInformation) (_ jwk.Key, err error) {
-
+	logrus.Info("Performing secure key release...")
 	logrus.Debugf("Releasing key blob: %v", SKRKeyBlob)
 
 	// Retrieve an MAA token
-
 	var maaToken string
 
 	// Generate an RSA pair that will be used for wrapping material released from a keyvault. MAA
 	// expects the public wrapping key to be formatted as a JSON Web Key (JWK).
 
 	// generate rsa key pair
+	logrus.Trace("Generating RSA key pair...")
 	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, RSASize)
 	if err != nil {
 		return nil, errors.Wrapf(err, "rsa key pair generation failed")
 	}
 
 	// construct the key blob
+	logrus.Info("Construct the key blob...")
 	jwkSetBytes, err := common.GenerateJWKSet(privateWrappingKey)
 	if err != nil {
 		return nil, errors.Wrapf(err, "generating key blob failed")
 	}
 
 	// Attest
+	logrus.Info("Attesting...")
 	maaToken, err = certState.Attest(SKRKeyBlob.Authority, jwkSetBytes, uvmInformation)
 	if err != nil {
 		return nil, errors.Wrapf(err, "attestation failed")
@@ -91,12 +93,15 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 
 	// retrieve an Azure authentication token for authenticating with AKV
 	if SKRKeyBlob.AKV.BearerToken == "" {
+		logrus.Info("Retrieving Azure authentication token...")
 		var ResourceIDTemplate string
 		// If endpoint contains managedhsm, request a token for managedhsm
 		// resource; otherwise for a vault
 		if strings.Contains(SKRKeyBlob.AKV.Endpoint, "managedhsm") {
+			logrus.Info("Requesting token for managedhsm...")
 			ResourceIDTemplate = ResourceIdManagedHSM
 		} else {
+			logrus.Info("Requesting token for vault...")
 			ResourceIDTemplate = ResourceIdVault
 		}
 
@@ -107,13 +112,13 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 
 		// set the azure authentication token to the AKV instance
 		SKRKeyBlob.AKV.BearerToken = token.AccessToken
-		logrus.Debugf("AAD Token: %s ", token.AccessToken)
 	}
+	logrus.Debugf("AAD Token: %s ", SKRKeyBlob.AKV.BearerToken)
 
 	// use the MAA token obtained from the AKV's authority to retrieve the key identified by kid. The ReleaseKey
 	// operation requires the private wrapping key to unwrap the encrypted key material released from
 	// the AKV.
-
+	logrus.Infof("Releasing key %s...", SKRKeyBlob.KID)
 	keyBytes, kty, err := SKRKeyBlob.AKV.ReleaseKey(maaToken, SKRKeyBlob.KID, privateWrappingKey)
 	if err != nil {
 		logrus.Debugf("releasing the key %s failed. err: %s", SKRKeyBlob.KID, err.Error())
@@ -123,6 +128,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 	logrus.Debugf("Key Type: %s Key %v", kty, keyBytes)
 
 	if kty == "oct" || kty == "oct-HSM" {
+		logrus.Trace("Encoding OCT key as JWK...")
 		jwKey := jwk.NewSymmetricKey()
 		err := jwKey.FromRaw(keyBytes)
 		if err != nil {
@@ -130,6 +136,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 		}
 		return jwKey, nil
 	} else if kty == "RSA-HSM" || kty == "RSA" {
+		logrus.Trace("Parsing RSA key...")
 		key, err := x509.ParsePKCS8PrivateKey(keyBytes)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not parse RSA key")
@@ -137,6 +144,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 
 		var privateRSAKey *rsa.PrivateKey = key.(*rsa.PrivateKey)
 
+		logrus.Trace("Encoding RSA key as JWK...")
 		jwKey := jwk.NewRSAPrivateKey()
 		err = jwKey.FromRaw(privateRSAKey)
 		if err != nil {
