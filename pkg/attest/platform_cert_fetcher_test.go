@@ -69,7 +69,7 @@ func Test_CertFetcher(t *testing.T) {
 			},
 			chipID:          ValidChipID,
 			platformVersion: 0xdeadbeef,
-			expectedError:   errors.Errorf("pulling certchain response from AzCache get request failed: GET request failed with status code 404: "),
+			expectedError:   errors.Errorf("pulling certchain response from AzCache URL 'https://americas.test.acccache.azure.net/SevSnpVM/certificates/e6c86796cd44b0bc6b7c0d4fdab33e2807e14b5fc4538b3750921169d97bcf4447c7d3ab2a7c25f74c1641e2885c1011d025cc536f5c9a2504713136c7877f48/deadbeef?api-version=2020-10-15-preview' failed: GET request failed with status code 404: "),
 			expectErr:       true,
 		},
 		// CertFetcher_Invalid_ChipID passes if the uri associated with the requested certificate was not found
@@ -83,7 +83,7 @@ func Test_CertFetcher(t *testing.T) {
 			},
 			chipID:          "0xdeadbeef",
 			platformVersion: ValidPlatformVersion,
-			expectedError:   errors.Errorf("pulling certchain response from AzCache get request failed: GET request failed with status code 404: "),
+			expectedError:   errors.Errorf("pulling certchain response from AzCache URL 'https://americas.test.acccache.azure.net/SevSnpVM/certificates/0xdeadbeef/3100000000000000?api-version=2020-10-15-preview' failed: GET request failed with status code 404: "),
 			expectErr:       true,
 		},
 		// CertFetcher_Invalid_TEEType passes if the uri associated with the requested tee_type and certificate was not found
@@ -97,7 +97,7 @@ func Test_CertFetcher(t *testing.T) {
 			},
 			chipID:          ValidChipID,
 			platformVersion: ValidPlatformVersion,
-			expectedError:   errors.Errorf("pulling certchain response from AzCache get request failed: GET request failed with status code 404: "),
+			expectedError:   errors.Errorf("pulling certchain response from AzCache URL 'https://americas.test.acccache.azure.net/InvalidTEEType/certificates/e6c86796cd44b0bc6b7c0d4fdab33e2807e14b5fc4538b3750921169d97bcf4447c7d3ab2a7c25f74c1641e2885c1011d025cc536f5c9a2504713136c7877f48/3100000000000000?api-version=2020-10-15-preview' failed: GET request failed with status code 404: "),
 			expectErr:       true,
 		},
 		// CertFetcher_Invalid_EndpointType passes if the uri associated with the requested tee_type and certificate was not found

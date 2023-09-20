@@ -159,7 +159,7 @@ const (
 )
 
 func fetchWithRetry(requestURL string, baseSec int, maxRetries int, httpRequestFunc func(string) (*http.Response, error)) ([]byte, error) {
-  logrus.Debugf("fetchWithRetry: requestURL=%s, baseSec=%d, maxRetries=%d", requestURL, baseSec, maxRetries)
+	logrus.Debugf("fetchWithRetry: requestURL=%s, baseSec=%d, maxRetries=%d", requestURL, baseSec, maxRetries)
 	if maxRetries < 0 {
 		return nil, errors.New("invalid `maxRetries` value")
 	}
@@ -271,8 +271,8 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "certcache failed to get local certs")
 			}
-      logrus.Trace("Parsing THIM TCBM...")
-      
+			logrus.Trace("Parsing THIM TCBM...")
+
 			thimTcbm, err = common.ParseTHIMTCBM(thimCerts)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "failed to parse THIM TCBM")
@@ -283,7 +283,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			logrus.Debugf("Retrieving Cert Chain from AzCache Endpoint %s...", certFetcher.Endpoint)
 			uri = fmt.Sprintf(AzureCertCacheRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, strconv.FormatUint(reportedTCB, 16), certFetcher.APIVersion)
 
-			logrus.Trace("Fetchging cert chain from AzCache endpoint...")
+			logrus.Trace("Fetching cert chain from AzCache endpoint...")
 			certChain, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, nil)
 			if err != nil {
 				return nil, thimTcbm, errors.Wrapf(err, "pulling certchain response from AzCache URL '%s' failed", uri)
