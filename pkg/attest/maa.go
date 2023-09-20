@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -64,26 +64,28 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 	var request attestSNPRequestBody
 
 	base64urlEncodedUvmReferenceInfo := base64.URLEncoding.EncodeToString(uvmReferenceInfo)
+	logrus.Debugf("base64urlEncodedUvmReferenceInfo: %s", base64urlEncodedUvmReferenceInfo)
 
 	if common.GenerateTestData {
-		ioutil.WriteFile("body.uvm_reference_info.bin", uvmReferenceInfo, 0644)
-		ioutil.WriteFile("body.uvm_reference_info.base64url", []byte(base64urlEncodedUvmReferenceInfo), 0644)
+		os.WriteFile("body.uvm_reference_info.bin", uvmReferenceInfo, 0644)
+		os.WriteFile("body.uvm_reference_info.base64url", []byte(base64urlEncodedUvmReferenceInfo), 0644)
 	}
 
 	maaEndorsement := maaEndorsements{
 		Uvm: []string{base64urlEncodedUvmReferenceInfo},
 	}
 
+	logrus.Info("Marshalling MAA Endorsement...")
 	maaEndorsementJSONBytes, err := json.Marshal(maaEndorsement)
 	if err != nil {
-		return nil, errors.Wrapf(err, "marhalling maa Report field failed")
+		return nil, errors.Wrapf(err, "marhalling maa endorsement failed")
 	}
 
 	base64urlEncodedmaaEndorsement := base64.URLEncoding.EncodeToString(maaEndorsementJSONBytes)
 
 	if common.GenerateTestData {
-		ioutil.WriteFile("body.endorsements.bin", maaEndorsementJSONBytes, 0644)
-		ioutil.WriteFile("body.endorsements.base64url", []byte(base64urlEncodedmaaEndorsement), 0644)
+		os.WriteFile("body.endorsements.bin", maaEndorsementJSONBytes, 0644)
+		os.WriteFile("body.endorsements.base64url", []byte(base64urlEncodedmaaEndorsement), 0644)
 	}
 
 	// the maa report is a bundle of the signed attestation report and
@@ -94,16 +96,17 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 		Endorsements: base64urlEncodedmaaEndorsement,
 	}
 
+	logrus.Debugf("Marshalling maaReport: %+v", maaReport)
 	maaReportJSONBytes, err := json.Marshal(maaReport)
 	if err != nil {
-		return nil, errors.Wrapf(err, "marhalling maa Report field failed")
+		return nil, errors.Wrapf(err, "marhalling maa Report failed")
 	}
 
 	request.Report = base64.URLEncoding.EncodeToString(maaReportJSONBytes)
 
 	if common.GenerateTestData {
-		ioutil.WriteFile("body.maa_report.json", maaReportJSONBytes, 0644)
-		ioutil.WriteFile("body.report.base64url", []byte(request.Report), 0644)
+		os.WriteFile("body.maa_report.json", maaReportJSONBytes, 0644)
+		os.WriteFile("body.report.base64url", []byte(request.Report), 0644)
 	}
 
 	// the key blob is passed as runtime data
@@ -114,7 +117,7 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 
 	// the policy blob is passed as inittime data
 	// As of today we CANNOT pass the policy as it is rego, so not good json and only json
-	// is currently supported byt MAA, not binary.
+	// is currently supported by MAA, not binary.
 	if false && policyBlob != nil {
 		request.InittimeData = attestedData{
 			Data:     base64.URLEncoding.EncodeToString(policyBlob),
@@ -122,7 +125,7 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 		}
 	}
 
-	rand.Seed(time.Now().UnixNano())
+	rand.New(rand.NewSource(time.Now().UnixNano()))
 	request.Nonce = rand.Uint64()
 
 	return &request, nil
@@ -142,11 +145,13 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 // Note, the using the leaf cert will be changed to a DID based scheme similar to fragments.
 func (maa MAA) attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlobBytes []byte, keyBlobBytes []byte, encodedUvmReferenceInfo []byte) (MAAToken string, err error) {
 	// Construct attestation request that contain the four attributes
+	logrus.Info("Constructing MAA Attestation Request...")
 	request, err := newAttestSNPRequestBody(SNPReportHexBytes, vcekCertChain, policyBlobBytes, keyBlobBytes, encodedUvmReferenceInfo)
 	if err != nil {
 		return "", errors.Wrapf(err, "creating new AttestSNPRequestBody failed")
 	}
 
+	logrus.Debugf("Marshalling MAA Attestation Request: %+v", request)
 	maaRequestJSONData, err := json.Marshal(request)
 	if err != nil {
 		return "", errors.Wrapf(err, "marshalling maa request failed")
@@ -154,11 +159,12 @@ func (maa MAA) attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlob
 	logrus.Debugf("MAA Request: %s\n", string(maaRequestJSONData))
 
 	if common.GenerateTestData {
-		ioutil.WriteFile("request.json", maaRequestJSONData, 0644)
+		os.WriteFile("request.json", maaRequestJSONData, 0644)
 	}
 
 	// HTTP POST request to MAA service
 	uri := fmt.Sprintf(AttestRequestURITemplate, maa.Endpoint, maa.TEEType, maa.APIVersion)
+	logrus.Debugf("Posting MAA Attestation Request to %s", uri)
 	httpResponse, err := common.HTTPPRequest("POST", uri, maaRequestJSONData, "")
 	if err != nil {
 		return "", errors.Wrapf(err, "maa post request failed")
@@ -176,6 +182,7 @@ func (maa MAA) attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlob
 		Token string
 	}
 
+	logrus.Info("Unmarshalling MAA Attestation Response...")
 	if err = json.Unmarshal(httpResponseBodyBytes, &maaResponse); err != nil {
 		return "", errors.Wrapf(err, "unmarshalling maa http response body failed")
 	}

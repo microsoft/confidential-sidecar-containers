@@ -4,6 +4,7 @@
          "mount_point": "/mnt/remote/share",
          "azure_url": "<azure-blob-storage-url>",
          "azure_url_private": true,
+         "read_write": true,
          "key": {
             "kid": "<key-vault-akv-key-identifier>",
             "kty": "<key-type-of-key-imported-to-akv>",

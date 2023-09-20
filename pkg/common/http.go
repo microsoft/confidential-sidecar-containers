@@ -5,7 +5,7 @@ package common
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -64,7 +64,7 @@ func HTTPResponseBody(httpResponse *http.Response) ([]byte, error) {
 
 	// Pull out response body
 	defer httpResponse.Body.Close()
-	httpResponseBodyBytes, err := ioutil.ReadAll(httpResponse.Body)
+	httpResponseBodyBytes, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
 		return nil, errors.Wrapf(err, "reading http response body failed")
 	}

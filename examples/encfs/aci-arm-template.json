@@ -4,7 +4,7 @@
   "parameters": {
     "containerGroupName": {
       "type": "string",
-      "defaultValue": "aciEncfsSidecarTest",
+      "defaultValue": "aciEncfsSidecarTestRead",
       "metadata": {
         "description": "Encrypted filesystem sidecar example"
       }
@@ -19,7 +19,7 @@
       "identity": {
         "type": "UserAssigned",
         "userAssignedIdentities": {
-          "<user-assigned-identity-with-access-to-azure-services>": {}
+          "<managed-identity-with-right-permissions-to-key-vault>": {}
         }
       },
       "properties": {
@@ -34,6 +34,14 @@
                 {
                   "name": "EncfsSideCarArgs",
                   "value": "<base64-std-encodes-string-of-sidecar-args>"
+                },
+                {
+                  "name": "LogFile",
+                  "value": "<optional-logfile-path>"
+                },
+                {
+                  "name": "LogLevel",
+                  "value": "<optional-loglevel-trace-debug-info-warning-error-fatal-panic>"
                 }
               ],
               "image": "mcr.microsoft.com/aci/encfs:2.3",
@@ -58,7 +66,7 @@
             "name": "test-encfs-container",
             "properties": {
               "command": [
-                "/bin/ash",
+                "/bin/sh",
                 "-c",
                 "while true; do cat /mnt/remote/share/test.txt | /usr/bin/head -n 20; sleep 1; done"
               ],

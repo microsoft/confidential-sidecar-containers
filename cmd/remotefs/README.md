@@ -10,6 +10,8 @@ the key assuming the release policy is satisfied with claims presented in the au
 token. If the key provided is RSA-HSM, the key_derivation object needs to be specified so that
 the tool can derive a symmetric key using the RSA key material and the key_derivation salt and label.
 For testing purposes, it is possible to pass the raw hexstring key as opposed to SKR information.
+Additionally, a read_write flag must be specified to determine if the filesystem is read-write, otherwise the filesystem
+defaults to read-only.
 
 ```
 {
@@ -18,6 +20,7 @@ For testing purposes, it is possible to pass the raw hexstring key as opposed to
             "mount_point":"/remotemounts/share1",
             "azure_url":"https://samplename.blob.core.windows.net/public-container/image-encrypted-1.img",
             "azure_url_private": true,
+            "read_write": false,   
             "key": {
                  "kid": "EncryptedFilesystemsContainer",
                  "kty": "RSA-HSM",
@@ -31,7 +34,7 @@ For testing purposes, it is possible to pass the raw hexstring key as opposed to
             "key_derivation":{
                 "salt": "92a631483ca875aad7e2477da755d58cac3876b77d10bcdd7b33bfa11e7d8b8e",
                 "label": "Encryption Key"
-            }            
+            }           
         },
         {
             "mount_point":"/remotemounts/share2",
@@ -45,7 +48,7 @@ For testing purposes, it is possible to pass the raw hexstring key as opposed to
                  "akv": { 
                      "endpoint": "amanagedhsmname.managedhsm.azure.net"
                  }
-            }              
+            }         
         }
     ]
 }

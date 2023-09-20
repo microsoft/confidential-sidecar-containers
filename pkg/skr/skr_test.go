@@ -294,7 +294,7 @@ func Test_AKV(t *testing.T) {
 
 			certstring: "MI",
 
-			expectedError: errors.New("decoding certificate from string failed"),
+			expectedError: errors.New("decoding x509 certificate from string failed: MI"),
 			expectErr:     true,
 		},
 		// passes if the certificate is parsed and found to be a non valid x509 cert
