@@ -41,3 +41,4 @@ Other command line options are:
   output to stdout.
 - ``blocksize``: Size of a cache block in KiB.
 - ``numblocks``: Number of cache blocks to keep.
+- ``readWrite``: Specify if the filesystem is read-write (true) or read-only (false or not included)

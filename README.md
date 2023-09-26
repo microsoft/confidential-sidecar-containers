@@ -23,6 +23,7 @@ The ``docker/encfs/build.sh`` script builds all necessary Go tools (for encrypte
 The encrypted filesystem sidecar uses the SKR library to release key material from Azure Key Vault instances required for mounting the encrypted filesystems required by the application.
 
 The ``examples/encfs`` shows an example of how the encrypted filesystem sidecar can be deployed within a confidential container group on ACI.
+
 ## Dependencies:
 - Golang 1.19 or later
 - Docker
