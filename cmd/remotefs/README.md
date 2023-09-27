@@ -57,8 +57,8 @@ defaults to read-only.
 The tool does the following for each filesystem (any failure will cause the program to exit):
 
 - It invokes ```azmount``` to expose the encrypted file specified in ``azure_url`` as
-  a local file. This file is read-only. Public containers can be read, but they
-  can't be written unless the user is authenticated. 
+  a local file. This file is read-only, unless a read-write filesystem is specified. 
+  Public containers can be read, but they can't be written unless the user is authenticated. 
 
   Also, the reason why this is a separate tool is that this tool uses FUSE to
   expose the remote file as a local file. This turns the userland process into a
