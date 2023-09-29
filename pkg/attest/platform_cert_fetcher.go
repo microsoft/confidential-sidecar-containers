@@ -329,8 +329,6 @@ func (certFetcher CertFetcher) GetThimCerts(uri string) (*common.THIMCerts, erro
 	if err != nil {
 		return nil, errors.Wrapf(err, "Fetching THIM Certs with retries failed.")
 	}
-	fmt.Println("length of thim certbytes is", len(THIMCertsBytes))
-	fmt.Println("actually print out the bytes\n", THIMCertsBytes)
 	thimCerts, err := common.ParseTHIMCertsFromByte(THIMCertsBytes)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Parse THIM Certs from bytes failed.")
