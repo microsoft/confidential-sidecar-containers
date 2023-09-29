@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"flag"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -19,12 +18,16 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
 	socketAddress             = flag.String("socket-address", "/tmp/attestation-container.sock", "The socket address of Unix domain socket (UDS)")
 	platformCertificateServer = flag.String("platform-certificate-server", "", "Server to fetch platform certificate. If set, certificates contained in security context directory are ignored. Value is either 'Azure' or 'AMD'")
 	insecureVirtual           = flag.Bool("insecure-virtual", false, "If set, dummy attestation is returned (INSECURE: do not use in production)")
+	logLevel                  = flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
+	logFile                   = flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
 
 	platformCertificateValue *common.THIMCerts = nil
 	// UVM Endorsement (UVM reference info)
@@ -48,10 +51,11 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 	}
 	copy(reportData[:], in.GetReportData())
 	if *insecureVirtual {
-		log.Println("Serving virtual attestation report")
+		logrus.Trace("Serving virtual attestation report")
 		return &pb.FetchAttestationReply{}, nil
 	}
 
+	logrus.Trace("Fetching attestation report...")
 	reportFetcher, err := attest.NewAttestationReportFetcher()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get attestation report fetcher: %s", err)
@@ -62,24 +66,30 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 		return nil, status.Errorf(codes.Internal, "failed to fetch attestation report: %s", err)
 	}
 
+	logrus.Trace("Setting platform certificate...")
 	var platformCertificate []byte
 	if platformCertificateValue == nil {
+		logrus.Trace("Deserializing attestation report...")
 		var SNPReport attest.SNPAttestationReport
 		if err = SNPReport.DeserializeReport(reportBytes); err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to deserialize attestation report: %s", err)
 		}
 		var certFetcher attest.CertFetcher
 		if *platformCertificateServer == "AMD" {
+			logrus.Trace("Setting AMD Certificate Fetcher...")
 			certFetcher = attest.DefaultAMDMilanCertFetcherNew()
 		} else {
 			// Use "Azure". The value of platformCertificateServer should be already checked.
+			logrus.Trace("Setting Azure Certificate Fetcher...")
 			certFetcher = attest.DefaultAzureCertFetcherNew()
 		}
+		logrus.Trace("Fetching platform certificate...")
 		platformCertificate, _, err = certFetcher.GetCertChain(SNPReport.ChipID, SNPReport.ReportedTCB)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to fetch platform certificate: %s", err)
 		}
 	} else {
+		logrus.Trace("Using platform certificate from UVM info...")
 		platformCertificate = append(platformCertificate, platformCertificateValue.VcekCert...)
 		platformCertificate = append(platformCertificate, platformCertificateValue.CertificateChain...)
 	}
@@ -89,66 +99,93 @@ func (s *server) FetchAttestation(ctx context.Context, in *pb.FetchAttestationRe
 
 func validateFlags() {
 	if *platformCertificateServer != "" && *platformCertificateServer != "AMD" && *platformCertificateServer != "Azure" {
-		log.Fatalf("invalid --platform-certificate-server value %s (valid values: 'AMD', 'Azure')", *platformCertificateServer)
+		logrus.Fatalf("invalid --platform-certificate-server value %s (valid values: 'AMD', 'Azure')", *platformCertificateServer)
 	}
 }
 
 func main() {
 	flag.Parse()
+
+	// if logFile is not set, logrus defaults to stderr
+	if *logFile != "" {
+		// If the file doesn't exist, create it. If it exists, append to it.
+		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			logrus.Fatal(err)
+		}
+		defer file.Close()
+		logrus.SetOutput(file)
+	}
+
+	level, err := logrus.ParseLevel(*logLevel)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	logrus.SetLevel(level)
+	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: false, DisableQuote: true, DisableTimestamp: true})
+
 	validateFlags()
 
-	log.Println("Attestation container started.")
+	logrus.Info("Attestation container started...")
 
 	if *insecureVirtual {
-		log.Printf("Warning: INSECURE virtual: do not use in production!")
+		logrus.Warn("Warning: INSECURE virtual: do not use in production!")
 	} else {
+		logrus.Trace("Checking if SNP device is detected...")
 		if attest.IsSNPVM5() {
-			log.Printf("%s is detected\n", attest.SNP_DEVICE_PATH_5)
+			logrus.Tracef("%s is detected\n", attest.SNP_DEVICE_PATH_5)
 		} else if attest.IsSNPVM6() {
-			log.Printf("%s is detected\n", attest.SNP_DEVICE_PATH_6)
+			logrus.Tracef("%s is detected\n", attest.SNP_DEVICE_PATH_6)
 		} else {
-			log.Fatalf("attestation-container is not running in SNP enabled VM")
+			logrus.Fatalf("attestation-container is not running in SNP enabled VM")
 		}
 
+		logrus.Trace("Getting UVM Information...")
 		uvmInfo, err := common.GetUvmInformation()
 		if err != nil {
-			log.Fatalf("Failed to get UVM information: %s", err)
+			logrus.Fatalf("Failed to get UVM information: %s", err)
 		}
 
+		logrus.Trace("Setting platform certificate server...")
 		if *platformCertificateServer == "" {
 			platformCertificateValue = &uvmInfo.InitialCerts
 		} else {
-			log.Printf("Platform certificates will be retrieved from server %s", *platformCertificateServer)
+			logrus.Tracef("Platform certificates will be retrieved from server %s", *platformCertificateServer)
 		}
 
+		logrus.Trace("Decoding UVM reference info...")
 		uvmEndorsementValue, err = base64.StdEncoding.DecodeString(uvmInfo.EncodedUvmReferenceInfo)
 		if err != nil {
-			log.Fatalf("Failed to decode base64 string: %s", err)
+			logrus.Fatalf("Failed to decode base64 string: %s", err)
 		}
 	}
 
 	// Cleanup
 	if _, err := os.Stat(*socketAddress); err == nil {
 		if err := os.RemoveAll(*socketAddress); err != nil {
-			log.Fatalf("Failed to clean up socket: %s", err)
+			logrus.Fatalf("Failed to clean up socket: %s", err)
+		} else {
+			logrus.Infof("Cleaned existing socket %s", *socketAddress)
 		}
+	} else {
+		logrus.Debugf("Failed to stat socket %s", *socketAddress)
 	}
 
 	// Create parent directory for socketAddress
 	socketDir := filepath.Dir(*socketAddress)
 	// os.MkdirAll doesn't return error when the directory already exists
 	if err := os.MkdirAll(socketDir, os.ModePerm); err != nil {
-		log.Fatalf("Failed to create directory for Unix domain socket: %s", err)
+		logrus.Fatalf("Failed to create directory for Unix domain socket: %s", err)
 	}
 
 	lis, err := net.Listen("unix", *socketAddress)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		logrus.Fatalf("Failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterAttestationContainerServer(s, &server{})
-	log.Printf("Server listening at %v", lis.Addr())
+	logrus.Infof("Server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		logrus.Fatalf("Failed to serve: %v", err)
 	}
 }

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
@@ -43,7 +42,9 @@ type AzureFilesystem struct {
 	KeyBlob skr.KeyBlob `json:"key,omitempty"`
 	// This is a testing key hexstring encoded to be used against the filesystem. This should
 	// be used only for testing.
-	RawKeyHexString string `json:"raw_key, omitempty"`
+	RawKeyHexString string `json:"raw_key,omitempty"`
+	// This is a flag specifying if this file system is read-write
+	ReadWrite bool `json:"read_write,omitempty"`
 }
 
 func usage() {
@@ -53,7 +54,7 @@ func usage() {
 
 func main() {
 	base64string := flag.String("base64", "", "base64-encoded json string with all information")
-	logLevel := flag.String("loglevel", "debug", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
+	logLevel := flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
 	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
 
 	flag.Usage = usage
@@ -62,7 +63,7 @@ func main() {
 
 	if *logFile != "" {
 		// If the file doesn't exist, create it. If it exists, append to it.
-		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -75,16 +76,17 @@ func main() {
 		logrus.Fatal(err)
 	}
 	logrus.SetLevel(level)
+	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: false, DisableQuote: true, DisableTimestamp: true})
 
 	logrus.Infof("Starting %s...", os.Args[0])
 
 	logrus.Infof("Args:")
-	logrus.Debugf("   Log Level: %s", *logLevel)
-	logrus.Debugf("   Log File:  %s", *logFile)
+	logrus.Infof("   Log Level: %s", *logLevel)
+	logrus.Infof("   Log File:  %s", *logFile)
 	logrus.Debugf("   base64:    %s", *base64string)
 
-	logrus.Infof("Creating temporary directory")
-	tempDir, err := ioutil.TempDir("", "remotefs")
+	logrus.Info("Creating temporary directory")
+	tempDir, err := os.MkdirTemp("", "remotefs")
 	if err != nil {
 		logrus.Fatalf("Failed to create temp dir: %s", err.Error())
 	}
@@ -99,7 +101,7 @@ func main() {
 	info := RemoteFilesystemsInformation{}
 	err = json.Unmarshal(bytes, &info)
 	if err != nil {
-		logrus.Fatalf("Failed to unmarshal: %s", err.Error())
+		logrus.Fatalf("Failed to unmarshal base64 string: %s", err.Error())
 	}
 
 	// populate missing attributes in KeyBlob

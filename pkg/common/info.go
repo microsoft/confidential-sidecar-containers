@@ -60,7 +60,7 @@ func ConcatenateCerts(thimCerts THIMCerts) []byte {
 func ParseTHIMTCBM(thimCerts THIMCerts) (uint64, error) {
 	thimTcbm, err := strconv.ParseUint(thimCerts.Tcbm, 16, 64)
 	if err != nil {
-		return thimTcbm, errors.Wrap(err, "Unable to convert TCBM from THIM certificates to a uint64")
+		return thimTcbm, errors.Wrapf(err, "Unable to convert TCBM from THIM certificates %s to a uint64", thimCerts.Tcbm)
 	}
 
 	return thimTcbm, nil
@@ -87,6 +87,7 @@ func GetUvmSecurityCtxDir() (string, error) {
 	if securityContextDir == "" {
 		return "", errors.New("UVM_SECURITY_CONTEXT_DIR not set")
 	}
+  logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s", securityContextDir)
 	return securityContextDir, nil
 }
 
