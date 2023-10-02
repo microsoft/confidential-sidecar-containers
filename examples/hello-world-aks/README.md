@@ -2,7 +2,7 @@
 
 # Azure Kubernetes Service Confidential Hello World
 
-This sample is a basic Python application used to demonstrate Confidential Pods on Azure Container Instances. In this sample an AMD SEV SNP report containing the container's firmware measurements will be displayed on the web using nginx.
+This sample is a basic Python application used to demonstrate Confidential Pods on Azure Kubernetes Service. In this sample an AMD SEV SNP report containing the container's firmware measurements will be displayed on the web using nginx.
 
 ![Hello World Hardware Report](./media/hello-world-cc.png)
 
