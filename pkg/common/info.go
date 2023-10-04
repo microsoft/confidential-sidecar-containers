@@ -96,12 +96,18 @@ func GetUvmSecurityCtxDir() (string, error) {
 }
 
 func GetUvmInformation() (UvmInformation, error) {
-	_, err := GetUvmSecurityCtxDir()
-	if err != nil {
-		return GetUvmInformationFromEnv()
-	} else {
-		return GetUvmInformationFromFiles()
+	contextDir, err := GetUvmSecurityCtxDir()
+	var info UvmInformation
+	if len(contextDir) > 0 {
+		info, err = GetUvmInformationFromFiles()
+		if err != nil {
+			logrus.Debugf("UVM Reference info not found in %q %s", contextDir, err)
+		}
 	}
+	if len(info.EncodedUvmReferenceInfo) == 0 {
+		info, err = GetUvmInformationFromEnv()
+	}
+	return info, err
 }
 
 func GetUvmInformationFromEnv() (UvmInformation, error) {
@@ -167,7 +173,6 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 	}
 
 	if encodedHostCertsFromTHIM != "" {
-		var err error
 		encodedUvmInformation.InitialCerts, err = ParseTHIMCertsFromString(encodedHostCertsFromTHIM)
 		if err != nil {
 			return encodedUvmInformation, err
@@ -189,7 +194,7 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 		os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
 	}
 
-	return encodedUvmInformation, nil
+	return encodedUvmInformation, err
 }
 
 func GetReferenceInfoFile(securityContextDir string, ReferenceInfoFilename string) (string, error) {
