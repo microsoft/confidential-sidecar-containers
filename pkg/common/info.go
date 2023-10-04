@@ -72,6 +72,8 @@ type UvmInformation struct {
 	EncodedUvmReferenceInfo string    // base64 encoded endorsements for the particular UVM image
 }
 
+const uvmSecurityCtxDirDefault = "/opt/confidential-containers/share/kata-containers"
+
 // Late in Public Preview, we made a change to pass the UVM information
 // via files instead of environment variables.
 // This code detects which method is being used and calls the appropriate
@@ -85,9 +87,11 @@ type UvmInformation struct {
 func GetUvmSecurityCtxDir() (string, error) {
 	securityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
 	if securityContextDir == "" {
-		return "", errors.New("UVM_SECURITY_CONTEXT_DIR not set")
+		logrus.Debugf("UVM_SECURITY_CONTEXT_DIR not set.  Using system default %q", uvmSecurityCtxDirDefault)
+		securityContextDir = uvmSecurityCtxDirDefault
+	} else {
+		logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s", securityContextDir)
 	}
-	logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s", securityContextDir)
 	return securityContextDir, nil
 }
 
