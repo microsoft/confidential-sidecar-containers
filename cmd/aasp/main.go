@@ -405,12 +405,6 @@ func main() {
 		return
 	}
 
-	lis, err := net.Listen("tcp", *port)
-	if err != nil {
-		log.Fatalf("failed to listen on port %v: %v", *port, err)
-	}
-	log.Printf("Listening on port %v", *port)
-
 	logrus.Infof("Args:")
 	logrus.Debugf("   aasp cert cache info:    %s", *azureInfoBase64string)
 	logrus.Debugf("   keyprovider_sock:    %s", *port)
@@ -468,6 +462,12 @@ func main() {
 	if azure_info.Identity.ClientId == "" {
 		log.Printf("Warning: Env AZURE_CLIENT_ID is not set")
 	}
+
+	lis, err := net.Listen("tcp", *port)
+	if err != nil {
+		log.Fatalf("failed to listen on port %v: %v", *port, err)
+	}
+	log.Printf("Listening on port %v", *port)
 
 	url := *hostname + ":" + *httpport
 	//start http server

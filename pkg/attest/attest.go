@@ -98,13 +98,13 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 	// Fetch the attestation report
 	var reportFetcher AttestationReportFetcher
 	if IsSNPVM() {
-    logrus.Info("Running inside SNP VM, using real attestation report fetcher...")
+		logrus.Info("Running inside SNP VM, using real attestation report fetcher...")
 		reportFetcher, err = NewAttestationReportFetcher()
 		if err != nil {
 			return "", errors.Wrapf(err, "failed to create attestation report fetcher")
 		}
 	} else {
-    logrus.Info("Not running inside SNP VM, using fake attestation report fetcher...")
+		logrus.Info("Not running inside SNP VM, using fake attestation report fetcher...")
 		// Use fake attestation report if it's not running inside SNP VM
 		hostData := GenerateMAAHostData(inittimeDataBytes)
 		reportFetcher = UnsafeNewFakeAttestationReportFetcher(hostData)
@@ -169,7 +169,10 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 		vcekCertChain = []byte(certString)
 	}
 
-	uvmReferenceInfoBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedUvmReferenceInfo)
+	var uvmReferenceInfoBytes []byte
+	if len(uvmInformation.EncodedUvmReferenceInfo) > 0 {
+		uvmReferenceInfoBytes, err = base64.StdEncoding.DecodeString(uvmInformation.EncodedUvmReferenceInfo)
+	}
 	if err != nil {
 		return "", errors.Wrap(err, "Decoding UVM encoded security policy from Base64 format failed")
 	}

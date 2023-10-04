@@ -87,7 +87,7 @@ func GetUvmSecurityCtxDir() (string, error) {
 	if securityContextDir == "" {
 		return "", errors.New("UVM_SECURITY_CONTEXT_DIR not set")
 	}
-  logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s", securityContextDir)
+	logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s", securityContextDir)
 	return securityContextDir, nil
 }
 
@@ -199,12 +199,14 @@ func GetReferenceInfoFile(securityContextDir string, ReferenceInfoFilename strin
 func GetUvmInformationAASP(UvmInfo *UvmInformation) {
 	securityContextDir, err := GetUvmSecurityCtxDir()
 	if err != nil {
-		logrus.Fatalf(err.Error())
+		logrus.Warn(err.Error())
+		return
 	}
 
 	UvmInfo.EncodedUvmReferenceInfo, err = GetReferenceInfoFile(securityContextDir, ReferenceInfoFilename)
 	if err != nil {
-		logrus.Fatalf(err.Error())
+		logrus.Warn(err.Error())
+		return
 	}
 
 	if GenerateTestData {
