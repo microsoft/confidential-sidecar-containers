@@ -35,6 +35,7 @@ const (
 	AmdVCEKRequestURITemplate        = "https://%s/%s/%s?ucodeSPL=%d&snpSPL=%d&teeSPL=%d&blSPL=%d"
 	AmdCertChainRequestURITemplate   = "https://%s/%s/cert_chain"
 	LocalTHIMUriTemplate             = "http://%s" // To-Do update once we know what this looks like
+	defaultLocalThimURI              = "169.254.169.254/metadata/THIM/amd/certification"
 )
 
 const (
@@ -324,6 +325,9 @@ func getThimCertsHttp(uri string) (*http.Response, error) {
 }
 
 func (certFetcher CertFetcher) GetThimCerts(uri string) (*common.THIMCerts, error) {
+	if len(uri) == 0 {
+		uri = defaultLocalThimURI
+	}
 	uri = fmt.Sprintf(LocalTHIMUriTemplate, uri)
 	THIMCertsBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, getThimCertsHttp)
 	if err != nil {
