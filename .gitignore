@@ -6,3 +6,4 @@
 /docker/skr/bin
 /docker/encfs/bin
 /tools/get-snp-report/bin
+.vscode
