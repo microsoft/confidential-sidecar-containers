@@ -72,6 +72,8 @@ type UvmInformation struct {
 	EncodedUvmReferenceInfo string    // base64 encoded endorsements for the particular UVM image
 }
 
+//this will always be set in ACI by the contol plane and is optionally set in K8s.  Need to
+//use a default if the customer does not set
 const uvmSecurityCtxDirDefault = "/opt/confidential-containers/share/kata-containers"
 
 // Late in Public Preview, we made a change to pass the UVM information
@@ -163,6 +165,16 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 		return encodedUvmInformation, err
 	}
 
+	encodedUvmInformation.EncodedUvmReferenceInfo, err = GetReferenceInfoFile(securityContextDir, ReferenceInfoFilename)
+	if err != nil {
+		return encodedUvmInformation, err
+	}
+
+	if GenerateTestData {
+		os.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
+		os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
+	}
+
 	encodedHostCertsFromTHIM, err := readSecurityContextFile(securityContextDir, HostAMDCertFilename)
 	if err != nil {
 		return encodedUvmInformation, errors.Wrapf(err, "reading host amd cert failed")
@@ -182,16 +194,6 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 	encodedUvmInformation.EncodedSecurityPolicy, err = readSecurityContextFile(securityContextDir, PolicyFilename)
 	if err != nil {
 		return encodedUvmInformation, errors.Wrapf(err, "reading security policy failed")
-	}
-
-	encodedUvmInformation.EncodedUvmReferenceInfo, err = GetReferenceInfoFile(securityContextDir, ReferenceInfoFilename)
-	if err != nil {
-		return encodedUvmInformation, err
-	}
-
-	if GenerateTestData {
-		os.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
-		os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
 	}
 
 	return encodedUvmInformation, err
