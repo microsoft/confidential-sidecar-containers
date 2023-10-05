@@ -425,18 +425,16 @@ func main() {
 		}
 	}
 
+	// pass in EncodedUvmInformation because ciruclar reference is created if we have the following func to retrieve THIM Cert
+	// Don't look at err here.  It will always be true because not all information is encoded in kata on AKS
+	EncodedUvmInformation, _ = common.GetUvmInformation()
+
 	thimCerts, err := azure_info.CertFetcher.GetThimCerts(azure_info.CertFetcher.Endpoint)
 	if err != nil {
 		logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
 	}
 
 	EncodedUvmInformation.InitialCerts = *thimCerts
-
-	// pass in EncodedUvmInformation because ciruclar reference is created if we have the following func to retrieve THIM Cert
-	common.GetUvmInformationAASP(&EncodedUvmInformation)
-	if err != nil {
-		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())
-	}
 
 	var tcbm string
 
