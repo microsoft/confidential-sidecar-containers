@@ -103,7 +103,7 @@ func GetUvmInformation() (UvmInformation, error) {
 	if len(contextDir) > 0 {
 		info, err = GetUvmInformationFromFiles()
 		if err != nil {
-			logrus.Debugf("UVM Reference info not found in %q %s", contextDir, err)
+			logrus.Debugf("getting UVM information from directory %q failed. %s", contextDir, err)
 		}
 	}
 	if len(info.EncodedUvmReferenceInfo) == 0 {
