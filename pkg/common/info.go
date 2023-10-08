@@ -6,10 +6,10 @@ package common
 import (
 	"encoding/base64"
 	"encoding/json"
-	"strconv"
-
 	"os"
 	"path/filepath"
+	"reflect"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -72,8 +72,8 @@ type UvmInformation struct {
 	EncodedUvmReferenceInfo string    // base64 encoded endorsements for the particular UVM image
 }
 
-//this will always be set in ACI by the contol plane and is optionally set in K8s.  Need to
-//use a default if the customer does not set
+// this will always be set in ACI by the contol plane and is optionally set in K8s.  Need to
+// use a default if the customer does not set
 const uvmSecurityCtxDirDefault = "/opt/confidential-containers/share/kata-containers"
 
 // Late in Public Preview, we made a change to pass the UVM information
@@ -205,6 +205,10 @@ func GetReferenceInfoFile(securityContextDir string, ReferenceInfoFilename strin
 		return encodedUvmReferenceInfo, errors.Wrapf(err, "reading uvm reference info failed")
 	}
 	return encodedUvmReferenceInfo, nil
+}
+
+func ThimCertsAbsent(thim *THIMCerts) bool {
+	return reflect.DeepEqual(*thim, THIMCerts{})
 }
 
 func GetUvmInformationAASP(UvmInfo *UvmInformation) {
