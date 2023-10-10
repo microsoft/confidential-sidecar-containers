@@ -14,6 +14,7 @@ import (
 	"github.com/Microsoft/confidential-sidecar-containers/internal/httpginendpoints"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/msi"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -110,12 +111,17 @@ func main() {
 
 	if common.ThimCertsAbsent(&EncodedUvmInformation.InitialCerts) {
 		logrus.Info("ThimCerts is absent, retrieving THIMCerts.")
-		thimCerts, err := info.CertFetcher.GetThimCerts(info.CertFetcher.Endpoint)
+		thimCerts, err := info.CertFetcher.GetThimCerts("")
 		if err != nil {
 			logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
 		}
 
 		EncodedUvmInformation.InitialCerts = *thimCerts
+	}
+
+	//temporary code. Remove uvm reference info if the running env is aks.
+	if msi.WorkloadIdentityEnabled() {
+		EncodedUvmInformation.EncodedUvmReferenceInfo = ""
 	}
 
 	// See above comment about hostname and risk of breaking confidentiality
