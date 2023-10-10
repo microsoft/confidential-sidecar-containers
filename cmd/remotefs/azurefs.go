@@ -23,6 +23,7 @@ import (
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/msi"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -171,11 +172,6 @@ func rawRemoteFilesystemKey(tempDir string, rawKeyHexString string) (keyFilePath
 // 3) Prepare the key file path using the released key
 func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob skr.KeyDerivationBlob, keyBlob skr.KeyBlob) (keyFilePath string, err error) {
 	keyFilePath = filepath.Join(tempDir, "keyfile")
-
-	if EncodedUvmInformation.EncodedSecurityPolicy == "" {
-		err = errors.New("EncodedSecurityPolicy is empty")
-		return "", errors.Wrapf(err, "Make sure the environment is correct") // only helpful running outside of a UVM
-	}
 
 	// 2) release key identified by keyBlob using encoded security policy and certfetcher (contained in CertState object)
 	//    certfetcher is required for validating the attestation report against the cert
@@ -358,9 +354,20 @@ func MountAzureFilesystems(tempDir string, info RemoteFilesystemsInformation) (e
 	Identity = info.AzureInfo.Identity
 
 	// Retrieve the incoming encoded security policy, cert and uvm endorsement
-	EncodedUvmInformation, err = common.GetUvmInformation()
-	if err != nil {
-		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())
+	EncodedUvmInformation, _ = common.GetUvmInformation()
+
+	if common.ThimCertsAbsent(&EncodedUvmInformation.InitialCerts) {
+		logrus.Info("ThimCerts is absent, retrieving THIMCerts.")
+		thimCerts, err := info.AzureInfo.CertFetcher.GetThimCerts(info.AzureInfo.CertFetcher.Endpoint)
+		if err != nil {
+			logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
+		}
+		EncodedUvmInformation.InitialCerts = *thimCerts
+	}
+
+	if msi.WorkloadIdentityEnabled() {
+		//remove EncodedUvmReferenceInfo for now because MAA does not currently validate it
+		EncodedUvmInformation.EncodedUvmReferenceInfo = ""
 	}
 
 	logrus.Debugf("EncodedUvmInformation.InitialCerts.Tcbm: %s\n", EncodedUvmInformation.InitialCerts.Tcbm)

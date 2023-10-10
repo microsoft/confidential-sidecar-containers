@@ -89,7 +89,7 @@ func main() {
 
 	EncodedUvmInformation, err := common.GetUvmInformation() // from the env.
 	if err != nil {
-		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())
+		logrus.Warnf("Failed to extract UVM_* environment variables: %s", err.Error())
 	}
 
 	info := AzureInformation{}
@@ -106,6 +106,16 @@ func main() {
 		if err != nil {
 			logrus.Fatalf("Failed to unmarshal attestion info json into AzureInformation: %s", err.Error())
 		}
+	}
+
+	if common.ThimCertsAbsent(&EncodedUvmInformation.InitialCerts) {
+		logrus.Info("ThimCerts is absent, retrieving THIMCerts.")
+		thimCerts, err := info.CertFetcher.GetThimCerts(info.CertFetcher.Endpoint)
+		if err != nil {
+			logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
+		}
+
+		EncodedUvmInformation.InitialCerts = *thimCerts
 	}
 
 	// See above comment about hostname and risk of breaking confidentiality
