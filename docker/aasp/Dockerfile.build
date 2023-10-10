@@ -9,7 +9,7 @@ RUN cd tools/get-snp-report && make && mv bin/get-snp-report / && mv bin/get-fak
 RUN cd cmd/aasp && CGO_ENABLED=0 GOOS=linux go build -o /aasp -ldflags="-s -w" main.go
 
 
-FROM alpine:3.17.1
+FROM alpine:3.17.5
 
 RUN apk update && apk --no-cache add curl
 
