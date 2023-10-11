@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/confidential"
 )
 
 const (
-	AZURE_CLIENT_ID            = "AZURE_CLIENT_ID"
-	AZURE_TENANT_ID            = "AZURE_TENANT_ID"
-	AZURE_FEDERATED_TOKEN_FILE = "AZURE_FEDERATED_TOKEN_FILE"
+	AZURE_CLIENT_ID                    = "AZURE_CLIENT_ID"
+	AZURE_TENANT_ID                    = "AZURE_TENANT_ID"
+	AZURE_FEDERATED_TOKEN_FILE         = "AZURE_FEDERATED_TOKEN_FILE"
+	WorkloadIdentityRquestTokenTimeout = time.Second * 7
 )
 
 // Convert federated token stored in a file into access token for a resource

@@ -101,7 +101,8 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 
 	// retrieve an Azure authentication token for authenticating with AKV
 	if SKRKeyBlob.AKV.BearerToken == "" {
-		ctx := context.TODO()
+		ctx, cancel := context.WithTimeout(context.Background(), msi.WorkloadIdentityRquestTokenTimeout)
+		defer cancel()
 		bearerToken := ""
 
 		if msi.WorkloadIdentityEnabled() {

@@ -93,7 +93,8 @@ func AzureSetup(urlString string, urlPrivate bool, identity common.Identity) err
 	}
 
 	if urlPrivate {
-		ctx := context.TODO()
+		ctx, cancel := context.WithTimeout(context.Background(), msi.WorkloadIdentityRquestTokenTimeout)
+		defer cancel()
 		accessToken := ""
 		var tokenRefresherFunc func(azblob.TokenCredential) (t time.Duration)
 
