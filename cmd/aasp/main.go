@@ -260,7 +260,7 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 
 	mhsm := skr.AKV{
 		Endpoint:   annotation.KmsEndpoint,
-		APIVersion: "api-version=7.3-preview",
+		APIVersion: "api-version=7.4",
 	}
 
 	maa := attest.MAA{
@@ -408,10 +408,13 @@ func main() {
 		}
 	}
 
-	EncodedUvmInformation, _ = common.GetUvmInformation()
+	EncodedUvmInformation, err = common.GetUvmInformation()
+	if err != nil {
+		logrus.Infof("Failed to extract UVM_* environment variables: %s", err.Error())
+	}
 
 	if common.ThimCertsAbsent(&EncodedUvmInformation.InitialCerts) {
-		logrus.Info("ThimCerts is absent, retrieving THIMCerts.")
+		logrus.Infof("ThimCerts is absent, retrieving THIMCerts from %s.", azure_info.CertFetcher.Endpoint)
 		thimCerts, err := azure_info.CertFetcher.GetThimCerts(azure_info.CertFetcher.Endpoint)
 		if err != nil {
 			logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
@@ -419,9 +422,6 @@ func main() {
 
 		EncodedUvmInformation.InitialCerts = *thimCerts
 	}
-
-	//remove EncodedUvmReferenceInfo for now because MAA does not currently validate it
-	EncodedUvmInformation.EncodedUvmReferenceInfo = ""
 
 	var tcbm string
 

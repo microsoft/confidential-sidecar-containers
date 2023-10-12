@@ -54,7 +54,7 @@ func usage() {
 
 func main() {
 	base64string := flag.String("base64", "", "base64-encoded json string with all information")
-	logLevel := flag.String("loglevel", "debug", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
+	logLevel := flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
 	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
 
 	flag.Usage = usage
@@ -107,7 +107,7 @@ func main() {
 	// populate missing attributes in KeyBlob
 	for i, _ := range info.AzureFilesystems {
 		// set the api versions and the tee type for which the authority will authorize secure key release
-		info.AzureFilesystems[i].KeyBlob.AKV.APIVersion = "api-version=7.3-preview"
+		info.AzureFilesystems[i].KeyBlob.AKV.APIVersion = "api-version=7.4"
 		info.AzureFilesystems[i].KeyBlob.Authority.APIVersion = "api-version=2020-10-01"
 		info.AzureFilesystems[i].KeyBlob.Authority.TEEType = "SevSnpVM"
 	}

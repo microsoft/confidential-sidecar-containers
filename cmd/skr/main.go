@@ -14,7 +14,6 @@ import (
 	"github.com/Microsoft/confidential-sidecar-containers/internal/httpginendpoints"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/msi"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -90,7 +89,7 @@ func main() {
 
 	EncodedUvmInformation, err := common.GetUvmInformation() // from the env.
 	if err != nil {
-		logrus.Warnf("Failed to extract UVM_* environment variables: %s", err.Error())
+		logrus.Infof("Failed to extract UVM_* environment variables: %s", err.Error())
 	}
 
 	info := AzureInformation{}
@@ -110,18 +109,13 @@ func main() {
 	}
 
 	if common.ThimCertsAbsent(&EncodedUvmInformation.InitialCerts) {
-		logrus.Info("ThimCerts is absent, retrieving THIMCerts.")
+		logrus.Info("ThimCerts is absent, retrieving THIMCerts from THIM endpoint.")
 		thimCerts, err := info.CertFetcher.GetThimCerts("")
 		if err != nil {
 			logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
 		}
 
 		EncodedUvmInformation.InitialCerts = *thimCerts
-	}
-
-	//temporary code. Remove uvm reference info if the running env is aks.
-	if msi.WorkloadIdentityEnabled() {
-		EncodedUvmInformation.EncodedUvmReferenceInfo = ""
 	}
 
 	// See above comment about hostname and risk of breaking confidentiality

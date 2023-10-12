@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -208,29 +207,5 @@ func GetReferenceInfoFile(securityContextDir string, ReferenceInfoFilename strin
 }
 
 func ThimCertsAbsent(thim *THIMCerts) bool {
-	return reflect.DeepEqual(*thim, THIMCerts{})
-}
-
-func GetUvmInformationAASP(UvmInfo *UvmInformation) {
-	securityContextDir, err := GetUvmSecurityCtxDir()
-	if err != nil {
-		logrus.Warn(err.Error())
-		return
-	}
-
-	UvmInfo.EncodedUvmReferenceInfo, err = GetReferenceInfoFile(securityContextDir, ReferenceInfoFilename)
-	if err != nil {
-		logrus.Warn(err.Error())
-		return
-	}
-
-	if GenerateTestData {
-		os.WriteFile("uvm_reference_info.base64", []byte(UvmInfo.EncodedUvmReferenceInfo), 0644)
-	}
-
-	if GenerateTestData {
-		THIMCertsBytes, _ := json.Marshal(UvmInfo.InitialCerts)
-		certificatesRaw := base64.StdEncoding.EncodeToString(THIMCertsBytes)
-		os.WriteFile("uvm_host_amd_certificate.base64", []byte(certificatesRaw), 0644)
-	}
+	return len(thim.VcekCert) == 0 && len(thim.CertificateChain) == 0
 }

@@ -189,7 +189,7 @@ func PostKeyRelease(c *gin.Context) {
 
 	akv := skr.AKV{
 		Endpoint:    newKeyReleaseData.AKVEndpoint,
-		APIVersion:  "api-version=7.3-preview",
+		APIVersion:  "api-version=7.4",
 		BearerToken: newKeyReleaseData.AccessToken,
 	}
 

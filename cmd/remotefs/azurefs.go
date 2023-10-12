@@ -23,7 +23,6 @@ import (
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/msi"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -352,22 +351,20 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 func MountAzureFilesystems(tempDir string, info RemoteFilesystemsInformation) (err error) {
 
 	Identity = info.AzureInfo.Identity
-
+	var err error
 	// Retrieve the incoming encoded security policy, cert and uvm endorsement
-	EncodedUvmInformation, _ = common.GetUvmInformation()
+	EncodedUvmInformation, err = common.GetUvmInformation()
+	if err != nil {
+		logrus.Infof("Failed to extract UVM_* environment variables: %s", err.Error())
+	}
 
 	if common.ThimCertsAbsent(&EncodedUvmInformation.InitialCerts) {
-		logrus.Info("ThimCerts is absent, retrieving THIMCerts.")
+		logrus.Infof("ThimCerts is absent, retrieving THIMCerts from %s.", info.AzureInfo.CertFetcher.Endpoint)
 		thimCerts, err := info.AzureInfo.CertFetcher.GetThimCerts(info.AzureInfo.CertFetcher.Endpoint)
 		if err != nil {
 			logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
 		}
 		EncodedUvmInformation.InitialCerts = *thimCerts
-	}
-
-	if msi.WorkloadIdentityEnabled() {
-		//remove EncodedUvmReferenceInfo for now because MAA does not currently validate it
-		EncodedUvmInformation.EncodedUvmReferenceInfo = ""
 	}
 
 	logrus.Debugf("EncodedUvmInformation.InitialCerts.Tcbm: %s\n", EncodedUvmInformation.InitialCerts.Tcbm)
