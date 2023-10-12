@@ -351,7 +351,7 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 func MountAzureFilesystems(tempDir string, info RemoteFilesystemsInformation) (err error) {
 
 	Identity = info.AzureInfo.Identity
-	var err error
+
 	// Retrieve the incoming encoded security policy, cert and uvm endorsement
 	EncodedUvmInformation, err = common.GetUvmInformation()
 	if err != nil {
