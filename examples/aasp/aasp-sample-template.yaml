@@ -20,9 +20,6 @@ spec:
     volumeMounts:
     - mountPath: /opt/confidential-containers/share/kata-containers/reference-info-base64
       name: endorsement-location
-    ports:
-      - containerPort: 8080
-      - containerPort: 50000
   - image: $SAMPLE_UNWRAP_IMAGE
     imagePullPolicy: Always
     name: sample-unwrap

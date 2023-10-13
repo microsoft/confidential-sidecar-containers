@@ -343,7 +343,7 @@ func main() {
 	outfile := flag.String("outfile", "", "The file to save the wrapped data")
 	logLevel := flag.String("loglevel", "debug", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
 
-	localhost := ""
+	localhost := "localhost"
 	hostname := &localhost
 
 	flag.Parse()
