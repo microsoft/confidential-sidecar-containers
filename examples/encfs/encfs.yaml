@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: encfs
+  labels:
+    azure.workload.identity/use: "true"
+spec:
+  serviceAccountName: workload-identity-sa
+  runtimeClassName: kata-cc
+  containers:
+    - image: "fishersnpregistry.azurecr.io/encfs:1"
+      imagePullPolicy: Always
+      name: encfs
+      command:
+        - /encfs.sh
+      securityContext:
+        allowPrivilegeEscalation: true
+        privileged: true
+      env:
+        - name: EncfsSideCarArgs
+          value: <base64-encoded-encfs-sidecar-args>
+        - name: UVM_SECURITY_CONTEXT_DIR
+          value: /opt/confidential-containers/share/kata-containers
+      volumeMounts:
+        - mountPath: /opt/confidential-containers/share/kata-containers/reference-info-base64
+          name: endor-loc
+        - mountPath: /dev
+          name: devfolder
+  volumes:
+    - name: endor-loc
+      hostPath:
+        path: /opt/confidential-containers/share/kata-containers/reference-info-base64
+    - name: devfolder
+      hostPath:
+        path: /dev
