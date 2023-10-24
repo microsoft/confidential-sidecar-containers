@@ -48,12 +48,32 @@ const (
 	protoVersionMinMajor = 7
 	protoVersionMinMinor = 17
 	protoVersionMaxMajor = 7
-	protoVersionMaxMinor = 17
+	protoVersionMaxMinor = 33
 )
 
 const (
 	rootID = 1
 )
+
+// AttrFlags are bit flags that can be seen in Attr.Flags.
+type AttrFlags uint32
+
+const (
+	// Node is a submount root.
+	//
+	// Don't use unless `Conn.Features` includes `InitSubMounts`.
+	//
+	// This doesn't seem to be usable outside of `virtio_fs``.
+	attrSubMount AttrFlags = 1 << 0
+)
+
+var attrFlagsNames = []flagName{
+	{uint32(attrSubMount), "AttrSubMount"},
+}
+
+func (fl AttrFlags) String() string {
+	return flagString(uint32(fl), attrFlagsNames)
+}
 
 type attr struct {
 	Ino       uint64
@@ -71,7 +91,7 @@ type attr struct {
 	Gid       uint32
 	Rdev      uint32
 	Blksize   uint32
-	_         uint32
+	Flags     uint32
 }
 
 type kstatfs struct {
@@ -108,49 +128,32 @@ func (fl GetattrFlags) String() string {
 type SetattrValid uint32
 
 const (
-	SetattrMode      SetattrValid = 1 << 0
-	SetattrUid       SetattrValid = 1 << 1
-	SetattrGid       SetattrValid = 1 << 2
-	SetattrSize      SetattrValid = 1 << 3
-	SetattrAtime     SetattrValid = 1 << 4
-	SetattrMtime     SetattrValid = 1 << 5
-	SetattrHandle    SetattrValid = 1 << 6
-	SetattrAtimeNow  SetattrValid = 1 << 7
-	SetattrMtimeNow  SetattrValid = 1 << 8
-	SetattrLockOwner SetattrValid = 1 << 9 // http://www.mail-archive.com/git-commits-head@vger.kernel.org/msg27852.html
-
-	// Deprecated: Not used, OS X remnant.
-	SetattrCrtime SetattrValid = 1 << 28
-	// Deprecated: Not used, OS X remnant.
-	SetattrChgtime SetattrValid = 1 << 29
-	// Deprecated: Not used, OS X remnant.
-	SetattrBkuptime SetattrValid = 1 << 30
-	// Deprecated: Not used, OS X remnant.
-	SetattrFlags SetattrValid = 1 << 31
+	SetattrMode        SetattrValid = 1 << 0
+	SetattrUid         SetattrValid = 1 << 1
+	SetattrGid         SetattrValid = 1 << 2
+	SetattrSize        SetattrValid = 1 << 3
+	SetattrAtime       SetattrValid = 1 << 4
+	SetattrMtime       SetattrValid = 1 << 5
+	SetattrHandle      SetattrValid = 1 << 6
+	SetattrAtimeNow    SetattrValid = 1 << 7
+	SetattrMtimeNow    SetattrValid = 1 << 8
+	SetattrLockOwner   SetattrValid = 1 << 9 // http://www.mail-archive.com/git-commits-head@vger.kernel.org/msg27852.html
+	SetattrCTime       SetattrValid = 1 << 10
+	SetattrKillSUIDGID SetattrValid = 1 << 11
 )
 
-func (fl SetattrValid) Mode() bool      { return fl&SetattrMode != 0 }
-func (fl SetattrValid) Uid() bool       { return fl&SetattrUid != 0 }
-func (fl SetattrValid) Gid() bool       { return fl&SetattrGid != 0 }
-func (fl SetattrValid) Size() bool      { return fl&SetattrSize != 0 }
-func (fl SetattrValid) Atime() bool     { return fl&SetattrAtime != 0 }
-func (fl SetattrValid) Mtime() bool     { return fl&SetattrMtime != 0 }
-func (fl SetattrValid) Handle() bool    { return fl&SetattrHandle != 0 }
-func (fl SetattrValid) AtimeNow() bool  { return fl&SetattrAtimeNow != 0 }
-func (fl SetattrValid) MtimeNow() bool  { return fl&SetattrMtimeNow != 0 }
-func (fl SetattrValid) LockOwner() bool { return fl&SetattrLockOwner != 0 }
-
-// Deprecated: Not used, OS X remnant.
-func (fl SetattrValid) Crtime() bool { return false }
-
-// Deprecated: Not used, OS X remnant.
-func (fl SetattrValid) Chgtime() bool { return false }
-
-// Deprecated: Not used, OS X remnant.
-func (fl SetattrValid) Bkuptime() bool { return false }
-
-// Deprecated: Not used, OS X remnant.
-func (fl SetattrValid) Flags() bool { return false }
+func (fl SetattrValid) Mode() bool               { return fl&SetattrMode != 0 }
+func (fl SetattrValid) Uid() bool                { return fl&SetattrUid != 0 }
+func (fl SetattrValid) Gid() bool                { return fl&SetattrGid != 0 }
+func (fl SetattrValid) Size() bool               { return fl&SetattrSize != 0 }
+func (fl SetattrValid) Atime() bool              { return fl&SetattrAtime != 0 }
+func (fl SetattrValid) Mtime() bool              { return fl&SetattrMtime != 0 }
+func (fl SetattrValid) Handle() bool             { return fl&SetattrHandle != 0 }
+func (fl SetattrValid) AtimeNow() bool           { return fl&SetattrAtimeNow != 0 }
+func (fl SetattrValid) MtimeNow() bool           { return fl&SetattrMtimeNow != 0 }
+func (fl SetattrValid) LockOwner() bool          { return fl&SetattrLockOwner != 0 }
+func (fl SetattrValid) SetattrCTime() bool       { return fl&SetattrCTime != 0 }
+func (fl SetattrValid) SetattrKillSUIDGID() bool { return fl&SetattrKillSUIDGID != 0 }
 
 func (fl SetattrValid) String() string {
 	return flagString(uint32(fl), setattrValidNames)
@@ -167,6 +170,8 @@ var setattrValidNames = []flagName{
 	{uint32(SetattrAtimeNow), "SetattrAtimeNow"},
 	{uint32(SetattrMtimeNow), "SetattrMtimeNow"},
 	{uint32(SetattrLockOwner), "SetattrLockOwner"},
+	{uint32(SetattrCTime), "SetattrCTime"},
+	{uint32(SetattrKillSUIDGID), "SetattrKillSUIDGID"},
 }
 
 // Flags that can be seen in OpenRequest.Flags.
@@ -245,6 +250,21 @@ var openFlagNames = []flagName{
 	{uint32(OpenTruncate), "OpenTruncate"},
 }
 
+// OpenRequestFlags are the FUSE-specific flags in an OpenRequest (as opposed to the flags from filesystem client `open(2)` flags argument).
+type OpenRequestFlags uint32
+
+const (
+	OpenKillSUIDGID OpenRequestFlags = 1 << 0
+)
+
+func (fl OpenRequestFlags) String() string {
+	return flagString(uint32(fl), openRequestFlagNames)
+}
+
+var openRequestFlagNames = []flagName{
+	{uint32(OpenKillSUIDGID), "OpenKillSUIDGID"},
+}
+
 // The OpenResponseFlags are returned in the OpenResponse.
 type OpenResponseFlags uint32
 
@@ -252,11 +272,7 @@ const (
 	OpenDirectIO    OpenResponseFlags = 1 << 0 // bypass page cache for this open file
 	OpenKeepCache   OpenResponseFlags = 1 << 1 // don't invalidate the data cache on open
 	OpenNonSeekable OpenResponseFlags = 1 << 2 // mark the file as non-seekable (not supported on FreeBSD)
-
-	// Deprecated: Not used, OS X remnant.
-	OpenPurgeAttr OpenResponseFlags = 1 << 30
-	// Deprecated: Not used, OS X remnant.
-	OpenPurgeUBC OpenResponseFlags = 1 << 31
+	OpenCacheDir    OpenResponseFlags = 1 << 3 // allow caching directory contents
 )
 
 func (fl OpenResponseFlags) String() string {
@@ -267,6 +283,7 @@ var openResponseFlagNames = []flagName{
 	{uint32(OpenDirectIO), "OpenDirectIO"},
 	{uint32(OpenKeepCache), "OpenKeepCache"},
 	{uint32(OpenNonSeekable), "OpenNonSeekable"},
+	{uint32(OpenCacheDir), "OpenCacheDir"},
 }
 
 // The InitFlags are used in the Init exchange.
@@ -292,13 +309,22 @@ const (
 	InitAsyncDIO        InitFlags = 1 << 15
 	InitWritebackCache  InitFlags = 1 << 16
 	InitNoOpenSupport   InitFlags = 1 << 17
-
-	// Deprecated: Not used, OS X remnant.
-	InitCaseSensitive InitFlags = 1 << 29
-	// Deprecated: Not used, OS X remnant.
-	InitVolRename InitFlags = 1 << 30
-	// Deprecated: Not used, OS X remnant.
-	InitXtimes InitFlags = 1 << 31
+	InitParallelDirOps  InitFlags = 1 << 18
+	// Deprecated: Use `InitHandleKillPriv2`.
+	InitHandleKillPriv InitFlags = 1 << 19
+	InitPosixACL       InitFlags = 1 << 20
+	InitAbortError     InitFlags = 1 << 21
+	InitMaxPages       InitFlags = 1 << 22
+	InitCacheSymlinks  InitFlags = 1 << 23
+	// Kernel supports zero-message OpenDir.
+	InitNoOpenDirSupport InitFlags = 1 << 24
+	// Only invalidate cached pages on explicit request, instead of e.g. at every file size change.
+	InitExplicitInvalidateData InitFlags = 1 << 25
+	InitMapAlignment           InitFlags = 1 << 26
+	InitSubMounts              InitFlags = 1 << 27
+	// Filesystem promises to remove SUID/SGID/cap on writes and `chown`.
+	InitHandleKillPrivV2 InitFlags = 1 << 28
+	InitSetxattrExt      InitFlags = 1 << 29
 )
 
 type flagName struct {
@@ -325,6 +351,18 @@ var initFlagNames = []flagName{
 	{uint32(InitAsyncDIO), "InitAsyncDIO"},
 	{uint32(InitWritebackCache), "InitWritebackCache"},
 	{uint32(InitNoOpenSupport), "InitNoOpenSupport"},
+	{uint32(InitParallelDirOps), "InitParallelDirOps"},
+	{uint32(InitHandleKillPriv), "InitHandleKillPriv"},
+	{uint32(InitPosixACL), "InitPosixACL"},
+	{uint32(InitAbortError), "InitAbortError"},
+	{uint32(InitMaxPages), "InitMaxPages"},
+	{uint32(InitCacheSymlinks), "InitCacheSymlinks"},
+	{uint32(InitNoOpenDirSupport), "InitNoOpenDirSupport"},
+	{uint32(InitExplicitInvalidateData), "InitExplicitInvalidateData"},
+	{uint32(InitMapAlignment), "InitMapAlignment"},
+	{uint32(InitSubMounts), "InitSubMounts"},
+	{uint32(InitHandleKillPrivV2), "InitHandleKillPrivV2"},
+	{uint32(InitSetxattrExt), "InitSetxattrExt"},
 }
 
 func (fl InitFlags) String() string {
@@ -369,46 +407,53 @@ var releaseFlagNames = []flagName{
 
 // Opcodes
 const (
-	opLookup      = 1
-	opForget      = 2 // no reply
-	opGetattr     = 3
-	opSetattr     = 4
-	opReadlink    = 5
-	opSymlink     = 6
-	opMknod       = 8
-	opMkdir       = 9
-	opUnlink      = 10
-	opRmdir       = 11
-	opRename      = 12
-	opLink        = 13
-	opOpen        = 14
-	opRead        = 15
-	opWrite       = 16
-	opStatfs      = 17
-	opRelease     = 18
-	opFsync       = 20
-	opSetxattr    = 21
-	opGetxattr    = 22
-	opListxattr   = 23
-	opRemovexattr = 24
-	opFlush       = 25
-	opInit        = 26
-	opOpendir     = 27
-	opReaddir     = 28
-	opReleasedir  = 29
-	opFsyncdir    = 30
-	opGetlk       = 31
-	opSetlk       = 32
-	opSetlkw      = 33
-	opAccess      = 34
-	opCreate      = 35
-	opInterrupt   = 36
-	opBmap        = 37
-	opDestroy     = 38
-	opIoctl       = 39
-	opPoll        = 40
-	opNotifyReply = 41
-	opBatchForget = 42
+	opLookup        = 1
+	opForget        = 2 // no reply
+	opGetattr       = 3
+	opSetattr       = 4
+	opReadlink      = 5
+	opSymlink       = 6
+	opMknod         = 8
+	opMkdir         = 9
+	opUnlink        = 10
+	opRmdir         = 11
+	opRename        = 12
+	opLink          = 13
+	opOpen          = 14
+	opRead          = 15
+	opWrite         = 16
+	opStatfs        = 17
+	opRelease       = 18
+	opFsync         = 20
+	opSetxattr      = 21
+	opGetxattr      = 22
+	opListxattr     = 23
+	opRemovexattr   = 24
+	opFlush         = 25
+	opInit          = 26
+	opOpendir       = 27
+	opReaddir       = 28
+	opReleasedir    = 29
+	opFsyncdir      = 30
+	opGetlk         = 31
+	opSetlk         = 32
+	opSetlkw        = 33
+	opAccess        = 34
+	opCreate        = 35
+	opInterrupt     = 36
+	opBmap          = 37
+	opDestroy       = 38
+	opIoctl         = 39
+	opPoll          = 40
+	opNotifyReply   = 41
+	opBatchForget   = 42
+	opFAllocate     = 43
+	opReadDirPlus   = 44
+	opRename2       = 45
+	opLSeek         = 46
+	opCopyFileRange = 47
+	opSetupMapping  = 48
+	opRemoveMapping = 49
 )
 
 type entryOut struct {
@@ -515,10 +560,10 @@ type setattrIn struct {
 	LockOwner uint64
 	Atime     uint64
 	Mtime     uint64
-	Unused2   uint64
+	Ctime     uint64
 	AtimeNsec uint32
 	MtimeNsec uint32
-	Unused3   uint32
+	CtimeNsec uint32
 	Mode      uint32
 	Unused4   uint32
 	Uid       uint32
@@ -527,8 +572,8 @@ type setattrIn struct {
 }
 
 type openIn struct {
-	Flags  uint32
-	Unused uint32
+	Flags     uint32
+	OpenFlags uint32
 }
 
 type openOut struct {
@@ -633,11 +678,14 @@ const (
 	WriteCache WriteFlags = 1 << 0
 	// LockOwner field is valid.
 	WriteLockOwner WriteFlags = 1 << 1
+	// Remove SUID and GID bits.
+	WriteKillSUIDGID WriteFlags = 1 << 2
 )
 
 var writeFlagNames = []flagName{
 	{uint32(WriteCache), "WriteCache"},
 	{uint32(WriteLockOwner), "WriteLockOwner"},
+	{uint32(WriteKillSUIDGID), "WriteKillSUIDGID"},
 }
 
 func (fl WriteFlags) String() string {
@@ -654,9 +702,33 @@ type fsyncIn struct {
 	_          uint32
 }
 
+// SetxattrFlags re passed in SetxattrRequest.SetxattrFlags.
+type SetxattrFlags uint32
+
+const (
+	SetxattrACLKillSGID SetxattrFlags = 1 << 0
+)
+
+var setxattrFlagNames = []flagName{
+	{uint32(SetxattrACLKillSGID), "SetxattrACLKillSGID"},
+}
+
+func (fl SetxattrFlags) String() string {
+	return flagString(uint32(fl), setxattrFlagNames)
+}
+
 type setxattrIn struct {
-	Size  uint32
-	Flags uint32
+	Size          uint32
+	Flags         uint32
+	SetxattrFlags SetxattrFlags
+	_             uint32
+}
+
+func setxattrInSize(fl InitFlags) uintptr {
+	if fl&InitSetxattrExt == 0 {
+		return unsafe.Offsetof(setxattrIn{}.SetxattrFlags)
+	}
+	return unsafe.Sizeof(setxattrIn{})
 }
 
 type getxattrIn struct {
@@ -752,6 +824,17 @@ type initOut struct {
 	MaxBackground       uint16
 	CongestionThreshold uint16
 	MaxWrite            uint32
+
+	// end of protocol 7.22 fields
+
+	// Granularity of timestamps, in nanoseconds.
+	// Maximum value 1e9 (one second).
+	TimeGran uint32
+	// Maximum number of pages of data in one read or write request.
+	// Set initOut.Flags.InitMaxPages when valid.
+	MaxPages     uint16
+	MapAlignment uint16
+	_            [8]uint32
 }
 
 type interruptIn struct {
@@ -802,6 +885,7 @@ const (
 	notifyCodeInvalEntry int32 = 3
 	notifyCodeStore      int32 = 4
 	notifyCodeRetrieve   int32 = 5
+	notifyCodeDelete     int32 = 6
 )
 
 type notifyInvalInodeOut struct {
@@ -812,6 +896,13 @@ type notifyInvalInodeOut struct {
 
 type notifyInvalEntryOut struct {
 	Parent  uint64
+	Namelen uint32
+	_       uint32
+}
+
+type notifyDeleteOut struct {
+	Parent  uint64
+	Child   uint64
 	Namelen uint32
 	_       uint32
 }
@@ -912,4 +1003,44 @@ type pollOut struct {
 
 type notifyPollWakeupOut struct {
 	Kh uint64
+}
+
+type FAllocateFlags uint32
+
+const (
+	FAllocateKeepSize  FAllocateFlags = unix.FALLOC_FL_KEEP_SIZE
+	FAllocatePunchHole FAllocateFlags = unix.FALLOC_FL_PUNCH_HOLE
+
+	// Only including constants supported by FUSE kernel implementation.
+	//
+	// FAllocateCollapseRange FAllocateFlags = unix.FALLOC_FL_COLLAPSE_RANGE
+	// FAllocateInsertRange   FAllocateFlags = unix.FALLOC_FL_INSERT_RANGE
+	// FAllocateNoHideStale   FAllocateFlags = unix.FALLOC_FL_NO_HIDE_STALE
+	// FAllocateUnshareRange  FAllocateFlags = unix.FALLOC_FL_UNSHARE_RANGE
+	// FAllocateZeroRange     FAllocateFlags = unix.FALLOC_FL_ZERO_RANGE
+)
+
+var fAllocateFlagsNames = []flagName{
+	{uint32(FAllocatePunchHole), "FAllocatePunchHole"},
+	{uint32(FAllocateKeepSize), "FAllocateKeepSize"},
+
+	// Only including constants supported by FUSE kernel implementation.
+	//
+	// {uint32(FAllocateCollapseRange), "FAllocateCollapseRange"},
+	// {uint32(FAllocateInsertRange), "FAllocateInsertRange"},
+	// {uint32(FAllocateNoHideStale), "FAllocateNoHideStale"},
+	// {uint32(FAllocateUnshareRange), "FAllocateUnshareRange"},
+	// {uint32(FAllocateZeroRange), "FAllocateZeroRange"},
+}
+
+func (fl FAllocateFlags) String() string {
+	return flagString(uint32(fl), fAllocateFlagsNames)
+}
+
+type fAllocateIn struct {
+	Fh     uint64
+	Offset uint64
+	Length uint64
+	Mode   uint32
+	_      uint32
 }
