@@ -294,6 +294,9 @@ type HandleReadDirAller interface {
 type HandleReader interface {
 	// Read requests to read data from the handle.
 	//
+	// Copy the response bytes to the byte slice resp.Data, slicing
+	// it shorter when needed.
+	//
 	// There is a page cache in the kernel that normally submits only
 	// page-aligned reads spanning one or more pages. However, you
 	// should not rely on this. To see individual requests as
@@ -401,6 +404,13 @@ type HandlePOSIXLocker interface {
 	// POSIX unlocking can also happen implicitly as part of Flush,
 	// in which case Unlock is not called.
 	HandleFlusher
+}
+
+type HandleFAllocater interface {
+	// FAllocate manipulates space reserved for the file.
+	//
+	// Note that the kernel limits what modes are acceptable in any FUSE filesystem.
+	FAllocate(ctx context.Context, req *fuse.FAllocateRequest) error
 }
 
 type Config struct {
@@ -867,7 +877,7 @@ type handlerTerminatedError struct {
 var _ error = handlerTerminatedError{}
 
 func (h handlerTerminatedError) Error() string {
-	return fmt.Sprintf("handler terminated (called runtime.Goexit)")
+	return "handler terminated (called runtime.Goexit)"
 }
 
 var _ fuse.ErrorNumber = handlerTerminatedError{}
@@ -1670,6 +1680,22 @@ func (c *Server) handleRequest(ctx context.Context, node Node, snode *serveNode,
 		r.Respond(s)
 		return nil
 
+	case *fuse.FAllocateRequest:
+		shandle := c.getHandle(r.Handle)
+		if shandle == nil {
+			return syscall.ESTALE
+		}
+		h, ok := shandle.handle.(HandleFAllocater)
+		if !ok {
+			return syscall.ENOTSUP
+		}
+		if err := h.FAllocate(ctx, r); err != nil {
+			return err
+		}
+		done(nil)
+		r.Respond()
+		return nil
+
 		/*	case *FsyncdirRequest:
 				return ENOSYS
 
@@ -1677,8 +1703,6 @@ func (c *Server) handleRequest(ctx context.Context, node Node, snode *serveNode,
 				return ENOSYS
 		*/
 	}
-
-	panic("not reached")
 }
 
 func (c *Server) saveLookup(ctx context.Context, s *fuse.LookupResponse, snode *serveNode, elem string, n2 Node) error {
@@ -1804,6 +1828,70 @@ func (s *Server) InvalidateEntry(parent Node, name string) error {
 		Node: id,
 		Out: invalidateEntryDetail{
 			Name: name,
+		},
+		Err: errstr(err),
+	})
+	return err
+}
+
+type notifyDeleteDetail struct {
+	ChildID fuse.NodeID
+	Name    string
+}
+
+func (i notifyDeleteDetail) String() string {
+	return fmt.Sprintf("child=%v %q", i.ChildID, i.Name)
+}
+
+// NotifyDelete informs the kernel that a directory entry has been deleted.
+//
+// Using this instead of [InvalidateEntry] races on networked systems where the directory is concurrently in use.
+// See [Linux kernel commit `451d0f599934fd97faf54a5d7954b518e66192cb`] for more.
+//
+// `child` can be `nil` to delete whatever entry is found with the given name, or set to ensure only matching entry is deleted.
+//
+// Only available when [Conn.Protocol] is greater than or equal to 7.18, see [Protocol.HasNotifyDelete].
+//
+// Errors include:
+//
+//   - [ENOTDIR]: `parent` does not refer to a directory
+//   - [ENOENT]: no such entry found
+//   - [EBUSY]: entry is a mountpoint
+//   - [ENOTEMPTY]: entry is a directory, with entries inside it still cached
+//
+// [Linux kernel commit `451d0f599934fd97faf54a5d7954b518e66192cb`]: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=451d0f599934fd97faf54a5d7954b518e66192cb
+func (s *Server) NotifyDelete(parent Node, child Node, name string) error {
+	s.meta.Lock()
+	parentID, parentOk := s.nodeRef[parent]
+	var childID fuse.NodeID = 0
+	childOk := true
+	if parentOk {
+		snode := s.node[parentID]
+		snode.wg.Add(1)
+		defer snode.wg.Done()
+
+		if child != nil {
+			childID, childOk = s.nodeRef[child]
+			if childOk {
+				snode := s.node[childID]
+				snode.wg.Add(1)
+				defer snode.wg.Done()
+			}
+		}
+	}
+	s.meta.Unlock()
+	if !parentOk || !childOk {
+		// This is what the kernel would have said, if we had been
+		// able to send this message; it's not cached.
+		return fuse.ErrNotCached
+	}
+	err := s.conn.NotifyDelete(parentID, childID, name)
+	s.debug(notification{
+		Op:   "NotifyDelete",
+		Node: parentID,
+		Out: notifyDeleteDetail{
+			ChildID: childID,
+			Name:    name,
 		},
 		Err: errstr(err),
 	})
