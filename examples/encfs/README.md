@@ -90,7 +90,6 @@ The script expects a symmetric key stored in binary format `keyfile.bin` previou
 32 bytes copied, 0.00142031 s, 22.5 kB/s
 keyfile exists
 Key in hex string format
-b'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef'
 [!] Creating encrypted image...
 Key slot 0 created.
 Command successful.
@@ -141,7 +140,7 @@ Once the key vault resource is ready and the `importkeyconfig.json` file is comp
 A fake encryption key is used in the command below to see the key get released. To import the key into AKV/mHSM, use the following command:
 
 ```
-go run /tools/importkey/main.go -c importkeyconfig.json -kh encryptionKey
+go run /tools/importkey/main.go -c importkeyconfig.json -kh /path/to/encryptionKeyFile
 ```
 
 Upon successful import completion, you should see something similar to the following: 

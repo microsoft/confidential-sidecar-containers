@@ -128,7 +128,7 @@ Once the key vault resource is ready and the `importkeyconfig.json` file is comp
 A fake encryption key is used in the command below to see the key get released. To import the key into AKV/mHSM, use the following command:
 
 ```
-go run /tools/importkey/main.go -c importkeyconfig.json -kh encryptionKey
+go run /tools/importkey/main.go -c importkeyconfig.json -kh /path/to/encryptionKeyFile
 ```
 
 Upon successful import completion, you should see something similar to the following: 
