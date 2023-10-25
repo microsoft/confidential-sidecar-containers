@@ -11,6 +11,8 @@ on:
       - tools/get-snp-report/bin/get-fake-snp-report
 
   push:
+    tags:        
+      - '*' 
     branches:
       - main
     paths:
