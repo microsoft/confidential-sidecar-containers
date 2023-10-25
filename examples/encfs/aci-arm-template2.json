@@ -44,7 +44,7 @@
                                     "value": "<optional-loglevel-trace-debug-info-warning-error-fatal-panic>"
                                 }
                             ],
-                            "image": "mcr.microsoft.com/aci/encfs:2.3",
+                            "image": "mcr.microsoft.com/aci/encfs:2.5",
                             "securityContext": {
                                 "privileged": true
                             },
