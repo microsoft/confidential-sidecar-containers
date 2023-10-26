@@ -10,7 +10,7 @@ on:
     paths:
       - .github/workflows/release.yml
       - tools/get-snp-report/bin/get-snp-report
-      - tools/get-snp-report/bin/get-fake-snp-report
+      - tools/get-snp-report/bin/verbose-report
 
 jobs:
   build:
@@ -19,15 +19,17 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Verbose Report Build
+    - name: Build Executables
       run: |
         pushd tools/get-snp-report && make && popd
   
-    - name: Upload Verbose Report Executable
+    - name: Upload Executables
       uses: actions/upload-artifact@v3
       with:
         name: binaries
-        path: tools/get-snp-report/bin/verbose-report
+        path: |
+          tools/get-snp-report/bin/get-snp-report
+          tools/get-snp-report/bin/verbose-report
 
   create_release:
     needs: build
@@ -42,4 +44,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
-          files: verbose-report
+          files: |
+            get-snp-report
+            verbose-report
