@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/msi"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -91,30 +93,45 @@ func AzureSetup(urlString string, urlPrivate bool, identity common.Identity) err
 	}
 
 	if urlPrivate {
-		// we use token credentials to access private azure blob storage the blob's
-		// url Host denotes the scope/audience for which we need to get a token
-		logrus.Trace("Using token credentials to access private azure blob storage...")
+		ctx, cancel := context.WithTimeout(context.Background(), msi.WorkloadIdentityRquestTokenTimeout)
+		defer cancel()
+		accessToken := ""
+		var tokenRefresherFunc func(azblob.TokenCredential) (t time.Duration)
 
-		var token common.TokenResponse
-		count := 0
-		logrus.Debugf("Getting token for https://%s", u.Host)
-		for {
-			token, err = common.GetToken("https://"+u.Host, identity)
-
+		if msi.WorkloadIdentityEnabled() {
+			tokenRefresherFunc = nil
+			logrus.Infof("Requesting token for using workload identity from %s", fmt.Sprintf("https://%s", u.Host))
+			accessToken, err = msi.GetAccessTokenFromFederatedToken(ctx, fmt.Sprintf("https://%s", u.Host))
 			if err != nil {
-				logrus.Info("Can't obtain a token required for accessing private blobs. Will retry in case the ACI identity sidecar is not running yet...")
-				time.Sleep(3 * time.Second)
-				count++
-				if count == 20 {
-					return errors.Wrapf(err, "Timeout of 60 seconds expired. Could not obtain token")
+				return errors.Wrapf(err, "retrieving authentication token using workload identity failed")
+			}
+		} else {
+			tokenRefresherFunc = tokenRefresher
+			// we use token credentials to access private azure blob storage the blob's
+			// url Host denotes the scope/audience for which we need to get a token
+			logrus.Trace("Using token credentials to access private azure blob storage...")
+
+			var token common.TokenResponse
+			count := 0
+			logrus.Debugf("Getting token for https://%s", u.Host)
+			for {
+				token, err = common.GetToken("https://"+u.Host, identity)
+
+				if err != nil {
+					logrus.Info("Can't obtain a token required for accessing private blobs. Will retry in case the ACI identity sidecar is not running yet...")
+					time.Sleep(3 * time.Second)
+					count++
+					if count == 20 {
+						return errors.Wrapf(err, "Timeout of 60 seconds expired. Could not obtain token")
+					}
+				} else {
+					logrus.Debugf("Token obtained: %s", token.AccessToken)
+					accessToken = token.AccessToken
+					break
 				}
-			} else {
-				logrus.Debugf("Token obtained: %s", token.AccessToken)
-				break
 			}
 		}
-
-		tokenCredential := azblob.NewTokenCredential(token.AccessToken, tokenRefresher)
+		tokenCredential := azblob.NewTokenCredential(accessToken, tokenRefresherFunc)
 		logrus.Debugf("Token credential created: %s", tokenCredential.Token())
 		fm.blobURL = azblob.NewPageBlobURL(*u, azblob.NewPipeline(tokenCredential, azblob.PipelineOptions{}))
 		logrus.Debugf("Blob URL created: %s", fm.blobURL)

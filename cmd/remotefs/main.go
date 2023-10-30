@@ -12,7 +12,6 @@ import (
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,9 +36,9 @@ type AzureFilesystem struct {
 	MountPoint string `json:"mount_point"`
 	// This is the information used by encfs to derive the encryption key of the filesystem
 	// if the key being released is a private RSA key
-	KeyDerivationBlob skr.KeyDerivationBlob `json:"key_derivation,omitempty"`
+	KeyDerivationBlob common.KeyDerivationBlob `json:"key_derivation,omitempty"`
 	// This is the information used by skr to release the encryption key of the filesystem
-	KeyBlob skr.KeyBlob `json:"key,omitempty"`
+	KeyBlob common.KeyBlob `json:"key,omitempty"`
 	// This is a testing key hexstring encoded to be used against the filesystem. This should
 	// be used only for testing.
 	RawKeyHexString string `json:"raw_key,omitempty"`
@@ -107,7 +106,7 @@ func main() {
 	// populate missing attributes in KeyBlob
 	for i, _ := range info.AzureFilesystems {
 		// set the api versions and the tee type for which the authority will authorize secure key release
-		info.AzureFilesystems[i].KeyBlob.AKV.APIVersion = "api-version=7.3-preview"
+		info.AzureFilesystems[i].KeyBlob.AKV.APIVersion = "api-version=7.4"
 		info.AzureFilesystems[i].KeyBlob.Authority.APIVersion = "api-version=2020-10-01"
 		info.AzureFilesystems[i].KeyBlob.Authority.TEEType = "SevSnpVM"
 	}

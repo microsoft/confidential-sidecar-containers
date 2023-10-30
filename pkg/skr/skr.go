@@ -4,6 +4,7 @@
 package skr
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/msi"
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -21,30 +23,6 @@ const (
 	ResourceIdVault      = "https%3A%2F%2Fvault.azure.net"
 )
 
-// KeyDerivationBlob contains information about the key that needs to be derived
-// from a secret that has been released
-//
-// Safe use of this is to ensure that the secret has enough entropy. Examples
-// include RSA private keys.
-type KeyDerivationBlob struct {
-	Salt  string `json:"salt,omitempty`
-	Label string `json:"label,omitemtpy`
-}
-
-// KeyBlob contains information about the AKV service that holds the secret
-// to be released.
-//
-// Authority lists the valid MAA that can issue tokens that the AKV service
-// will accept. The key imported to this AKV needs to have included the
-// authority's endpoint as the authority in the SKR.
-
-type KeyBlob struct {
-	KID       string     `json:"kid"`
-	KTY       string     `json:"kty,omitempty"`
-	KeyOps    []string   `json:"key_ops,omitempty"`
-	Authority attest.MAA `json:"authority"`
-	AKV       AKV        `json:"akv"`
-}
 
 // SecureKeyRelease releases a key identified by the KID and AKV in the keyblob.
 //  1. Retrieve an MAA token using the attestation package. This token can be presented to a Azure Key
@@ -57,7 +35,7 @@ type KeyBlob struct {
 // information about the AKV, authority and the key to be released.
 //
 // The return type is a JWK key
-func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRKeyBlob KeyBlob, uvmInformation common.UvmInformation) (_ jwk.Key, err error) {
+func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRKeyBlob common.KeyBlob, uvmInformation common.UvmInformation) (_ jwk.Key, err error) {
 	logrus.Info("Performing secure key release...")
 	logrus.Debugf("Releasing key blob: %v", SKRKeyBlob)
 
@@ -69,7 +47,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 
 	// generate rsa key pair
 	logrus.Trace("Generating RSA key pair...")
-	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, RSASize)
+	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, common.RSASize)
 	if err != nil {
 		return nil, errors.Wrapf(err, "rsa key pair generation failed")
 	}
@@ -88,30 +66,40 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 		return nil, errors.Wrapf(err, "attestation failed")
 	}
 
-	// 2. Interact with Azure Key Vault. The REST API of AKV requires
-	//     authentication using an Azure authentication token.
+	var ResourceIDTemplate string
+
+	// If endpoint contains managedhsm, request a token for managedhsm
+	// resource; otherwise for a vault
+	if ResourceIDTemplate = ResourceIdVault; strings.Contains(SKRKeyBlob.AKV.Endpoint, "managedhsm") {
+		ResourceIDTemplate = ResourceIdManagedHSM
+		logrus.Infof("Requesting token from %s", ResourceIDTemplate)
+	}
 
 	// retrieve an Azure authentication token for authenticating with AKV
 	if SKRKeyBlob.AKV.BearerToken == "" {
-		logrus.Info("Retrieving Azure authentication token...")
-		var ResourceIDTemplate string
-		// If endpoint contains managedhsm, request a token for managedhsm
-		// resource; otherwise for a vault
-		if strings.Contains(SKRKeyBlob.AKV.Endpoint, "managedhsm") {
-			logrus.Info("Requesting token for managedhsm...")
-			ResourceIDTemplate = ResourceIdManagedHSM
-		} else {
-			logrus.Info("Requesting token for vault...")
-			ResourceIDTemplate = ResourceIdVault
-		}
+		ctx, cancel := context.WithTimeout(context.Background(), msi.WorkloadIdentityRquestTokenTimeout)
+		defer cancel()
+		bearerToken := ""
 
-		token, err := common.GetToken(ResourceIDTemplate, identity)
-		if err != nil {
-			return nil, errors.Wrapf(err, "retrieving authentication token failed")
+		if msi.WorkloadIdentityEnabled() {
+			logrus.Info("Requesting token for using workload identity.")
+			bearerToken, err = msi.GetAccessTokenFromFederatedToken(ctx, ResourceIDTemplate)
+			if err != nil {
+				return nil, errors.Wrapf(err, "retrieving authentication token using workload identity failed")
+			}
+		} else {
+			// 2. Interact with Azure Key Vault. The REST API of AKV requires
+			//     authentication using an Azure authentication token.
+			token, err := common.GetToken(ResourceIDTemplate, identity)
+			if err != nil {
+				return nil, errors.Wrapf(err, "retrieving authentication token failed")
+			}
+			bearerToken = token.AccessToken
 		}
+		logrus.Info("Retrieving Azure authentication token...")
 
 		// set the azure authentication token to the AKV instance
-		SKRKeyBlob.AKV.BearerToken = token.AccessToken
+		SKRKeyBlob.AKV.BearerToken = bearerToken
 	}
 	logrus.Debugf("AAD Token: %s ", SKRKeyBlob.AKV.BearerToken)
 
