@@ -37,9 +37,9 @@
 // but few are required.
 // The specific methods are described in the documentation for those interfaces.
 //
-// The hellofs subdirectory contains a simple illustration of the fs.Serve approach.
+// The examples/hellofs subdirectory contains a simple illustration of the fs.Serve approach.
 //
-// Service Methods
+// # Service Methods
 //
 // The required and optional methods for the FS, Node, and Handle interfaces
 // have the general form
@@ -58,7 +58,7 @@
 // including any []byte fields such as WriteRequest.Data or
 // SetxattrRequest.Xattr.
 //
-// Errors
+// # Errors
 //
 // Operations can return errors. The FUSE interface can only
 // communicate POSIX errno error numbers to file system clients, the
@@ -69,7 +69,7 @@
 // Error messages will be visible in the debug log as part of the
 // response.
 //
-// Interrupted Operations
+// # Interrupted Operations
 //
 // In some file systems, some operations
 // may take an undetermined amount of time.  For example, a Read waiting for
@@ -82,7 +82,7 @@
 // If an operation does not block for an indefinite amount of time, supporting
 // cancellation is not necessary.
 //
-// Authentication
+// # Authentication
 //
 // All requests types embed a Header, meaning that the method can
 // inspect req.Pid, req.Uid, and req.Gid as necessary to implement
@@ -91,11 +91,10 @@
 // AllowOther), but does not enforce access modes (to change this, see
 // DefaultPermissions).
 //
-// Mount Options
+// # Mount Options
 //
 // Behavior and metadata of the mounted file system can be changed by
 // passing MountOption values to Mount.
-//
 package fuse // import "bazil.org/fuse"
 
 import (
@@ -114,16 +113,6 @@ import (
 
 // A Conn represents a connection to a mounted FUSE file system.
 type Conn struct {
-	// Always closed, mount is ready when Mount returns.
-	//
-	// Deprecated: Not used, OS X remnant.
-	Ready <-chan struct{}
-
-	// Use error returned from Mount.
-	//
-	// Deprecated: Not used, OS X remnant.
-	MountError error
-
 	// File handle for kernel communication. Only safe to access if
 	// rio or wio is held.
 	dev *os.File
@@ -155,7 +144,8 @@ func (e *MountpointDoesNotExistError) Error() string {
 // resources.
 func Mount(dir string, options ...MountOption) (*Conn, error) {
 	conf := mountConfig{
-		options: make(map[string]string),
+		options:   make(map[string]string),
+		initFlags: InitAsyncDIO | InitSetxattrExt,
 	}
 	for _, option := range options {
 		if err := option(&conf); err != nil {
@@ -163,11 +153,7 @@ func Mount(dir string, options ...MountOption) (*Conn, error) {
 		}
 	}
 
-	ready := make(chan struct{})
-	close(ready)
-	c := &Conn{
-		Ready: ready,
-	}
+	c := &Conn{}
 	f, err := mount(dir, &conf)
 	if err != nil {
 		return nil, err
@@ -226,7 +212,7 @@ func initMount(c *Conn, conf *mountConfig) error {
 	}
 	c.proto = proto
 
-	c.flags = r.Flags & (InitBigWrites | conf.initFlags)
+	c.flags = r.Flags & (InitBigWrites | InitParallelDirOps | conf.initFlags)
 	s := &initResponse{
 		Library:             proto,
 		MaxReadahead:        conf.maxReadahead,
@@ -527,6 +513,9 @@ func fileMode(unixMode uint32) os.FileMode {
 	if unixMode&syscall.S_ISGID != 0 {
 		mode |= os.ModeSetgid
 	}
+	if unixMode&syscall.S_ISVTX != 0 {
+		mode |= os.ModeSticky
+	}
 	return mode
 }
 
@@ -669,6 +658,7 @@ func (c *Conn) ReadRequest() (Request, error) {
 			Size:   in.Size,
 			Atime:  time.Unix(int64(in.Atime), int64(in.AtimeNsec)),
 			Mtime:  time.Unix(int64(in.Mtime), int64(in.MtimeNsec)),
+			Ctime:  time.Unix(int64(in.Ctime), int64(in.CtimeNsec)),
 			Mode:   fileMode(in.Mode),
 			Uid:    in.Uid,
 			Gid:    in.Gid,
@@ -805,9 +795,10 @@ func (c *Conn) ReadRequest() (Request, error) {
 			goto corrupt
 		}
 		req = &OpenRequest{
-			Header: m.Header(),
-			Dir:    m.hdr.Opcode == opOpendir,
-			Flags:  openFlags(in.Flags),
+			Header:    m.Header(),
+			Dir:       m.hdr.Opcode == opOpendir,
+			Flags:     openFlags(in.Flags),
+			OpenFlags: OpenRequestFlags(in.OpenFlags),
 		}
 
 	case opRead, opReaddir:
@@ -883,11 +874,12 @@ func (c *Conn) ReadRequest() (Request, error) {
 		}
 
 	case opSetxattr:
-		in := (*setxattrIn)(m.data())
-		if m.len() < unsafe.Sizeof(*in) {
+		size := setxattrInSize(c.flags)
+		if m.len() < size {
 			goto corrupt
 		}
-		m.off += int(unsafe.Sizeof(*in))
+		in := (*setxattrIn)(m.data())
+		m.off += int(size)
 		name := m.bytes()
 		i := bytes.IndexByte(name, '\x00')
 		if i < 0 {
@@ -898,12 +890,16 @@ func (c *Conn) ReadRequest() (Request, error) {
 			goto corrupt
 		}
 		xattr = xattr[:in.Size]
-		req = &SetxattrRequest{
+		r := &SetxattrRequest{
 			Header: m.Header(),
 			Flags:  in.Flags,
 			Name:   string(name[:i]),
 			Xattr:  xattr,
 		}
+		if c.proto.GE(Protocol{7, 32}) {
+			r.SetxattrFlags = SetxattrFlags(in.SetxattrFlags)
+		}
+		req = r
 
 	case opGetxattr:
 		in := (*getxattrIn)(m.data())
@@ -1109,6 +1105,19 @@ func (c *Conn) ReadRequest() (Request, error) {
 			},
 			LockFlags: LockFlags(in.LkFlags),
 		}
+
+	case opFAllocate:
+		in := (*fAllocateIn)(m.data())
+		if m.len() < unsafe.Sizeof(*in) {
+			goto corrupt
+		}
+		req = &FAllocateRequest{
+			Header: m.Header(),
+			Handle: HandleID(in.Fh),
+			Offset: in.Offset,
+			Length: in.Length,
+			Mode:   FAllocateFlags(in.Mode),
+		}
 	}
 
 	return req, nil
@@ -1255,6 +1264,42 @@ func (c *Conn) InvalidateEntry(parent NodeID, name string) error {
 	h.Error = notifyCodeInvalEntry
 	out := (*notifyInvalEntryOut)(buf.alloc(unsafe.Sizeof(notifyInvalEntryOut{})))
 	out.Parent = uint64(parent)
+	out.Namelen = uint32(len(name))
+	buf = append(buf, name...)
+	buf = append(buf, '\x00')
+	return c.sendNotify(buf)
+}
+
+// NotifyDelete informs the kernel that a directory entry has been deleted.
+//
+// Using this instead of [InvalidateEntry] races on networked systems where the directory is concurrently in use.
+// See [Linux kernel commit `451d0f599934fd97faf54a5d7954b518e66192cb`] for more.
+//
+// `child` can be 0 to delete whatever entry is found with the given name, or set to ensure only matching entry is deleted.
+//
+// Only available when [Conn.Protocol] is greater than or equal to 7.18, see [Protocol.HasNotifyDelete].
+//
+// Errors include:
+//
+//   - [ENOTDIR]: `parent` does not refer to a directory
+//   - [ENOENT]: no such entry found
+//   - [EBUSY]: entry is a mountpoint
+//   - [ENOTEMPTY]: entry is a directory, with entries inside it still cached
+//
+// [Linux kernel commit `451d0f599934fd97faf54a5d7954b518e66192cb`]: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=451d0f599934fd97faf54a5d7954b518e66192cb
+func (c *Conn) NotifyDelete(parent NodeID, child NodeID, name string) error {
+	const maxUint32 = ^uint32(0)
+	if uint64(len(name)) > uint64(maxUint32) {
+		// very unlikely, but we don't want to silently truncate
+		return syscall.ENAMETOOLONG
+	}
+	buf := newBuffer(unsafe.Sizeof(notifyDeleteOut{}) + uintptr(len(name)) + 1)
+	h := (*outHeader)(unsafe.Pointer(&buf[0]))
+	// h.Unique is 0
+	h.Error = notifyCodeDelete
+	out := (*notifyDeleteOut)(buf.alloc(unsafe.Sizeof(notifyDeleteOut{})))
+	out.Parent = uint64(parent)
+	out.Child = uint64(child)
 	out.Namelen = uint32(len(name))
 	buf = append(buf, name...)
 	buf = append(buf, '\x00')
@@ -1413,6 +1458,12 @@ func (r *initRequest) Respond(resp *initResponse) {
 	if out.MaxWrite > maxWrite {
 		out.MaxWrite = maxWrite
 	}
+
+	switch {
+	case resp.Library.LT(Protocol{7, 23}):
+		// Protocol version 7.23 added fields to `fuse_init_out`, see `FUSE_COMPAT_22_INIT_OUT_SIZE`.
+		buf = buf[:unsafe.Sizeof(outHeader{})+24]
+	}
 	r.respond(buf)
 }
 
@@ -1502,11 +1553,7 @@ type Attr struct {
 	Gid       uint32      // group gid
 	Rdev      uint32      // device numbers
 	BlockSize uint32      // preferred blocksize for filesystem I/O
-
-	// Deprecated: Not used, OS X remnant.
-	Crtime time.Time
-	// Deprecated: Not used, OS X remnant.
-	Flags uint32
+	Flags     AttrFlags
 }
 
 func (a Attr) String() string {
@@ -1559,6 +1606,9 @@ func (a *Attr) attr(out *attr, proto Protocol) {
 	if proto.GE(Protocol{7, 9}) {
 		out.Blksize = a.BlockSize
 	}
+	if proto.GE(Protocol{7, 32}) {
+		out.Flags = uint32(a.Flags & attrSubMount)
+	}
 }
 
 // A GetattrRequest asks for the metadata for the file denoted by r.Node.
@@ -1603,9 +1653,6 @@ type GetxattrRequest struct {
 
 	// Name of the attribute requested.
 	Name string
-
-	// Deprecated: Not used, OS X remnant.
-	Position uint32
 }
 
 var _ Request = (*GetxattrRequest)(nil)
@@ -1641,9 +1688,6 @@ func (r *GetxattrResponse) String() string {
 type ListxattrRequest struct {
 	Header `json:"-"`
 	Size   uint32 // maximum size to return
-
-	// Deprecated: Not used, OS X remnant.
-	Position uint32
 }
 
 var _ Request = (*ListxattrRequest)(nil)
@@ -1716,8 +1760,8 @@ type SetxattrRequest struct {
 	// TODO XATTR_REPLACE and not exist -> ENODATA
 	Flags uint32
 
-	// Deprecated: Not used, OS X remnant.
-	Position uint32
+	// FUSE-specific flags (as opposed to the flags from filesystem client `setxattr(2)` flags argument).
+	SetxattrFlags SetxattrFlags
 
 	Name  string
 	Xattr []byte
@@ -1788,9 +1832,10 @@ func (r *LookupResponse) String() string {
 
 // An OpenRequest asks to open a file or directory
 type OpenRequest struct {
-	Header `json:"-"`
-	Dir    bool // is this Opendir?
-	Flags  OpenFlags
+	Header    `json:"-"`
+	Dir       bool // is this Opendir?
+	Flags     OpenFlags
+	OpenFlags OpenRequestFlags
 }
 
 var _ Request = (*OpenRequest)(nil)
@@ -2186,6 +2231,7 @@ type SetattrRequest struct {
 	Size   uint64
 	Atime  time.Time
 	Mtime  time.Time
+	Ctime  time.Time
 	// Mode is the file mode to set (when valid).
 	//
 	// The type of the node (as in os.ModeType, os.ModeDir etc) is not
@@ -2194,15 +2240,6 @@ type SetattrRequest struct {
 	Mode os.FileMode
 	Uid  uint32
 	Gid  uint32
-
-	// Deprecated: Not used, OS X remnant.
-	Bkuptime time.Time
-	// Deprecated: Not used, OS X remnant.
-	Chgtime time.Time
-	// Deprecated: Not used, OS X remnant.
-	Crtime time.Time
-	// Deprecated: Not used, OS X remnant.
-	Flags uint32
 }
 
 var _ Request = (*SetattrRequest)(nil)
@@ -2473,25 +2510,6 @@ func (r *InterruptRequest) String() string {
 	return fmt.Sprintf("Interrupt [%s] ID %v", &r.Header, r.IntrID)
 }
 
-// Deprecated: Not used, OS X remnant.
-type ExchangeDataRequest struct {
-	Header           `json:"-"`
-	OldDir, NewDir   NodeID
-	OldName, NewName string
-}
-
-var _ Request = (*ExchangeDataRequest)(nil)
-
-func (r *ExchangeDataRequest) String() string {
-	// TODO options
-	return fmt.Sprintf("ExchangeData [%s] %v %q and %v %q", &r.Header, r.OldDir, r.OldName, r.NewDir, r.NewName)
-}
-
-func (r *ExchangeDataRequest) Respond() {
-	buf := newBuffer(0)
-	r.respond(buf)
-}
-
 // NotifyReply is a response to an earlier notification. It behaves
 // like a Request, but is not really a request expecting a response.
 type NotifyReply struct {
@@ -2573,12 +2591,12 @@ type FileLock struct {
 //
 // Unlocking can be
 //
-//     - explicit with UnlockRequest
-//     - for flock: implicit on final close (ReleaseRequest.ReleaseFlags
-//       has ReleaseFlockUnlock set)
-//     - for POSIX locks: implicit on any close (FlushRequest)
-//     - for Open File Description locks: implicit on final close
-//       (no LockOwner observed as of 2020-04)
+//   - explicit with UnlockRequest
+//   - for flock: implicit on final close (ReleaseRequest.ReleaseFlags
+//     has ReleaseFlockUnlock set)
+//   - for POSIX locks: implicit on any close (FlushRequest)
+//   - for Open File Description locks: implicit on final close
+//     (no LockOwner observed as of 2020-04)
 //
 // See LockFlags to know which kind of a lock is being requested. (As
 // of 2020-04, Open File Descriptor locks are indistinguishable from
@@ -2700,4 +2718,28 @@ type QueryLockResponse struct {
 
 func (r *QueryLockResponse) String() string {
 	return fmt.Sprintf("QueryLock range=%d..%d type=%v pid=%v", r.Lock.Start, r.Lock.End, r.Lock.Type, r.Lock.PID)
+}
+
+// FAllocateRequest  manipulates space reserved for the file.
+//
+// Note that the kernel limits what modes are acceptable in any FUSE filesystem.
+type FAllocateRequest struct {
+	Header
+	Handle HandleID
+	Offset uint64
+	Length uint64
+	Mode   FAllocateFlags
+}
+
+var _ Request = (*FAllocateRequest)(nil)
+
+func (r *FAllocateRequest) String() string {
+	return fmt.Sprintf("FAllocate [%s] %v %d @%d mode=%s", &r.Header, r.Handle,
+		r.Length, r.Offset, r.Mode)
+}
+
+// Respond replies to the request, indicating that the FAllocate succeeded.
+func (r *FAllocateRequest) Respond() {
+	buf := newBuffer(0)
+	r.respond(buf)
 }
