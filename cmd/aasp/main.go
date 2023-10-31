@@ -25,7 +25,6 @@ import (
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/aasp/keyprovider"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/msi"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -59,10 +58,7 @@ var (
 )
 
 const (
-	aasp                       = "aasp"
-	AZURE_CLIENT_ID            = "AZURE_CLIENT_ID"
-	AZURE_TENANT_ID            = "AZURE_TENANT_ID"
-	AZURE_FEDERATED_TOKEN_FILE = "AZURE_FEDERATED_TOKEN_FILE"
+	AASP = "aasp"
 )
 
 type DecryptConfig struct {
@@ -204,7 +200,7 @@ func (s *server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKe
 
 	aa := tokens[0]
 	kid := tokens[1]
-	if !strings.EqualFold(aa, aasp) {
+	if !strings.EqualFold(aa, AASP) {
 		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", aa)
 	}
 	log.Printf("Attestation agent: %v, kid: %v", aa, kid)
@@ -244,7 +240,7 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	aa, _ := base64.StdEncoding.DecodeString(dc.Parameters["attestation-agent"][0])
 	log.Printf("Attestation agent name: %v", string(aa))
 
-	if !strings.EqualFold(string(aa), aasp) {
+	if !strings.EqualFold(string(aa), AASP) {
 		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", string(aa))
 	}
 
@@ -262,22 +258,9 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	}
 	log.Printf("Annotation packet: %v", annotation)
 
-	bearerToken := ""
-
-	clientID := os.Getenv(AZURE_CLIENT_ID)
-	tenantID := os.Getenv(AZURE_TENANT_ID)
-	tokenFile := os.Getenv(AZURE_FEDERATED_TOKEN_FILE)
-	if clientID != "" && tenantID != "" && tokenFile != "" {
-		bearerToken, err = msi.GetAccessTokenFromFederatedToken(c, tokenFile, clientID, tenantID, "https://managedhsm.azure.net")
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Failed to obtain access token to MHSM: %v", err)
-		}
-	}
-
 	mhsm := skr.AKV{
-		Endpoint:    annotation.KmsEndpoint,
-		APIVersion:  "api-version=7.3-preview",
-		BearerToken: bearerToken,
+		Endpoint:   annotation.KmsEndpoint,
+		APIVersion: "api-version=7.4",
 	}
 
 	maa := attest.MAA{
@@ -405,12 +388,6 @@ func main() {
 		return
 	}
 
-	lis, err := net.Listen("tcp", *port)
-	if err != nil {
-		log.Fatalf("failed to listen on port %v: %v", *port, err)
-	}
-	log.Printf("Listening on port %v", *port)
-
 	logrus.Infof("Args:")
 	logrus.Debugf("   aasp cert cache info:    %s", *azureInfoBase64string)
 	logrus.Debugf("   keyprovider_sock:    %s", *port)
@@ -431,17 +408,19 @@ func main() {
 		}
 	}
 
-	thimCerts, err := azure_info.CertFetcher.GetThimCerts(azure_info.CertFetcher.Endpoint)
+	EncodedUvmInformation, err = common.GetUvmInformation()
 	if err != nil {
-		logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
+		logrus.Infof("Failed to extract UVM_* environment variables: %s", err.Error())
 	}
 
-	EncodedUvmInformation.InitialCerts = *thimCerts
+	if common.ThimCertsAbsent(&EncodedUvmInformation.InitialCerts) {
+		logrus.Infof("ThimCerts is absent, retrieving THIMCerts from %s.", azure_info.CertFetcher.Endpoint)
+		thimCerts, err := azure_info.CertFetcher.GetThimCerts(azure_info.CertFetcher.Endpoint)
+		if err != nil {
+			logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
+		}
 
-	// pass in EncodedUvmInformation because ciruclar reference is created if we have the following func to retrieve THIM Cert
-	common.GetUvmInformationAASP(&EncodedUvmInformation)
-	if err != nil {
-		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())
+		EncodedUvmInformation.InitialCerts = *thimCerts
 	}
 
 	var tcbm string
@@ -468,6 +447,12 @@ func main() {
 	if azure_info.Identity.ClientId == "" {
 		log.Printf("Warning: Env AZURE_CLIENT_ID is not set")
 	}
+
+	lis, err := net.Listen("tcp", *port)
+	if err != nil {
+		log.Fatalf("failed to listen on port %v: %v", *port, err)
+	}
+	log.Printf("Listening on port %v", *port)
 
 	url := *hostname + ":" + *httpport
 	//start http server

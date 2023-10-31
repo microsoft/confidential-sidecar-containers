@@ -172,11 +172,6 @@ func rawRemoteFilesystemKey(tempDir string, rawKeyHexString string) (keyFilePath
 func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob skr.KeyDerivationBlob, keyBlob skr.KeyBlob) (keyFilePath string, err error) {
 	keyFilePath = filepath.Join(tempDir, "keyfile")
 
-	if EncodedUvmInformation.EncodedSecurityPolicy == "" {
-		err = errors.New("EncodedSecurityPolicy is empty")
-		return "", errors.Wrapf(err, "Make sure the environment is correct") // only helpful running outside of a UVM
-	}
-
 	// 2) release key identified by keyBlob using encoded security policy and certfetcher (contained in CertState object)
 	//    certfetcher is required for validating the attestation report against the cert
 	//    chain of the chip identified in the attestation report
@@ -360,7 +355,16 @@ func MountAzureFilesystems(tempDir string, info RemoteFilesystemsInformation) (e
 	// Retrieve the incoming encoded security policy, cert and uvm endorsement
 	EncodedUvmInformation, err = common.GetUvmInformation()
 	if err != nil {
-		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())
+		logrus.Infof("Failed to extract UVM_* environment variables: %s", err.Error())
+	}
+
+	if common.ThimCertsAbsent(&EncodedUvmInformation.InitialCerts) {
+		logrus.Infof("ThimCerts is absent, retrieving THIMCerts from %s.", info.AzureInfo.CertFetcher.Endpoint)
+		thimCerts, err := info.AzureInfo.CertFetcher.GetThimCerts(info.AzureInfo.CertFetcher.Endpoint)
+		if err != nil {
+			logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
+		}
+		EncodedUvmInformation.InitialCerts = *thimCerts
 	}
 
 	logrus.Debugf("EncodedUvmInformation.InitialCerts.Tcbm: %s\n", EncodedUvmInformation.InitialCerts.Tcbm)

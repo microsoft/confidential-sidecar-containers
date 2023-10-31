@@ -6,10 +6,9 @@ package common
 import (
 	"encoding/base64"
 	"encoding/json"
-	"strconv"
-
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -72,6 +71,10 @@ type UvmInformation struct {
 	EncodedUvmReferenceInfo string    // base64 encoded endorsements for the particular UVM image
 }
 
+// this will always be set in ACI by the contol plane and is optionally set in K8s.  Need to
+// use a default if the customer does not set
+const uvmSecurityCtxDirDefault = "/opt/confidential-containers/share/kata-containers"
+
 // Late in Public Preview, we made a change to pass the UVM information
 // via files instead of environment variables.
 // This code detects which method is being used and calls the appropriate
@@ -85,19 +88,27 @@ type UvmInformation struct {
 func GetUvmSecurityCtxDir() (string, error) {
 	securityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
 	if securityContextDir == "" {
-		return "", errors.New("UVM_SECURITY_CONTEXT_DIR not set")
+		logrus.Debugf("UVM_SECURITY_CONTEXT_DIR not set.  Using system default %q", uvmSecurityCtxDirDefault)
+		securityContextDir = uvmSecurityCtxDirDefault
+	} else {
+		logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s", securityContextDir)
 	}
-  logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s", securityContextDir)
 	return securityContextDir, nil
 }
 
 func GetUvmInformation() (UvmInformation, error) {
-	_, err := GetUvmSecurityCtxDir()
-	if err != nil {
-		return GetUvmInformationFromEnv()
-	} else {
-		return GetUvmInformationFromFiles()
+	contextDir, err := GetUvmSecurityCtxDir()
+	var info UvmInformation
+	if len(contextDir) > 0 {
+		info, err = GetUvmInformationFromFiles()
+		if err != nil {
+			logrus.Debugf("getting UVM information from directory %q failed. %s", contextDir, err)
+		}
 	}
+	if len(info.EncodedUvmReferenceInfo) == 0 {
+		info, err = GetUvmInformationFromEnv()
+	}
+	return info, err
 }
 
 func GetUvmInformationFromEnv() (UvmInformation, error) {
@@ -153,6 +164,16 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 		return encodedUvmInformation, err
 	}
 
+	encodedUvmInformation.EncodedUvmReferenceInfo, err = GetReferenceInfoFile(securityContextDir, ReferenceInfoFilename)
+	if err != nil {
+		return encodedUvmInformation, err
+	}
+
+	if GenerateTestData {
+		os.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
+		os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
+	}
+
 	encodedHostCertsFromTHIM, err := readSecurityContextFile(securityContextDir, HostAMDCertFilename)
 	if err != nil {
 		return encodedUvmInformation, errors.Wrapf(err, "reading host amd cert failed")
@@ -163,7 +184,6 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 	}
 
 	if encodedHostCertsFromTHIM != "" {
-		var err error
 		encodedUvmInformation.InitialCerts, err = ParseTHIMCertsFromString(encodedHostCertsFromTHIM)
 		if err != nil {
 			return encodedUvmInformation, err
@@ -175,17 +195,7 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 		return encodedUvmInformation, errors.Wrapf(err, "reading security policy failed")
 	}
 
-	encodedUvmInformation.EncodedUvmReferenceInfo, err = GetReferenceInfoFile(securityContextDir, ReferenceInfoFilename)
-	if err != nil {
-		return encodedUvmInformation, err
-	}
-
-	if GenerateTestData {
-		os.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
-		os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
-	}
-
-	return encodedUvmInformation, nil
+	return encodedUvmInformation, err
 }
 
 func GetReferenceInfoFile(securityContextDir string, ReferenceInfoFilename string) (string, error) {
@@ -196,24 +206,6 @@ func GetReferenceInfoFile(securityContextDir string, ReferenceInfoFilename strin
 	return encodedUvmReferenceInfo, nil
 }
 
-func GetUvmInformationAASP(UvmInfo *UvmInformation) {
-	securityContextDir, err := GetUvmSecurityCtxDir()
-	if err != nil {
-		logrus.Fatalf(err.Error())
-	}
-
-	UvmInfo.EncodedUvmReferenceInfo, err = GetReferenceInfoFile(securityContextDir, ReferenceInfoFilename)
-	if err != nil {
-		logrus.Fatalf(err.Error())
-	}
-
-	if GenerateTestData {
-		os.WriteFile("uvm_reference_info.base64", []byte(UvmInfo.EncodedUvmReferenceInfo), 0644)
-	}
-
-	if GenerateTestData {
-		THIMCertsBytes, _ := json.Marshal(UvmInfo.InitialCerts)
-		certificatesRaw := base64.StdEncoding.EncodeToString(THIMCertsBytes)
-		os.WriteFile("uvm_host_amd_certificate.base64", []byte(certificatesRaw), 0644)
-	}
+func ThimCertsAbsent(thim *THIMCerts) bool {
+	return len(thim.VcekCert) == 0 && len(thim.CertificateChain) == 0
 }
