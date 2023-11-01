@@ -12,8 +12,8 @@ deviceNamePath="/dev/mapper/$deviceName"
 if [ -f "$keyFilePath" ]; then
     echo "keyfile exists"
 else
-    echo "[!] Generating keyfile..."
-    dd if=/dev/random of="$keyFilePath" count=1 bs=32
+    echo "[!] keyfile does not exist."
+    exist 1
 fi
 
 echo "Key in hex string format"
