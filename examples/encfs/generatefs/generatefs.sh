@@ -13,7 +13,7 @@ if [ -f "$keyFilePath" ]; then
     echo "keyfile exists"
 else
     echo "[!] keyfile does not exist."
-    exist 1
+    exit 1
 fi
 
 echo "Key in hex string format"
