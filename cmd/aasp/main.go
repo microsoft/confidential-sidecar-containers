@@ -258,7 +258,7 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	}
 	log.Printf("Annotation packet: %v", annotation)
 
-	mhsm := skr.AKV{
+	mhsm := common.AKV{
 		Endpoint:   annotation.KmsEndpoint,
 		APIVersion: "api-version=7.4",
 	}
