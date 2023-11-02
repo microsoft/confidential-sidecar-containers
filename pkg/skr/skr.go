@@ -23,7 +23,6 @@ const (
 	ResourceIdVault      = "https%3A%2F%2Fvault.azure.net"
 )
 
-
 // SecureKeyRelease releases a key identified by the KID and AKV in the keyblob.
 //  1. Retrieve an MAA token using the attestation package. This token can be presented to a Azure Key
 //     Vault to release a secret.

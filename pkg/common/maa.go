@@ -87,11 +87,11 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 		}
 		base64urlEncodedmaaEndorsement = base64.URLEncoding.EncodeToString(maaEndorsementJSONBytes)
 
-
 		if GenerateTestData {
 			os.WriteFile("body.endorsements.bin", maaEndorsementJSONBytes, 0644)
 			os.WriteFile("body.endorsements.base64url", []byte(base64urlEncodedmaaEndorsement), 0644)
 		}
+	}
 
 	// the maa report is a bundle of the signed attestation report and
 	// the cert chain that endorses the signing key
