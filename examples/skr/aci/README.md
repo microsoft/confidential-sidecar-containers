@@ -78,7 +78,7 @@ Replace [AAD token](importkeyconfig.json#L11) in `importkeyconfig.json` and [Skr
 
 #### 5. Fill in Key Information
 
-After setting up an [Azure Key Vault resource](#import-key), fill in the `importkeyconfig.json` file with the name of the key to be created and imported into the key vault [Key name](importkeyconfig.json#L3).
+After setting up an Azure Key Vault resource, fill in the `importkeyconfig.json` file with the name of the key to be created and imported into the key vault [Key name](importkeyconfig.json#L3).
 
 Additionally, fill in the optional [key derivation](importkeyconfig.json#L14) for RSA keys and [Key type: `RSA-HSM` or `oct-HSM`](importkeyconfig.json#L4) fields or remove these fields from the `importkeyconfig.json` file.
 

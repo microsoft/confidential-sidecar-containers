@@ -1,16 +1,16 @@
-# Troubleshooting Guide for Deploying the SKR Sidecar
+# Troubleshooting Guide for Deploying the Secure Key Release Sidecar
 
 ## 401 Unauthorized Error
 
 When running the importkey tool, you may see the following error:
 
-```
+```text
 pulling AKV response body failed: http response status equal to 401 Unauthorized
 ```
 
 Generate a new bearer token and copy it into the importkeyconfig.json.
 
-```
+```bash
 az account get-access-token --resource https://managedhsm.azure.net
 ```
 
@@ -18,7 +18,7 @@ az account get-access-token --resource https://managedhsm.azure.net
 
 When checking the log output of the SKR container, you may see the following error:
 
-```
+```text
 err: pulling AKV response body failed: http response status equal to 403 Forbidden
 ```
 
@@ -34,7 +34,7 @@ Ensure that:
 
 When checking the log output of the SKR container, you may see the following error:
 
-```
+```text
 err: pulling AKV response body failed: http response status equal to 404 Not Found
 ```
 
@@ -46,7 +46,7 @@ Ensure that:
 
 When checking the log output of the SKR container, you may see the following error:
 
-```
+```text
 err: AKV post request failed: HTTP GET failed: Post "https://<mhsm-name>.managedhsm.azure.net/keys/<key-name>/release?api-version=7.3-preview": dial tcp: lookup <mhsm-name>.managedhsm.azure.net on 168.63.129.16:53: no such host
 ```
 
@@ -56,19 +56,20 @@ Ensure that:
 
 ## "CreateContainerRequest is blocked by policy" error (Confidential Containers in AKS Only)
 
-If you are running the SKR container on Confidential Containers in AKS and the container pod does not run. Occasionally this could be caused by incorrect workload identity setup that results in empty environment variables that the container depends on. To debug, issue the following command: 
+If you are running the SKR container on Confidential Containers in AKS and the container pod does not run. Occasionally this could be caused by incorrect workload identity setup that results in empty environment variables that the container depends on. To debug, issue the following command:
 
 ```bash
 # This command describes the current status of the container pod
 kubectl describe pod skr 
 ```
-If the error is the following: 
 
-```
+If the error is the following:
+
+```text
 Failed to create pod sandbox: rpc error: code = Unknown desc = failed to create containerd task: failed to create shim task: "CreateContainerRequest is blocked by policy": unknown
 ```
 
-Issue the following commands to check the workload identity is properly enabled where the pod containing the SKR container is running: 
+Issue the following commands to check the workload identity is properly enabled where the pod containing the SKR container is running:
 
 ```bash
 # Obtain the client id of the managed identity. 
@@ -79,9 +80,9 @@ export USER_ASSIGNED_CLIENT_ID="$(az identity show --resource-group "${RESOURCE_
 kubectl get sa <service-account-name> -n <skr-container-pod-namespace> -o yaml 
 ```
 
-Check the service account `azure.workload.identity/client-id` annotation value matches the obtained `USER_ASSIGNED_CLIENT_ID` value. If they match, check the following: 
+Check the service account `azure.workload.identity/client-id` annotation value matches the obtained `USER_ASSIGNED_CLIENT_ID` value. If they match, check the following:
 
-```bash 
+```bash
 # Obtain the AKS_OIDC_ISSUER. Replace CLUSTER_NAME and RESOURCE_GROUP with the name of the cluster skr is run and the resource group the cluster resides 
 export AKS_OIDC_ISSUER="$(az aks show -n "${CLUSTER_NAME}" -g "${RESOURCE_GROUP}" --query "oidcIssuerProfile.issuerUrl" -otsv)"
 # Obtain the federated identity detail 
@@ -89,7 +90,7 @@ export AKS_OIDC_ISSUER="$(az aks show -n "${CLUSTER_NAME}" -g "${RESOURCE_GROUP}
 az identity federated-credential show --resource-group "${RESOURCE_GROUP}" -n "${FEDERATED_IDENTITY_NAME}" --identity-name "${USER_ASSIGNED_IDENTITY_NAME}"
 ```
 
-Once you have the federated identity detail, it should look something like this: 
+Once you have the federated identity detail, it should look something like this:
 
 ```json
 {
@@ -106,5 +107,4 @@ Once you have the federated identity detail, it should look something like this:
 }
 ```
 
-Make sure the issuer matches the `AKS_OIDC_ISSUER` value obtained, the subject matches the service account (especially the namespace and service account name part), and the resourceGroup matches the one where the managed identity resides. If any one of the above items does not match, please follow the guide to re-enable workload identity. 
-
+Make sure the issuer matches the `AKS_OIDC_ISSUER` value obtained, the subject matches the service account (especially the namespace and service account name part), and the resourceGroup matches the one where the managed identity resides. If any one of the above items does not match, please follow the guide to re-enable workload identity.
