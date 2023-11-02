@@ -1,12 +1,9 @@
 name: Create Release
 
 on:
-  workflow_dispatch:
   push:
     tags:        
-      - '*' 
-    branches:
-      - main
+      - '*'
       
 env:
   GO_VERSION: "1.19.x"
@@ -23,8 +20,8 @@ jobs:
 
       - name: Build Linux Executables
         run: |
-        pushd tools/get-snp-report && make && popd
-        go build ./tools/importkey
+          pushd tools/get-snp-report && make && popd
+          go build ./tools/importkey
         
       - name: Build Windows Executables
         run: go build ./tools/importkey
