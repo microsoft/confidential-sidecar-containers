@@ -6,6 +6,12 @@ on:
       - main
     tags:        
       - '*'
+    paths:
+      - .github/workflows/release.yml
+      - tools/get-snp-report/**
+      - tools/importkey/**
+      - pkg/common/akv.go
+      - pkg/common/keyblob.go
       
 env:
   GO_VERSION: "1.19.x"
