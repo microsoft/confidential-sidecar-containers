@@ -2,6 +2,8 @@ name: Create Release
 
 on:
   push:
+    branches:
+      - main
     tags:        
       - '*'
       
@@ -21,6 +23,7 @@ jobs:
       - name: Build Linux Executables
         run: |
           pushd tools/get-snp-report && make && popd
+          cp -a tools/get-snp-report/bin/* .
           go build ./tools/importkey
         
       - name: Build Windows Executables
@@ -34,8 +37,8 @@ jobs:
         with:
           name: binaries
           path: |
-            tools/get-snp-report/bin/get-snp-report
-            tools/get-snp-report/bin/verbose-report
+            get-snp-report
+            verbose-report
             importkey.exe
             importkey
 
