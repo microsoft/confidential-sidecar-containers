@@ -12,7 +12,7 @@ deviceNamePath="/dev/mapper/$deviceName"
 if [ -f "$keyFilePath" ]; then
     echo "keyfile exists"
 else
-    echo "[!] keyfile does not exist."
+    echo "[!] Generating keyfile..."
     dd if=/dev/urandom of="$keyFilePath" count=1 bs=32
 fi
 
