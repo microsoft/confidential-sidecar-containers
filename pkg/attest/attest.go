@@ -87,7 +87,7 @@ func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
 //	retrieval and has been reported by the PSP in the attestation report as REPORT DATA
 //
 // Note that it uses fake attestation report if it's not running inside SNP VM
-func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) (string, error) {
+func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) (string, error) {
 	logrus.Info("Decoding UVM encoded security policy...")
 	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedSecurityPolicy)
 	if err != nil {
@@ -179,7 +179,7 @@ func (certState *CertState) Attest(maa MAA, runtimeDataBytes []byte, uvmInformat
 
 	// Retrieve the MAA token required by the request's MAA endpoint
 	logrus.Info("Retrieving MAA token...")
-	maaToken, err := maa.attest(SNPReportBytes, vcekCertChain, inittimeDataBytes, runtimeDataBytes, uvmReferenceInfoBytes)
+	maaToken, err := maa.Attest(SNPReportBytes, vcekCertChain, inittimeDataBytes, runtimeDataBytes, uvmReferenceInfoBytes)
 	if err != nil || maaToken == "" {
 		return "", errors.Wrapf(err, "Retrieving MAA token from MAA endpoint failed")
 	}

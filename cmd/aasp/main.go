@@ -258,18 +258,18 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	}
 	log.Printf("Annotation packet: %v", annotation)
 
-	mhsm := skr.AKV{
+	mhsm := common.AKV{
 		Endpoint:   annotation.KmsEndpoint,
 		APIVersion: "api-version=7.4",
 	}
 
-	maa := attest.MAA{
+	maa := common.MAA{
 		Endpoint:   annotation.AttesterEndpoint,
 		TEEType:    "SevSnpVM",
 		APIVersion: "api-version=2020-10-01",
 	}
 
-	skrKeyBlob := skr.KeyBlob{
+	skrKeyBlob := common.KeyBlob{
 		KID:       annotation.Kid,
 		Authority: maa,
 		AKV:       mhsm,

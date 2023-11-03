@@ -135,7 +135,7 @@ func Test_MAA(t *testing.T) {
 	type testcase struct {
 		name string
 
-		maa MAA
+		maa common.MAA
 
 		snpAttestationReport []byte
 		vcekCertChain        []byte
@@ -153,7 +153,7 @@ func Test_MAA(t *testing.T) {
 		{
 			name: "MAA_Success_Production",
 
-			maa: MAA{
+			maa: common.MAA{
 				Endpoint:   ValidMAAEndpoint,
 				TEEType:    ValidTEEType,
 				APIVersion: ValidMAAAPIVersion,
@@ -172,7 +172,7 @@ func Test_MAA(t *testing.T) {
 		{
 			name: "MAA_InvalidCertChain",
 
-			maa: MAA{
+			maa: common.MAA{
 				Endpoint:   ValidMAAEndpoint,
 				TEEType:    ValidTEEType,
 				APIVersion: ValidMAAAPIVersion,
@@ -191,7 +191,7 @@ func Test_MAA(t *testing.T) {
 		{
 			name: "MAA_InvalidKeyBlob",
 
-			maa: MAA{
+			maa: common.MAA{
 				Endpoint:   ValidMAAEndpoint,
 				TEEType:    ValidTEEType,
 				APIVersion: ValidMAAAPIVersion,
@@ -210,7 +210,7 @@ func Test_MAA(t *testing.T) {
 		{
 			name: "MAA_TamperedKeyBlob",
 
-			maa: MAA{
+			maa: common.MAA{
 				Endpoint:   ValidMAAEndpoint,
 				TEEType:    ValidTEEType,
 				APIVersion: ValidMAAAPIVersion,
@@ -229,7 +229,7 @@ func Test_MAA(t *testing.T) {
 		{
 			name: "MAA_InvalidPolicyBlob",
 
-			maa: MAA{
+			maa: common.MAA{
 				Endpoint:   ValidMAAEndpoint,
 				TEEType:    ValidTEEType,
 				APIVersion: ValidMAAAPIVersion,
@@ -249,7 +249,7 @@ func Test_MAA(t *testing.T) {
 		{
 			name: "MAA_TamperedPolicyBlob",
 
-			maa: MAA{
+			maa: common.MAA{
 				Endpoint:   ValidMAAEndpoint,
 				TEEType:    ValidTEEType,
 				APIVersion: ValidMAAAPIVersion,
@@ -267,7 +267,7 @@ func Test_MAA(t *testing.T) {
 		{
 			name: "MAA_CorruptedSNPReport",
 
-			maa: MAA{
+			maa: common.MAA{
 				Endpoint:   ValidMAAEndpoint,
 				TEEType:    ValidTEEType,
 				APIVersion: ValidMAAAPIVersion,
@@ -285,7 +285,7 @@ func Test_MAA(t *testing.T) {
 		{
 			name: "MAA_CorruptedSigSNPReport",
 
-			maa: MAA{
+			maa: common.MAA{
 				Endpoint:   ValidMAAEndpoint,
 				TEEType:    ValidTEEType,
 				APIVersion: ValidMAAAPIVersion,
@@ -303,7 +303,7 @@ func Test_MAA(t *testing.T) {
 		{
 			name: "MAA_NotMatchingCertChain",
 
-			maa: MAA{
+			maa: common.MAA{
 				Endpoint:   ValidMAAEndpoint,
 				TEEType:    ValidTEEType,
 				APIVersion: ValidMAAAPIVersion,
@@ -325,7 +325,7 @@ func Test_MAA(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			resp, err := tc.maa.attest(tc.snpAttestationReport, tc.vcekCertChain, tc.policyBlob, tc.keyBlob, tc.uvmReferenceInfo)
+			resp, err := tc.maa.Attest(tc.snpAttestationReport, tc.vcekCertChain, tc.policyBlob, tc.keyBlob, tc.uvmReferenceInfo)
 
 			if tc.expectErr && err == nil {
 				fmt.Printf("token: %v\n", resp)

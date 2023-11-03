@@ -1,35 +1,52 @@
 name: Create Release
 
 on:
-  workflow_dispatch:
   push:
-    tags:        
-      - '*' 
     branches:
       - main
+    tags:        
+      - '*'
     paths:
       - .github/workflows/release.yml
-      - tools/get-snp-report/bin/get-snp-report
-      - tools/get-snp-report/bin/verbose-report
+      - tools/get-snp-report/**
+      - tools/importkey/**
+      - pkg/common/akv.go
+      - pkg/common/keyblob.go
+      
+env:
+  GO_VERSION: "1.19.x"
 
 jobs:
   build:
     name: Build Binaries
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
 
-    - name: Build Executables
-      run: |
-        pushd tools/get-snp-report && make && popd
+      - name: Build Linux Executables
+        run: |
+          pushd tools/get-snp-report && make && popd
+          cp -a tools/get-snp-report/bin/* .
+          go build ./tools/importkey
+        
+      - name: Build Windows Executables
+        run: go build ./tools/importkey
+        env: 
+          GOOS: windows
+          GOARCH: amd64
   
-    - name: Upload Executables
-      uses: actions/upload-artifact@v3
-      with:
-        name: binaries
-        path: |
-          tools/get-snp-report/bin/get-snp-report
-          tools/get-snp-report/bin/verbose-report
+      - name: Upload Executables
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries
+          path: |
+            get-snp-report
+            verbose-report
+            importkey.exe
+            importkey
 
   create_release:
     needs: build
@@ -47,3 +64,5 @@ jobs:
           files: |
             get-snp-report
             verbose-report
+            importkey.exe
+            importkey

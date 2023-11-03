@@ -169,7 +169,7 @@ func rawRemoteFilesystemKey(tempDir string, rawKeyHexString string) (keyFilePath
 // 2) Perform secure key release
 //
 // 3) Prepare the key file path using the released key
-func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob skr.KeyDerivationBlob, keyBlob skr.KeyBlob) (keyFilePath string, err error) {
+func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob common.KeyDerivationBlob, keyBlob common.KeyBlob) (keyFilePath string, err error) {
 	keyFilePath = filepath.Join(tempDir, "keyfile")
 
 	// 2) release key identified by keyBlob using encoded security policy and certfetcher (contained in CertState object)

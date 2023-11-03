@@ -140,7 +140,7 @@ func PostMAAAttest(c *gin.Context) {
 		return
 	}
 
-	maa := attest.MAA{
+	maa := common.MAA{
 		Endpoint:   attestData.MAAEndpoint,
 		TEEType:    "SevSnpVM",
 		APIVersion: "api-version=2020-10-01",
@@ -187,19 +187,19 @@ func PostKeyRelease(c *gin.Context) {
 		return
 	}
 
-	akv := skr.AKV{
+	akv := common.AKV{
 		Endpoint:    newKeyReleaseData.AKVEndpoint,
 		APIVersion:  "api-version=7.4",
 		BearerToken: newKeyReleaseData.AccessToken,
 	}
 
-	maa := attest.MAA{
+	maa := common.MAA{
 		Endpoint:   newKeyReleaseData.MAAEndpoint,
 		TEEType:    "SevSnpVM",
 		APIVersion: "api-version=2020-10-01",
 	}
 
-	skrKeyBlob := skr.KeyBlob{
+	skrKeyBlob := common.KeyBlob{
 		KID:       newKeyReleaseData.KID,
 		Authority: maa,
 		AKV:       akv,

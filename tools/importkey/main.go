@@ -22,15 +22,14 @@ import (
 	"golang.org/x/crypto/hkdf"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
 type importKeyConfig struct {
-	KeyDerivation skr.KeyDerivationBlob `json:"key_derivation,omitempty"`
-	Key           skr.KeyBlob           `json:"key"`
-	Claims        [][]skr.ClaimStruct   `json:"claims"`
-	Identity      common.Identity       `json:"identity,omitempty"`
+	KeyDerivation common.KeyDerivationBlob `json:"key_derivation,omitempty"`
+	Key           common.KeyBlob           `json:"key"`
+	Claims        [][]common.ClaimStruct   `json:"claims"`
+	Identity      common.Identity          `json:"identity,omitempty"`
 }
 
 type RSAKey struct {
@@ -103,7 +102,7 @@ func main() {
 	}
 
 	// create release policy
-	var releasePolicy skr.ReleasePolicy
+	var releasePolicy common.ReleasePolicy
 
 	releasePolicy.Version = "1.0.0"
 
@@ -111,7 +110,7 @@ func main() {
 		// authority denotes authorized MAA endpoint that can present MAA tokens to the AKV
 		releasePolicy.AnyOf = append(
 			releasePolicy.AnyOf,
-			skr.OuterClaimStruct{
+			common.OuterClaimStruct{
 				Authority: "https://" + importKeyCfg.Key.Authority.Endpoint,
 				AllOf:     allOfStatement,
 			},
@@ -124,7 +123,7 @@ func main() {
 	if importKeyCfg.Key.KTY == "RSA-HSM" {
 		var jwKey jwk.RSAPrivateKey
 		if keyRSAPEMFile == "" {
-			privateRSAKey, err := rsa.GenerateKey(rand.Reader, skr.RSASize)
+			privateRSAKey, err := rsa.GenerateKey(rand.Reader, common.RSASize)
 			if err != nil {
 				fmt.Println(err)
 				return

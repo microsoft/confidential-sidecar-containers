@@ -23,31 +23,6 @@ const (
 	ResourceIdVault      = "https%3A%2F%2Fvault.azure.net"
 )
 
-// KeyDerivationBlob contains information about the key that needs to be derived
-// from a secret that has been released
-//
-// Safe use of this is to ensure that the secret has enough entropy. Examples
-// include RSA private keys.
-type KeyDerivationBlob struct {
-	Salt  string `json:"salt,omitempty"`
-	Label string `json:"label,omitempty"`
-}
-
-// KeyBlob contains information about the AKV service that holds the secret
-// to be released.
-//
-// Authority lists the valid MAA that can issue tokens that the AKV service
-// will accept. The key imported to this AKV needs to have included the
-// authority's endpoint as the authority in the SKR.
-
-type KeyBlob struct {
-	KID       string     `json:"kid"`
-	KTY       string     `json:"kty,omitempty"`
-	KeyOps    []string   `json:"key_ops,omitempty"`
-	Authority attest.MAA `json:"authority"`
-	AKV       AKV        `json:"akv"`
-}
-
 // SecureKeyRelease releases a key identified by the KID and AKV in the keyblob.
 //  1. Retrieve an MAA token using the attestation package. This token can be presented to a Azure Key
 //     Vault to release a secret.
@@ -59,7 +34,7 @@ type KeyBlob struct {
 // information about the AKV, authority and the key to be released.
 //
 // The return type is a JWK key
-func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRKeyBlob KeyBlob, uvmInformation common.UvmInformation) (_ jwk.Key, err error) {
+func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRKeyBlob common.KeyBlob, uvmInformation common.UvmInformation) (_ jwk.Key, err error) {
 	logrus.Info("Performing secure key release...")
 	logrus.Debugf("Releasing key blob: %v", SKRKeyBlob)
 
@@ -71,7 +46,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 
 	// generate rsa key pair
 	logrus.Trace("Generating RSA key pair...")
-	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, RSASize)
+	privateWrappingKey, err := rsa.GenerateKey(rand.Reader, common.RSASize)
 	if err != nil {
 		return nil, errors.Wrapf(err, "rsa key pair generation failed")
 	}

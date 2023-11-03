@@ -110,7 +110,7 @@ func Test_Keywrap(t *testing.T) {
 			if cipher, err := aes.NewCipher(tc.kek); err != nil {
 				t.Fatal("new aes cipher generation failed")
 			} else {
-				key, err := aesUnwrapPadding(cipher, tc.wrapKey)
+				key, err := common.AesUnwrapPadding(cipher, tc.wrapKey)
 
 				if tc.expectErr && err == nil {
 					t.Fatal("expected err got nil")
@@ -255,7 +255,7 @@ func Test_AKV(t *testing.T) {
 	for _, tc := range jwstokenValidationTestcases {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, token := range tc.token {
-				err := verifyJWSToken(token)
+				err := common.VerifyJWSToken(token)
 
 				if tc.expectErr && err == nil {
 					t.Fatal("expected err got nil")
@@ -310,7 +310,7 @@ func Test_AKV(t *testing.T) {
 
 	for _, tc := range certParsingTestcases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := parseX509Certificate(tc.certstring)
+			_, err := common.ParseX509Certificate(tc.certstring)
 
 			if tc.expectErr && err == nil {
 				t.Fatal("expected err got nil")
@@ -398,13 +398,13 @@ func Test_AKV(t *testing.T) {
 
 			roots := x509.NewCertPool()
 
-			if root, err := parseX509Certificate(tc.root); err != nil {
+			if root, err := common.ParseX509Certificate(tc.root); err != nil {
 				t.Fatalf("not valid root certificate: %s", err)
 			} else {
 				roots.AddCert(root)
 			}
 
-			err := verifyX509CertChain(tc.dnsName, tc.x5c, roots)
+			err := common.VerifyX509CertChain(tc.dnsName, tc.x5c, roots)
 
 			if tc.expectErr && err == nil {
 				t.Fatal("expected err got nil")
@@ -494,7 +494,7 @@ func Test_AKV(t *testing.T) {
 
 	for _, tc := range jwstokenSignatureValidationTestcases {
 		t.Run(tc.name, func(t *testing.T) {
-			payloadBytes, err := validateJWSToken(string(tc.signedPayload), tc.pubkey, jwa.RS256)
+			payloadBytes, err := common.ValidateJWSToken(string(tc.signedPayload), tc.pubkey, jwa.RS256)
 
 			if tc.expectErr && err == nil {
 				t.Fatal("expected err got nil")
@@ -591,7 +591,7 @@ func Test_AKV(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// decode Ciphertext no-padding base64 url representation and wnwrap the key
 			if ciphertext, err := base64.RawURLEncoding.DecodeString(tc.ciphertextBase64); err == nil {
-				keyBytes, err := rsaAESKeyUnwrap(tc.enc, ciphertext, tc.privkey)
+				keyBytes, err := common.RsaAESKeyUnwrap(tc.enc, ciphertext, tc.privkey)
 
 				if tc.expectErr && err == nil {
 					t.Fatal("expected err got nil")

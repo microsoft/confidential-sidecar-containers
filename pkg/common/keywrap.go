@@ -29,7 +29,7 @@
 // This package has modified AESUnwrap function from  https://github.com/NickBall/go-aes-key-wrap/
 // to unwrap per 5649 protocol
 
-package skr
+package common
 
 import (
 	"crypto/cipher"
@@ -46,7 +46,7 @@ var AIV = []byte{0xA6, 0x59, 0x59, 0xA6}
 // (and corresponding key), using the AES Key Wrap algorithm (RFC-5649). The
 // decrypted cipher text is verified using the alternative IV and will return an
 // error if validation fails.
-func aesUnwrapPadding(block cipher.Block, cipherText []byte) ([]byte, error) {
+func AesUnwrapPadding(block cipher.Block, cipherText []byte) ([]byte, error) {
 	a := make([]byte, 8)
 	c := make([]byte, len(cipherText)-8)
 	n := (len(cipherText) / 8) - 1

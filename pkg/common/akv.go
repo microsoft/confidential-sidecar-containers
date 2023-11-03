@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-package skr
+package common
 
 import (
 	"crypto/aes"
@@ -18,7 +18,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/lestrrat-go/jwx/jwa"
 	"github.com/lestrrat-go/jwx/jws"
 	"github.com/pkg/errors"
@@ -40,7 +39,7 @@ type AKV struct {
 // Helper Functions
 
 // rsaAESKeyUnwrap unwraps a key using the RSA_AES algorithm
-func rsaAESKeyUnwrap(alg string, ciphertext []byte, priv *rsa.PrivateKey) ([]byte, error) {
+func RsaAESKeyUnwrap(alg string, ciphertext []byte, priv *rsa.PrivateKey) ([]byte, error) {
 	// Ciphertext data format
 	// ======================
 	// First N bytes contain the encrypted emphimeral AES key where N equals the
@@ -82,7 +81,7 @@ func rsaAESKeyUnwrap(alg string, ciphertext []byte, priv *rsa.PrivateKey) ([]byt
 		return nil, errors.Wrapf(err, "new aes cipher generation failed")
 	}
 
-	return aesUnwrapPadding(cipher, encryptedKey)
+	return AesUnwrapPadding(cipher, encryptedKey)
 }
 
 // JWS and x509 helper functions
@@ -95,7 +94,7 @@ type jwsHeader struct {
 
 // verifyJWSTokenconfirms that the JWS token is valid comprising three fields:
 // header, payload, signature
-func verifyJWSToken(token string) error {
+func VerifyJWSToken(token string) error {
 	var tokenParts = strings.Split(token, ".")
 	if len(tokenParts) != 3 {
 		return errors.Errorf("jws token validation failed")
@@ -117,7 +116,7 @@ func (header *jwsHeader) extractJWSTokenHeader(token string) error {
 }
 
 // validateJWSToken validates a JWS token using the key and alg attributes
-func validateJWSToken(token string, key interface{}, alg jwa.SignatureAlgorithm) ([]byte, error) {
+func ValidateJWSToken(token string, key interface{}, alg jwa.SignatureAlgorithm) ([]byte, error) {
 	payloadString, err := jws.Verify([]byte(token), alg, key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "jws token verification failed")
@@ -126,7 +125,7 @@ func validateJWSToken(token string, key interface{}, alg jwa.SignatureAlgorithm)
 }
 
 // parseX509Certificate parses a x509 certificate from a string
-func parseX509Certificate(certstring string) (*x509.Certificate, error) {
+func ParseX509Certificate(certstring string) (*x509.Certificate, error) {
 	certBytes, err := base64.StdEncoding.DecodeString(certstring)
 	if err != nil {
 		return nil, errors.Wrapf(err, "decoding x509 certificate from string failed: %s", certstring)
@@ -142,17 +141,17 @@ func parseX509Certificate(certstring string) (*x509.Certificate, error) {
 
 // verifyX509CertChain verifies a cert chain against a trusted root cert pool and
 // a trusted server for the leaf's certificate
-func verifyX509CertChain(dnsName string, certChain []string, roots *x509.CertPool) error {
+func VerifyX509CertChain(dnsName string, certChain []string, roots *x509.CertPool) error {
 	// we construct an intermediate cert pool using the intermediate certs in the
 	// chain excluding the root certificate and the leaf certificate
-	cert, err := parseX509Certificate(certChain[0])
+	cert, err := ParseX509Certificate(certChain[0])
 	if err != nil {
 		return errors.Wrapf(err, "verification of leaf's certificate chain failed while parsing X5C[0]")
 	}
 
 	intermediates := x509.NewCertPool()
 	for index := len(certChain) - 2; index > 0; index-- {
-		certificate, err := parseX509Certificate(certChain[index])
+		certificate, err := ParseX509Certificate(certChain[index])
 		if err != nil {
 			return errors.Wrapf(err, "verification of leaf's certificate chain failed while parsing X5C[%d]", index)
 		}
@@ -299,12 +298,12 @@ func (akv AKV) ImportPlaintextKey(key interface{}, releasePolicy ReleasePolicy, 
 	fmt.Println(string(importKeyJSON))
 	// Create HTTP request for AKV
 	uri := fmt.Sprintf(AKVImportKeyRequestURITemplate, akv.Endpoint, keyName, akv.APIVersion)
-	httpResponse, err := common.HTTPPRequest("PUT", uri, importKeyJSON, akv.BearerToken)
+	httpResponse, err := HTTPPRequest("PUT", uri, importKeyJSON, akv.BearerToken)
 	if err != nil {
 		return nil, errors.Wrapf(err, "AKV put request failed")
 	}
 
-	httpResponseBodyBytes, err := common.HTTPResponseBody(httpResponse)
+	httpResponseBodyBytes, err := HTTPResponseBody(httpResponse)
 	if err != nil {
 		return nil, errors.Wrapf(err, "pulling AKV response body failed")
 	}
@@ -339,12 +338,12 @@ func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey 
 
 	uri := fmt.Sprintf(AKVReleaseKeyRequestURITemplate, akv.Endpoint, kid, akv.APIVersion)
 
-	httpResponse, err := common.HTTPPRequest("POST", uri, releaseKeyJSONData, akv.BearerToken)
+	httpResponse, err := HTTPPRequest("POST", uri, releaseKeyJSONData, akv.BearerToken)
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "AKV post request failed")
 	}
 
-	httpResponseBodyBytes, err := common.HTTPResponseBody(httpResponse)
+	httpResponseBodyBytes, err := HTTPResponseBody(httpResponse)
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "pulling AKV response body failed")
 	}
@@ -369,7 +368,7 @@ func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey 
 // (7) Unwrap the wrapped key from the payload
 func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (key []byte, kty string, err error) {
 	// (1) Verify that it is a well formed JWS object
-	if err := verifyJWSToken(AKVJWS); err != nil {
+	if err := VerifyJWSToken(AKVJWS); err != nil {
 		return nil, "", err
 	}
 
@@ -379,7 +378,7 @@ func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (ke
 		return nil, "", err
 	}
 
-	leafCertificate, err := parseX509Certificate(header.X5C[0])
+	leafCertificate, err := ParseX509Certificate(header.X5C[0])
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "parsing certificate X5C[0] failed")
 	}
@@ -390,7 +389,7 @@ func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (ke
 	}
 
 	// (3) Signature validation of the JWS token
-	payloadBytes, err := validateJWSToken(AKVJWS, leafKey, jwa.SignatureAlgorithm(header.Alg))
+	payloadBytes, err := ValidateJWSToken(AKVJWS, leafKey, jwa.SignatureAlgorithm(header.Alg))
 	if err != nil {
 		return nil, "", err
 	}
@@ -404,7 +403,7 @@ func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (ke
 	if runtime.GOOS == "windows" {
 		roots = x509.NewCertPool()
 
-		rootCertificate, err := parseX509Certificate(header.X5C[len(header.X5C)-1])
+		rootCertificate, err := ParseX509Certificate(header.X5C[len(header.X5C)-1])
 		if err != nil {
 			return nil, "", errors.Wrapf(err, "failed to parse root certificate X5C[%d]", len(header.X5C)-1)
 		}
@@ -417,7 +416,7 @@ func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (ke
 		}
 	}
 
-	if err := verifyX509CertChain(akv.Endpoint, header.X5C, roots); err != nil {
+	if err := VerifyX509CertChain(akv.Endpoint, header.X5C, roots); err != nil {
 		return nil, "", err
 	}
 
@@ -444,7 +443,7 @@ func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (ke
 		return nil, "", errors.Wrapf(err, "decoding keyHSM's ciphertext failed")
 	}
 
-	key, err = rsaAESKeyUnwrap(payloadJSON.Request.Enc, ciphertext, privateWrappingKey)
+	key, err = RsaAESKeyUnwrap(payloadJSON.Request.Enc, ciphertext, privateWrappingKey)
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "aes key unwrap failed")
 	}
