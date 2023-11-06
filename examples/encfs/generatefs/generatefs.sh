@@ -18,6 +18,8 @@ fi
 
 echo "Key in hex string format"
 
+python hexstring.py $keyFilePath
+
 truncate -s 32 "$keyFilePath"
 
 echo "[!] Creating encrypted image..."
