@@ -9,8 +9,7 @@ on:
       - .github/workflows/push_skr_image.yml
       - cmd/skr/**
       - docker/skr/**
-      - tools/get-snp-report/bin/get-snp-report
-      - tools/get-snp-report/bin/get-fake-snp-report
+      - tools/get-snp-report/**
       - vendor/**
       - internal/**
 
@@ -21,8 +20,7 @@ on:
       - .github/workflows/push_skr_image.yml
       - cmd/skr/**
       - docker/skr/**
-      - tools/get-snp-report/bin/get-snp-report
-      - tools/get-snp-report/bin/get-fake-snp-report
+      - tools/get-snp-report/**
       - vendor/**
       - internal/**
 
