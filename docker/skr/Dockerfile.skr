@@ -1,6 +1,6 @@
 FROM alpine:3.18.4
 
-RUN apk update && apk add --no-cache curl
+RUN apk update && apk upgrade --no-cache && apk add --no-cache curl
 
 COPY ./bin/skr ./bin/get-snp-report /bin/
 COPY skr.sh tests/*_client.sh tests/skr_test.sh /
