@@ -1,6 +1,6 @@
 FROM alpine:3.18.4
 
-RUN apk update && apk --no-cache add wget curl jq
+RUN apk update && apk upgrade --no-cache && apk --no-cache add wget curl jq
 
 COPY ./examples/aasp/unwrap.sh /bin/
 COPY ./examples/aasp/wrapped /
