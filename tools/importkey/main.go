@@ -62,7 +62,7 @@ func main() {
 
 	// flags declaration using flag package
 	flag.StringVar(&configFile, "c", "", "Specify config file to process")
-	flag.StringVar(&keyHexFile, "kh", "", "Specify path to oct key file [optional]")
+	flag.StringVar(&keyHexFile, "kh", "", "Specify path to oct key file or the contents of the oct key [optional]")
 	flag.StringVar(&keyRSAPEMFile, "kp", "", "Specify path to RSA key PEM file [optional]")
 	flag.BoolVar(&runInsideAzure, "a", false, "Run within Azure VM [optional]")
 	flag.BoolVar(&outputOctetKeyfile, "out", false, "Output octet key binary file")
@@ -241,6 +241,13 @@ func main() {
 		if keyHexFile == "" {
 			octKey = make([]byte, 32)
 			rand.Read(octKey)
+		} else if _, err = os.Stat(keyHexFile); err != nil {
+			// read string keyHexFile as contents of the key
+			octKey, err = hex.DecodeString(keyHexFile)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 		} else {
 			// read string from file keyHexFile as hexstring
 			octKey, err = os.ReadFile(keyHexFile)

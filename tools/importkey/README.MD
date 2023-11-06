@@ -38,7 +38,7 @@ When importing a key to the key vault, a release policy is coupled with the key.
         {
             "claim": "x-ms-sevsnpvm-is-debuggable",
             "equals": "false"
-        }            
+        }
     ]
 }
 ```
@@ -53,7 +53,7 @@ The tool currently supports two types of keys specified in the `kty` attribute o
 
 - -kh
 
-    Path for octet key (optional)
+    Path for octet key or contents of octet key (optional)
 
 - -kp
 
