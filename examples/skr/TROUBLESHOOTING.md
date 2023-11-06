@@ -8,7 +8,7 @@ When running the importkey tool, you may see the following error:
 pulling AKV response body failed: http response status equal to 401 Unauthorized
 ```
 
-To resolve this issue, generate a new bearer token and copy it into the importkeyconfig.json.
+Generate a new bearer token and copy it into the importkeyconfig.json.
 
 ```
 az account get-access-token --resource https://managedhsm.azure.net
@@ -22,7 +22,7 @@ When checking the log output of the SKR container, you may see the following err
 err: pulling AKV response body failed: http response status equal to 403 Forbidden
 ```
 
-To resolve this issue, ensure that:
+Ensure that:
 
 - the security policy is up-to-date by following these steps:
     1. re-run the policy generation tool whenever you update the ARM template
@@ -38,9 +38,9 @@ When checking the log output of the SKR container, you may see the following err
 err: pulling AKV response body failed: http response status equal to 404 Not Found
 ```
 
-To resolve this issue, ensure that:
+Ensure that:
 
-- the key name ("kid" field) in the importkeyconfig.json file matches the key name ("SkrClientKID") field in the ARM template
+- the "kid" field in the importkeyconfig.json matches "SkrClientKID" field in the ARM template
 
 ## HTTP GET Failed Error
 
@@ -50,6 +50,6 @@ When checking the log output of the SKR container, you may see the following err
 err: AKV post request failed: HTTP GET failed: Post "https://<mhsm-name>.managedhsm.azure.net/keys/<key-name>/release?api-version=7.3-preview": dial tcp: lookup <mhsm-name>.managedhsm.azure.net on 168.63.129.16:53: no such host
 ```
 
-To resolve this issue, ensure that:
+Ensure that:
 
 - the name of the mHSM is correct in the ARM template and matches the name of the mHSM in the importkeyconfig.json file
