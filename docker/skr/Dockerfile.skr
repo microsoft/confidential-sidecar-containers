@@ -4,7 +4,7 @@ FROM golang:${GOLANG_VERSION} AS build
 ENV PROJECT_DIR=/go/src/github.com/microsoft
 WORKDIR ${PROJECT_DIR}/confidential-sidecar-containers
 COPY . ./
-RUN cd tools/get-snp-report && make && mv bin/get-snp-report / && mv bin/get-fake-snp-report / && mv bin/verbose-report /
+RUN cd tools/get-snp-report && make && mv bin/get-snp-report / && mv bin/get-fake-snp-report /
 
 RUN cd cmd/skr && CGO_ENABLED=0 GOOS=linux go build -o /skr -ldflags="-s -w" main.go
 
@@ -12,18 +12,13 @@ FROM alpine:3.18.4
 
 RUN apk update && apk add --no-cache curl
 
-COPY --from=build /skr /get-snp-report /get-fake-snp-report /verbose-report ./bin/
+COPY --from=build /skr /get-snp-report /get-fake-snp-report ./bin/
 
 ENV BUILD_DIR=/go/src/github.com/microsoft/confidential-sidecar-containers
 COPY --from=build ${BUILD_DIR}/docker/skr/skr.sh /
 COPY --from=build ${BUILD_DIR}/docker/skr/tests/*_client.sh ${BUILD_DIR}/docker/skr/tests/skr_test.sh /tests/skr/
-ENV PROJECT_DIR=/go/src/github.com/microsoft
-WORKDIR ${PROJECT_DIR}/confidential-sidecar-containers/docker/skr
 
-# COPY skr.sh /
-# RUN mkdir -p /tests/skr
-# COPY tests/*_client.sh tests/skr_test.sh /tests/skr/
 RUN chmod +x /*.sh /tests/skr/*.sh
 
 # set the start command
-CMD [ "/bin/skr" ]
+CMD [ "/skr.sh" ]

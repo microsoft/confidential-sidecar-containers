@@ -19,7 +19,7 @@ popd
 
 echo building get-snp-report
 pushd tools/get-snp-report
-make 
+make
 popd
 cp tools/get-snp-report/bin/get-snp-report ./bin
 cp tools/get-snp-report/bin/get-fake-snp-report ./bin
@@ -29,5 +29,6 @@ bash ./build.sh
 popd
 
 pushd docker/skr
-bash ./build.sh
+# the multi-stage dockerfile builds the snp-report binaries so we don't need an individual build script
+docker build -t skr -f Dockerfile.skr ../..
 popd
