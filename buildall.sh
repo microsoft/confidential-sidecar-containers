@@ -29,6 +29,5 @@ bash ./build.sh
 popd
 
 pushd docker/skr
-# the multi-stage dockerfile builds the snp-report binaries so we don't need an individual build script
-docker build -t skr -f Dockerfile.skr ../..
+bash ./build.sh
 popd
