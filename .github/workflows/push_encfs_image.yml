@@ -10,8 +10,7 @@ on:
       - cmd/azmount/**
       - cmd/remotefs/**
       - docker/encfs/**
-      - tools/get-snp-report/bin/get-snp-report
-      - tools/get-snp-report/bin/get-fake-snp-report
+      - tools/get-snp-report/**
       - vendor/**
       - internal/**
   push:
@@ -22,8 +21,7 @@ on:
       - cmd/azmount/**
       - cmd/remotefs/**
       - docker/encfs/**
-      - tools/get-snp-report/bin/get-snp-report
-      - tools/get-snp-report/bin/get-fake-snp-report
+      - tools/get-snp-report/**
       - vendor/**
       - internal/**
 

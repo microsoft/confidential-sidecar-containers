@@ -10,7 +10,7 @@ RUN cd cmd/skr && CGO_ENABLED=0 GOOS=linux go build -o /skr -ldflags="-s -w" mai
 
 FROM alpine:3.18.4
 
-RUN apk update && apk add --no-cache curl
+RUN apk update && apk upgrade --no-cache && apk add --no-cache curl
 
 COPY --from=build /skr /get-snp-report /get-fake-snp-report ./bin/
 
