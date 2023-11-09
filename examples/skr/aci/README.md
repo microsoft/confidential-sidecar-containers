@@ -127,7 +127,7 @@ go run /tools/importkey/main.go -c importkeyconfig.json -kh /path/to/encryptionK
 
 Upon successful import completion, you should see something similar to the following:
 
-```
+```json
 [34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
 https://accmhsm.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
 {"version":"1.0.0","anyOf":[{"authority":"https://sharedeus2.eus2.test.attest.azure.net","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
@@ -144,7 +144,7 @@ az keyvault key list --hsm-name <MHSM NAME> -o table
 
 Go to Azure portal and click on `deploy a custom template`, then click `Build your own template in the editor`. By this time, the `aci-arm-template.json` file should be completely filled out. Copy and paste the ARM template into the field start a deployment. Once deployment is done, to verify the key has been successful released, shell into the `skr-sidecar-container` container and see the log.txt and you should see the following log message:
 
-```
+```text
 level=debug msg=Releasing key blob: {doc-sample-key-release}
 ```
 

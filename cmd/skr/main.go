@@ -14,10 +14,10 @@ import (
 	"strconv"
 
 	"github.com/Microsoft/confidential-sidecar-containers/internal/httpginendpoints"
-	server "github.com/Microsoft/confidential-sidecar-containers/pkg/aasp/grpcserver"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/aasp/keyprovider"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
+	server "github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/grpcserver"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/keyprovider"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
@@ -45,7 +45,6 @@ func usage() {
 
 // TODO:
 // - vcek source is different
-// - aks has grpc server
 // - aci gets security policy and hashes it
 
 func main() {
@@ -54,7 +53,7 @@ func main() {
 	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
 	httpPort := flag.String("port", "8080", "Port on which to listen")
 	allowTestingMismatchedTCB := flag.Bool("allowTestingMismatchedTCB", false, "For TESTING purposes only. Corrupts the TCB value")
-	// NOTE: these 4 input arguments are only used in AKS, not ACI
+	// NOTE: these 4 input arguments are typically only used in AKS, not ACI
 	grpcPort := flag.String("keyprovider_sock", "127.0.0.1:50000", "Port on which the grpc key provider to listen")
 	infile := flag.String("infile", "", "The file with its content to be wrapped")
 	key_path := flag.String("keypath", "", "The path to the wrapping key")
@@ -66,7 +65,7 @@ func main() {
 	// WARNING!!!
 	// If the security policy does not control the arguments to this process then
 	// this hostname could be set to 0.0.0.0 (an external interface) rather than 127.0.0.1 (visible only
-	// witin the container group/pod)and so expose the attestation and key release outside of the secure uvm
+	// within the container group/pod) and so expose the attestation and key release outside of the secure uvm
 
 	// Leaving this line here, as a comment, to aid debugging.
 	// hostname := flag.String("hostname", "localhost", "address on which to listen (dangerous)")
@@ -103,6 +102,35 @@ func main() {
 	logrus.Debugf("   Hostname:      %s", *hostname)
 	logrus.Debugf("   azure info:    %s", *azureInfoBase64string)
 	logrus.Debugf("   corrupt tcbm:  %t", *allowTestingMismatchedTCB)
+
+	if *infile != "" {
+		bytes, err := os.ReadFile(*infile)
+		if err != nil {
+			log.Fatalf("Can't read input file %v", *infile)
+		}
+		if *key_path == "" {
+			log.Fatalf("The key path is not specified for wrapping")
+		}
+		if *outfile == "" {
+			log.Fatalf("The output file is not specified")
+		}
+
+		if _, err := os.Stat(*key_path + "-info.json"); err != nil {
+			log.Fatalf("The wrapping key info is not found")
+		}
+
+		annotationBytes, e := server.DirectWrap(bytes, *key_path)
+		if e != nil {
+			log.Fatalf("%v", e)
+		}
+
+		outstr := base64.StdEncoding.EncodeToString(annotationBytes)
+		if err := os.WriteFile(*outfile, []byte(outstr), 0644); err != nil {
+			log.Fatalf("Failed to save the wrapped data to %v", *outfile)
+		}
+		log.Printf("Success! The wrapped data is saved to %v", *outfile)
+		return
+	}
 
 	info := AzureInformation{}
 
@@ -161,35 +189,6 @@ func main() {
 
 	logrus.Info("Starting HTTP server...")
 	go setupServer(&certState, &info.Identity, &EncodedUvmInformation, url)
-
-	if *infile != "" {
-		bytes, err := os.ReadFile(*infile)
-		if err != nil {
-			log.Fatalf("Can't read input file %v", *infile)
-		}
-		if *key_path == "" {
-			log.Fatalf("The key path is not specified for wrapping")
-		}
-		if *outfile == "" {
-			log.Fatalf("The output file is not specified")
-		}
-
-		if _, err := os.Stat(*key_path + "-info.json"); err != nil {
-			log.Fatalf("The wrapping key info is not found")
-		}
-
-		annotationBytes, e := server.DirectWrap(bytes, *key_path)
-		if e != nil {
-			log.Fatalf("%v", e)
-		}
-
-		outstr := base64.StdEncoding.EncodeToString(annotationBytes)
-		if err := os.WriteFile(*outfile, []byte(outstr), 0644); err != nil {
-			log.Fatalf("Failed to save the wrapped data to %v", *outfile)
-		}
-		log.Printf("Success! The wrapped data is saved to %v", *outfile)
-		return
-	}
 
 	lis, err := net.Listen("tcp", *grpcPort)
 	if err != nil {

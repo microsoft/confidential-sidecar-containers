@@ -23,10 +23,10 @@ spec:
   - image: $SAMPLE_UNWRAP_IMAGE
     imagePullPolicy: Always
     name: sample-unwrap
-    command: 
+    command:
       - /bin/sh
       - "-c"
-    args: 
+    args:
       - until netstat -anpe | grep 50000; do sleep 3; done; /bin/unwrap.sh /wrapped /plaintext && cat /plaintext && sleep infinity
   imagePullSecrets:
     - name: $ACR_SECRET
