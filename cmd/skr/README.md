@@ -1,9 +1,10 @@
-The ```skr``` tool instantiates a web server ( http://localhost:<port>) which exposes a REST API so that other containers can retrieve raw attestation via the `attest/raw` POST method and MAA token via the `attest/maa` POST methods as well as release secrets from Azure Key Vault service via the `key/release` POST method. 
+The ```skr``` tool instantiates a web server ( <http://localhost>:<port>) which exposes a REST API so that other containers can retrieve raw attestation via the `attest/raw` POST method and MAA token via the `attest/maa` POST methods as well as release secrets from Azure Key Vault service via the `key/release` POST method.
 
 The tool can be executed using the script [skr.sh](https://github.com/Microsoft/confidential-sidecar-containers/blob/master/skr.sh). If the port number is not specified, the port will default to 8080.
 
 API
 ---
+
 The `status` GET method returns the status of the server. The response carries a `StatusOK` header and a payload of the following format:
 
 ```json
@@ -19,7 +20,7 @@ The `status` GET method returns the status of the server. The response carries a
 The `attest/raw` POST method expects a JSON of the following format:
 
 ```json
-{	    
+{     
     "runtime_data": "<Base64-encoded blob; the hash digest of the blob will be presented as report data in the raw attestation report>"    
 }
 ```
@@ -43,7 +44,7 @@ Upon error, the `attest/raw` POST method response carries a `BadRequest` or `Sta
 The `attest/maa` POST method expects a JSON of the following format:
 
 ```json
-{	
+{ 
     "maa_endpoint": "<maa endpoint>",
     "runtime_data": "<Base64-encoded blob whose hash digest will be presented as runtime data in maa token>"    
 }
@@ -68,7 +69,7 @@ Upon error, the `attest/maa` POST method response carries a `BadRequest` or `Sta
 The `key/release` POST method expects a JSON of the following format:
 
 ```json
-{	
+{ 
     "maa_endpoint": "<maa endpoint>",
     "akv_endpoint": "<akv endpoint>",
     "kid": "<key identifier>",
@@ -92,3 +93,43 @@ Upon error, the `key/release` POST method response carries a `StatusForbidden` h
 }
 ```
 
+Additionally, the ```skr``` tool instantiates a GRPC server that can be accessed by running grpcurl commands. The GRPC server exposes the following methods:
+
+API
+---
+
+The `<ip:port> list` command lists the services exposed on a specific IP address and port.
+
+```bash
+grpcurl -v -plaintext 127.0.0.1:50000 list
+```
+
+The `<ip:port> list <service-name>` command lists the exposed APIs under a specific service on a specfic IP address and port.
+
+```bash
+grpcurl -v -plaintext 127.0.0.1:50000  list keyprovider.KeyProviderService
+```
+
+The SayHello method of the KeyProviderService is used to test whether APIs under KeyProviderService can be reached.
+
+```bash
+grpcurl -v -plaintext -d '{"name":"This is a GRPC test!"}' 127.0.0.1:50000  keyprovider.KeyProviderService.SayHello
+```
+
+The GetReport method of the KeyProviderService is used to get the SNP report in hex string format. Users can optionally provide `reportDataHexString` and the input will show under report data section of the SNP report.
+
+```bash
+grpcurl -v -plaintext -d '{"reportDataHexString":""}' 127.0.0.1:50000  keyprovider.KeyProviderService.GetReport
+```
+
+The UnWrapKey method of the KeyProviderService is used to test whether the key can be released.
+
+```bash
+AAA=`printf skr | base64 -w0`
+
+ANNO=`cat wrapped`
+
+REQ=`echo "{\"op\":\"keyunwrap\",\"keywrapparams\":{},\"keyunwrapparams\":{\"dc\":{\"Parameters\":{\"attestation-agent\":[\"${AAA}\"]}},\"annotation\":\"${ANNO}\"}}" | base64 -w0`
+
+grpcurl -plaintext -d "{\"KeyProviderKeyWrapProtocolInput\":\"${REQ}\"}" 127.0.0.1:50000 keyprovider.KeyProviderService.UnWrapKey
+```

@@ -1,4 +1,4 @@
-# Attestation and Secure Key Release Sidecar Example
+# Attestation and Secure Key Release Sidecar ACI Example
 
 ## Table of Contents
 
