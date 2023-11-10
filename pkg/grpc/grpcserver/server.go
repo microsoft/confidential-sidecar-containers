@@ -50,7 +50,7 @@ var (
 	ServerCertState       attest.CertState
 	azure_info            AzureInformation
 	EncodedUvmInformation common.UvmInformation
-	AaspSideCarArgs       = "AaspSideCarArgs"
+	SkrSideCarArgs        = "SkrSideCarArgs"
 	CorruptedTCB          = "ffffffff"
 )
 
