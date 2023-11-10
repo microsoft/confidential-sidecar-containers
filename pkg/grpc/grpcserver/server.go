@@ -30,29 +30,23 @@ import (
 
 type Server struct {
 	keyprovider.UnimplementedKeyProviderServiceServer
+	ServerCertState       *attest.CertState
+	EncodedUvmInformation *common.UvmInformation
+	Azure_info            *AzureInformation
 }
 
 type AzureInformation struct {
 	// Endpoint of the certificate cache service from which
 	// the certificate chain endorsing hardware attestations
-	// can be retrieved. This is optinal only when the container
+	// can be retrieved. This is optional only when the container
 	// will expose attest/maa and key/release APIs.
 	CertFetcher attest.CertFetcher `json:"certcache,omitempty"`
-
 	// Identifier of the managed identity to be used
-	// for authenticating with AKV MHSM. This is optional and
+	// for authenticating with AKV. This is optional and
 	// useful only when the container group has been assigned
 	// more than one managed identity.
 	Identity common.Identity `json:"identity,omitempty"`
 }
-
-var (
-	ServerCertState       attest.CertState
-	azure_info            AzureInformation
-	EncodedUvmInformation common.UvmInformation
-	SkrSideCarArgs        = "SkrSideCarArgs"
-	CorruptedTCB          = "ffffffff"
-)
 
 const (
 	AASP = "aasp"
@@ -270,7 +264,7 @@ func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	// MHSM has limit on the request size. We do not pass the EncodedSecurityPolicy here so
 	// it is not presented as fine-grained init-time claims in the MAA token, which would
 	// introduce larger MAA tokens that MHSM would accept
-	keyBytes, err := skr.SecureKeyRelease(azure_info.Identity, ServerCertState, skrKeyBlob, EncodedUvmInformation)
+	keyBytes, err := skr.SecureKeyRelease((*(s.Azure_info)).Identity, *(s.ServerCertState), skrKeyBlob, *(s.EncodedUvmInformation))
 	if err != nil {
 		return nil, errors.Wrapf(err, "SKR failed")
 	}

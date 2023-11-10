@@ -25,19 +25,6 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-type AzureInformation struct {
-	// Endpoint of the certificate cache service from which
-	// the certificate chain endorsing hardware attestations
-	// can be retrieved. This is optional only when the container
-	// will expose attest/maa and key/release APIs.
-	CertFetcher attest.CertFetcher `json:"certcache,omitempty"`
-	// Identifier of the managed identity to be used
-	// for authenticating with AKV. This is optional and
-	// useful only when the container group has been assigned
-	// more than one managed identity.
-	Identity common.Identity `json:"identity,omitempty"`
-}
-
 func usage() {
 	fmt.Printf("Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
@@ -132,7 +119,7 @@ func main() {
 		return
 	}
 
-	info := AzureInformation{}
+	info := server.AzureInformation{}
 
 	// Decode base64 attestation information only if it s not empty
 	logrus.Info("Decoding base64 attestation information if not empty...")
@@ -197,7 +184,8 @@ func main() {
 	log.Printf("Listening on port %v", *grpcPort)
 	//start grpc server
 	s := grpc.NewServer()
-	keyprovider.RegisterKeyProviderServiceServer(s, &server.Server{})
+	server := server.Server{ServerCertState: &certState, EncodedUvmInformation: &EncodedUvmInformation, Azure_info: &info}
+	keyprovider.RegisterKeyProviderServiceServer(s, &server)
 	reflection.Register(s)
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
