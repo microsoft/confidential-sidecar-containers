@@ -18,6 +18,7 @@ The ARM template file includes two entries: (i) encrypted filesystem sidecar con
 ### Step by Step Example 
 
 This example is is made to be run on Linux/WSL. Also make sure the line endings in the scripts used in this example are set to LF instead of CRLF. 
+However, the import key tool is available in both Linux and Windows. 
 The MAA endpoint is the value of env var [Authority Endpoint](encfs-sidecar-args.json#L12). 
 See "obtain an attestation endpoint" section on how to get this endpoint. 
 The managed HSM instance endpoint corresponds to [AKV Endpoint](encfs-sidecar-args.json#L15). 
@@ -123,13 +124,17 @@ Copy this output and replace the [hash-digest-of-the-security-policy](importkeyc
 
 Once the key vault resource is ready and the `importkeyconfig.json` file is completely filled out, the user can import `RSA-HSM` or `oct-HSM` keys into it using the `importkey` tool placed under `<parent_repo_dir>/tools/importkey` as discussed in the tools' [readme file](https://github.com/microsoft/confidential-sidecar-containers/tree/main/tools/importkey).
 
-Starting from release 2.6, we provide importkey binaries so that users do not have to rely on certain Golang modules. Go to the [release page](https://github.com/microsoft/confidential-sidecar-containers/releases) and download the appropriate binary for your environment. 
+Starting with release 2.6, we provide the importkey tool executables to remove the Golang dependency from the user. Go to the [release page](https://github.com/microsoft/confidential-sidecar-containers/releases) and download the appropriate binary for your environment. 
 To import the key into AKV/mHSM, use the following command:
 
 ```bash 
+# using wsl 
 ./importkey -c importkeyconfig.json -out=true
+
+# using windows 
+importkey.exe -c importkeyconfig.json -out=true
 ```
-Users have the option of adding salt to their key if they configured `RSA-HSM` key type on `importkeyconfig.json`. Users can come up with their own salt but it must be a hex encoded string. If choose to use salt, the salt must appear in both `importkeyconfig.json` and`encfs-sidecar-args.json`.   
+Users have the option of adding salt to their key if they configured `RSA-HSM` key type on `importkeyconfig.json`. Users can come up with their own salt but it must be a hex-encoded string. If users choose to use salt, the salt must appear in both `importkeyconfig.json` and`encfs-sidecar-args.json`.   
 Upon successful import completion, you should see something similar to the following: 
 
 ```

@@ -211,6 +211,7 @@ func main() {
 			}
 
 			if err != nil {
+				fmt.Println("Please make sure the provided salt is hex-encoded string.")
 				fmt.Println(err)
 				return
 			}
