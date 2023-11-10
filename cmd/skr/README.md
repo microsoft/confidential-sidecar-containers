@@ -25,6 +25,8 @@ The `attest/raw` POST method expects a JSON of the following format:
 }
 ```
 
+`runtime_data` is to gurantee the freshness of the attestation report. We put the `runtime_data` in the attestation report request and then we can check the whole signed report contains the same data we just put in. This field is for preventing replay attack. 
+
 Upon success, the `attest/raw` POST method reponse carries a `StatusOK` header and a payload of the following format:
 
 ```json
