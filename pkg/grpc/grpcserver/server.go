@@ -50,12 +50,12 @@ var (
 	ServerCertState       attest.CertState
 	azure_info            AzureInformation
 	EncodedUvmInformation common.UvmInformation
-	SkrSideCarArgs        = "SkrSideCarArgs"
+	AaspSideCarArgs       = "AaspSideCarArgs"
 	CorruptedTCB          = "ffffffff"
 )
 
 const (
-	SKR = "skr"
+	AASP = "aasp"
 )
 
 type DecryptConfig struct {
@@ -192,7 +192,7 @@ func (s *Server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKe
 
 	aa := tokens[0]
 	kid := tokens[1]
-	if !strings.EqualFold(aa, SKR) {
+	if !strings.EqualFold(aa, AASP) {
 		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", aa)
 	}
 	log.Printf("Attestation agent: %v, kid: %v", aa, kid)
@@ -232,7 +232,7 @@ func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	aa, _ := base64.StdEncoding.DecodeString(dc.Parameters["attestation-agent"][0])
 	log.Printf("Attestation agent name: %v", string(aa))
 
-	if !strings.EqualFold(string(aa), SKR) {
+	if !strings.EqualFold(string(aa), AASP) {
 		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", string(aa))
 	}
 
