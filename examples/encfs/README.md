@@ -133,7 +133,7 @@ To import the key into AKV/mHSM, use the following command:
 # using go run command 
 go run /tools/importkey/main.go -c importkeyconfig.json -out=true 
 ```
-Users have the option of adding salts to their key if they configured `RSA-HSM` key type on `importkeyconfig.json`. Users can come up with their own salt but it must a hex encoded string. If choose to use salt, the salt must appear in both `importkeyconfig.json` and`encfs-sidecar-args.json`.   
+Users have the option of adding salts to their key if they configured `RSA-HSM` key type on `importkeyconfig.json`. Users can come up with their own salt but it must be a hex encoded string. If choose to use salt, the salt must appear in both `importkeyconfig.json` and`encfs-sidecar-args.json`.   
 Upon successful import completion, you should see something similar to the following: 
 
 ```
