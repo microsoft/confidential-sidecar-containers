@@ -8,9 +8,9 @@ RUN cd tools/get-snp-report && make && mv bin/get-snp-report / && mv bin/get-fak
 
 RUN cd cmd/skr && CGO_ENABLED=0 GOOS=linux go build -o /skr -ldflags="-s -w" main.go
 
-FROM alpine:3.18.4
+FROM mcr.microsoft.com/azureml/minimal-ubuntu20.04-py38-cpu-inference:20231102.v2
 
-RUN apk update && apk upgrade --no-cache && apk add --no-cache curl
+RUN apt update && apt upgrade -y && apt install -y curl
 
 COPY --from=build /skr /get-snp-report /get-fake-snp-report ./bin/
 

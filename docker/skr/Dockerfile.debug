@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM mcr.microsoft.com/azureml/minimal-ubuntu20.04-py38-cpu-inference:20231102.v2
 RUN apt update
 RUN apt install --fix-missing -y net-tools wget curl bc jq bash vim ssh
 
