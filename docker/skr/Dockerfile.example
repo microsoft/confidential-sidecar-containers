@@ -1,9 +1,10 @@
 FROM mcr.microsoft.com/azureml/minimal-ubuntu20.04-py38-cpu-inference:20231102.v2
 
+USER root
 RUN apt update && apt upgrade -y && apt install -y wget curl jq
 
-COPY ./examples/skr/unwrap.sh /bin/
-COPY ./examples/skr/wrapped /
+COPY ./examples/skr/aks/unwrap.sh /bin/
+COPY ./examples/skr/aks/wrapped /
 RUN wget -q https://github.com/fullstorydev/grpcurl/releases/download/v1.8.7/grpcurl_1.8.7_linux_x86_64.tar.gz &&\
         tar xfz grpcurl_1.8.7_linux_x86_64.tar.gz &&\
         chmod +x grpcurl &&\
