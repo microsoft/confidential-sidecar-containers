@@ -8,10 +8,9 @@ RUN cd tools/get-snp-report && make && mv bin/get-snp-report / && mv bin/get-fak
 
 RUN cd cmd/skr && CGO_ENABLED=0 GOOS=linux go build -o /skr -ldflags="-s -w" main.go
 
-FROM mcr.microsoft.com/azureml/minimal-ubuntu20.04-py38-cpu-inference:20231102.v2
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
 
-USER root
-RUN apt update && apt upgrade -y && apt install -y curl
+RUN tdnf update -qy tdnf && tdnf -y upgrade && tdnf -y install curl
 
 COPY --from=build /skr /get-snp-report /get-fake-snp-report ./bin/
 
