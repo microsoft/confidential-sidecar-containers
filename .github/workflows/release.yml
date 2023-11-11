@@ -37,6 +37,7 @@ jobs:
         run: |
           go build ./tools/importkey
           go build ./cmd/skr
+        env:
           GOOS: windows
           GOARCH: amd64
   
