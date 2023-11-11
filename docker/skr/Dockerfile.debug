@@ -1,5 +1,7 @@
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
-RUN tdnf update -qy tdnf && tdnf -y upgrade && tdnf -y install net-tools wget curl bc jq bash vim ssh
+FROM mcr.microsoft.com/azureml/minimal-ubuntu20.04-py38-cpu-inference:20231102.v2
+USER root
+RUN apt update
+RUN apt install --fix-missing -y net-tools wget curl bc jq bash vim ssh
 
 # clearly this is extremely insecure but is only for debugging
 # do not copy this.
