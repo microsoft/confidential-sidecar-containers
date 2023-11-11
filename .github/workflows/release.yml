@@ -36,7 +36,6 @@ jobs:
       - name: Build Windows Executables
         run: |
           go build ./tools/importkey
-          go build ./cmd/skr
         env:
           GOOS: windows
           GOARCH: amd64
@@ -50,7 +49,6 @@ jobs:
             verbose-report
             importkey.exe
             importkey
-            skr.exe
             skr
 
   create_release:
@@ -71,5 +69,4 @@ jobs:
             verbose-report
             importkey.exe
             importkey
-            skr.exe
             skr
