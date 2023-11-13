@@ -8,9 +8,9 @@ RUN cd tools/get-snp-report && make && mv bin/get-snp-report / && mv bin/get-fak
 
 RUN cd cmd/skr && CGO_ENABLED=0 GOOS=linux go build -o /skr -ldflags="-s -w" main.go
 
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
+FROM alpine:3.18.4
 
-RUN tdnf update -qy tdnf && tdnf -y upgrade && tdnf -y install curl
+RUN apk update && apk upgrade --no-cache && apk add --no-cache curl
 
 COPY --from=build /skr /get-snp-report /get-fake-snp-report ./bin/
 

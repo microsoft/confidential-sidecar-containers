@@ -1,6 +1,6 @@
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
+FROM alpine:3.18.4
 
-RUN tdnf update -qy tdnf && tdnf -y upgrade && tdnf -y install cryptsetup fuse3 curl
+RUN apk update && apk upgrade --no-cache && apk add --no-cache cryptsetup fuse3 curl
 
 COPY ./bin/azmount ./bin/remotefs ./bin/get-snp-report /bin/
 COPY encfs.sh /
