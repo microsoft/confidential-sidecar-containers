@@ -2,8 +2,8 @@ FROM alpine:3.18.4
 
 RUN apk update && apk upgrade --no-cache && apk --no-cache add wget curl jq
 
-COPY ./examples/aasp/unwrap.sh /bin/
-COPY ./examples/aasp/wrapped /
+COPY ./examples/skr/aks/unwrap.sh /bin/
+COPY ./examples/skr/aks/wrapped /
 RUN wget -q https://github.com/fullstorydev/grpcurl/releases/download/v1.8.7/grpcurl_1.8.7_linux_x86_64.tar.gz &&\
         tar xfz grpcurl_1.8.7_linux_x86_64.tar.gz &&\
         chmod +x grpcurl &&\
@@ -11,4 +11,4 @@ RUN wget -q https://github.com/fullstorydev/grpcurl/releases/download/v1.8.7/grp
         rm -f grpcurl*
 
 # set the start command
-CMD [ "/bin/sh", "-c", "unwrap.sh /wrapped /plaintext && cat /plaintext && sleep infinity" ]
+CMD [ "/bin/sh", "-c", "/bin/unwrap.sh /wrapped /plaintext && cat /plaintext && sleep infinity" ]

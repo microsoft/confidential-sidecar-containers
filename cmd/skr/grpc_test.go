@@ -6,7 +6,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/aasp/keyprovider"
+	server "github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/grpcserver"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/keyprovider"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
@@ -24,7 +25,7 @@ var (
 func init() {
 	lis = bufconn.Listen(bufSize)
 	s := grpc.NewServer()
-	keyprovider.RegisterKeyProviderServiceServer(s, &server{})
+	keyprovider.RegisterKeyProviderServiceServer(s, &server.Server{})
 	go func() {
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("Server exited with error: %v", err)

@@ -19,7 +19,7 @@ popd
 
 echo building get-snp-report
 pushd tools/get-snp-report
-make 
+make
 popd
 cp tools/get-snp-report/bin/get-snp-report ./bin
 cp tools/get-snp-report/bin/get-fake-snp-report ./bin

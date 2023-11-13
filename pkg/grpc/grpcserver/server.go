@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-package main
+package server
 
 import (
 	"context"
@@ -12,50 +12,41 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 
-	"github.com/Microsoft/confidential-sidecar-containers/internal/httpginendpoints"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/aasp/keyprovider"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/keyprovider"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
-	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
+
+type Server struct {
+	keyprovider.UnimplementedKeyProviderServiceServer
+	ServerCertState       *attest.CertState
+	EncodedUvmInformation *common.UvmInformation
+	Azure_info            *AzureInformation
+}
 
 type AzureInformation struct {
 	// Endpoint of the certificate cache service from which
 	// the certificate chain endorsing hardware attestations
-	// can be retrieved. This is optinal only when the container
+	// can be retrieved. This is optional only when the container
 	// will expose attest/maa and key/release APIs.
 	CertFetcher attest.CertFetcher `json:"certcache,omitempty"`
-
 	// Identifier of the managed identity to be used
-	// for authenticating with AKV MHSM. This is optional and
+	// for authenticating with AKV. This is optional and
 	// useful only when the container group has been assigned
 	// more than one managed identity.
 	Identity common.Identity `json:"identity,omitempty"`
 }
-
-var (
-	ServerCertState       attest.CertState
-	azure_info            AzureInformation
-	EncodedUvmInformation common.UvmInformation
-	AaspSideCarArgs       = "AaspSideCarArgs"
-	CorruptedTCB          = "ffffffff"
-)
 
 const (
 	AASP = "aasp"
@@ -119,12 +110,7 @@ type KeyProviderProtocolOutput struct {
 	KeyUnwrapResults KeyUnwrapResults `json:"keyunwrapresults,omitempty"`
 }
 
-// server is used to implement helloworld.GreeterServer.
-type server struct {
-	keyprovider.UnimplementedKeyProviderServiceServer
-}
-
-func (s *server) SayHello(ctx context.Context, in *keyprovider.HelloRequest) (*keyprovider.HelloReply, error) {
+func (s *Server) SayHello(ctx context.Context, in *keyprovider.HelloRequest) (*keyprovider.HelloReply, error) {
 	log.Printf("Received: %v", in.GetName())
 	return &keyprovider.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
@@ -178,7 +164,7 @@ func directWrap(optsdata []byte, key_path string) ([]byte, error) {
 	return annotationBytes, nil
 }
 
-func (s *server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKeyWrapProtocolInput) (*keyprovider.KeyProviderKeyWrapProtocolOutput, error) {
+func (s *Server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKeyWrapProtocolInput) (*keyprovider.KeyProviderKeyWrapProtocolOutput, error) {
 	var input keyProviderInput
 	str := string(grpcInput.KeyProviderKeyWrapProtocolInput)
 	err := json.Unmarshal(grpcInput.KeyProviderKeyWrapProtocolInput, &input)
@@ -224,7 +210,7 @@ func (s *server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKe
 	}, nil
 }
 
-func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKeyWrapProtocolInput) (*keyprovider.KeyProviderKeyWrapProtocolOutput, error) {
+func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKeyWrapProtocolInput) (*keyprovider.KeyProviderKeyWrapProtocolOutput, error) {
 	var input keyProviderInput
 	str := string(grpcInput.KeyProviderKeyWrapProtocolInput)
 	err := json.Unmarshal(grpcInput.KeyProviderKeyWrapProtocolInput, &input)
@@ -278,7 +264,7 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	// MHSM has limit on the request size. We do not pass the EncodedSecurityPolicy here so
 	// it is not presented as fine-grained init-time claims in the MAA token, which would
 	// introduce larger MAA tokens that MHSM would accept
-	keyBytes, err := skr.SecureKeyRelease(azure_info.Identity, ServerCertState, skrKeyBlob, EncodedUvmInformation)
+	keyBytes, err := skr.SecureKeyRelease((*(s.Azure_info)).Identity, *(s.ServerCertState), skrKeyBlob, *(s.EncodedUvmInformation))
 	if err != nil {
 		return nil, errors.Wrapf(err, "SKR failed")
 	}
@@ -308,7 +294,7 @@ func (s *server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	}, nil
 }
 
-func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetReportInput) (*keyprovider.KeyProviderGetReportOutput, error) {
+func (s *Server) GetReport(c context.Context, in *keyprovider.KeyProviderGetReportInput) (*keyprovider.KeyProviderGetReportOutput, error) {
 	reportDataStr := in.GetReportDataHexString()
 	log.Printf("Received report data: %v", reportDataStr)
 
@@ -334,152 +320,51 @@ func (s *server) GetReport(c context.Context, in *keyprovider.KeyProviderGetRepo
 	}, nil
 }
 
-func main() {
-	azureInfoBase64string := flag.String("aasp-cert-cache-args", os.Getenv(AaspSideCarArgs), "optional base64-encoded json string with azure information")
-	port := flag.String("keyprovider_sock", "127.0.0.1:50000", "Port on which the grpc key provider to listen")
-	httpport := flag.String("http_keyprovider_sock", "8080", "Port on which the http key provider to listen")
-	infile := flag.String("infile", "", "The file with its content to be wrapped")
-	key_path := flag.String("keypath", "", "The path to the wrapping key")
-	outfile := flag.String("outfile", "", "The file to save the wrapped data")
-	logLevel := flag.String("loglevel", "debug", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
+func DirectWrap(optsdata []byte, key_path string) ([]byte, error) {
+	_, kid := path.Split(key_path)
+	var annotation AnnotationPacket
+	annotation.Kid = kid
+	annotation.Iv = []byte("")
+	annotation.WrapType = "rsa_3072"
 
-	localhost := "localhost"
-	hostname := &localhost
-
-	flag.Parse()
-
-	if len(*azureInfoBase64string) == 0 {
-		logrus.Warn("If used as runtime grpc service, `aasp cert cache` has to be set either \n through env var or through passing cmdline arg in order for grpc service \nto work. \n")
+	var keyInfo RSAKeyInfo
+	path := key_path + "-info.json"
+	keyInfoBytes, e := os.ReadFile(path)
+	if e != nil {
+		return nil, fmt.Errorf("failed to read key info file %v", path)
 	}
 
-	level, err := logrus.ParseLevel(*logLevel)
+	err := json.Unmarshal(keyInfoBytes, &keyInfo)
 	if err != nil {
-		logrus.Fatal(err)
+		return nil, fmt.Errorf("invalid RSA key info file %v", path)
 	}
-	logrus.SetLevel(level)
-	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: false, DisableQuote: true, DisableTimestamp: true})
+	log.Printf("%v", keyInfo)
 
-	if *infile != "" {
-		bytes, err := os.ReadFile(*infile)
-		if err != nil {
-			log.Fatalf("Can't read input file %v", *infile)
-		}
-		if *key_path == "" {
-			log.Fatalf("The key path is not specified for wrapping")
-		}
-		if *outfile == "" {
-			log.Fatalf("The output file is not specified")
-		}
+	annotation.AttesterEndpoint = keyInfo.AttesterEndpoint
+	annotation.KmsEndpoint = keyInfo.KmsEndpoint
 
-		if _, err := os.Stat(*key_path + "-info.json"); err != nil {
-			log.Fatalf("The wrapping key info is not found")
-		}
-
-		annotationBytes, e := directWrap(bytes, *key_path)
-		if e != nil {
-			log.Fatalf("%v", e)
-		}
-
-		outstr := base64.StdEncoding.EncodeToString(annotationBytes)
-		if err := os.WriteFile(*outfile, []byte(outstr), 0644); err != nil {
-			log.Fatalf("Failed to save the wrapped data to %v", *outfile)
-		}
-		log.Printf("Success! The wrapped data is saved to %v", *outfile)
-		return
-	}
-
-	logrus.Infof("Args:")
-	logrus.Debugf("   aasp cert cache info:    %s", *azureInfoBase64string)
-	logrus.Debugf("   keyprovider_sock:    %s", *port)
-	logrus.Debugf("   infile:    %s", *infile)
-	logrus.Debugf("   outfile:    %s", *outfile)
-	logrus.Debugf("   loglevel:    %s", *logLevel)
-
-	//Decode base64 attestation information only if it s not empty
-	if *azureInfoBase64string != "" {
-		bytes, err := base64.StdEncoding.DecodeString(*azureInfoBase64string)
-		if err != nil {
-			logrus.Fatalf("Failed to decode base64: %s", err.Error())
-		}
-
-		err = json.Unmarshal(bytes, &azure_info)
-		if err != nil {
-			logrus.Fatalf("Failed to unmarshal: %s", err.Error())
-		}
-	}
-
-	EncodedUvmInformation, err = common.GetUvmInformation()
+	pubpem, err := os.ReadFile(keyInfo.PublicKeyPath)
 	if err != nil {
-		logrus.Infof("Failed to extract UVM_* environment variables: %s", err.Error())
+		return nil, fmt.Errorf("failed to read public key file %v", keyInfo.PublicKeyPath)
+	}
+	block, _ := pem.Decode([]byte(pubpem))
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("invalid public key in %v, error: %v", path, err)
 	}
 
-	if common.ThimCertsAbsent(&EncodedUvmInformation.InitialCerts) {
-		logrus.Infof("ThimCerts is absent, retrieving THIMCerts from %s.", azure_info.CertFetcher.Endpoint)
-		thimCerts, err := azure_info.CertFetcher.GetThimCerts(azure_info.CertFetcher.Endpoint)
+	var ciphertext []byte
+	if pubkey, ok := key.(*rsa.PublicKey); ok {
+		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, pubkey, optsdata, nil)
 		if err != nil {
-			logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
+			return nil, fmt.Errorf("failed to encrypt with the public key %v", err)
 		}
-
-		EncodedUvmInformation.InitialCerts = *thimCerts
-	}
-
-	var tcbm string
-
-	if len(EncodedUvmInformation.InitialCerts.Tcbm) == 0 {
-		logrus.Debugf("setting tcbm to corrupted tcbm value: %s\n", CorruptedTCB)
-		tcbm = CorruptedTCB
 	} else {
-		logrus.Debugf("setting tcbm to EncodedUvmInformation.InitialCerts.Tcbm value: %s\n", EncodedUvmInformation.InitialCerts.Tcbm)
-		tcbm = EncodedUvmInformation.InitialCerts.Tcbm
+		return nil, fmt.Errorf("invalid public RSA key in %v", path)
 	}
 
-	thimTcbm, err := strconv.ParseUint(tcbm, 16, 64)
-	if err != nil {
-		logrus.Fatal("Unable to convert intial TCBM to a uint64")
-	}
+	annotation.WrappedData = ciphertext
+	annotationBytes, _ := json.Marshal(annotation)
 
-	ServerCertState = attest.CertState{
-		CertFetcher: azure_info.CertFetcher,
-		Tcbm:        thimTcbm,
-	}
-
-	azure_info.Identity.ClientId = os.Getenv("AZURE_CLIENT_ID")
-	if azure_info.Identity.ClientId == "" {
-		log.Printf("Warning: Env AZURE_CLIENT_ID is not set")
-	}
-
-	lis, err := net.Listen("tcp", *port)
-	if err != nil {
-		log.Fatalf("failed to listen on port %v: %v", *port, err)
-	}
-	log.Printf("Listening on port %v", *port)
-
-	url := *hostname + ":" + *httpport
-	//start http server
-	go setupServer(&ServerCertState, &azure_info.Identity, &EncodedUvmInformation, url)
-
-	//start grpc server
-	s := grpc.NewServer()
-	keyprovider.RegisterKeyProviderServiceServer(s, &server{})
-	reflection.Register(s)
-	log.Printf("server listening at %v", lis.Addr())
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to start GRPC server: %v", err)
-	}
-}
-
-func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo *common.UvmInformation, url string) {
-	certString := uvmInfo.InitialCerts.VcekCert + uvmInfo.InitialCerts.CertificateChain
-	logrus.Debugf("Setting security policy to %s", uvmInfo.EncodedSecurityPolicy)
-	logrus.Debugf("Setting uvm reference to %s", uvmInfo.EncodedUvmReferenceInfo)
-	logrus.Debugf("Setting platform certs to %s", certString)
-
-	server := gin.Default()
-	server.Use(httpginendpoints.RegisterGlobalStates(certState, identity, uvmInfo))
-	server.GET("/status", httpginendpoints.GetStatus)
-	server.POST("/attest/raw", httpginendpoints.PostRawAttest)
-	server.POST("/attest/maa", httpginendpoints.PostMAAAttest)
-	server.POST("/key/release", httpginendpoints.PostKeyRelease)
-	httpginendpoints.SetServerReady()
-	server.Run(url)
+	return annotationBytes, nil
 }

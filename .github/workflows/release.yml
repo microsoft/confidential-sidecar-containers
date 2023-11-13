@@ -31,10 +31,12 @@ jobs:
           pushd tools/get-snp-report && make && popd
           cp -a tools/get-snp-report/bin/* .
           go build ./tools/importkey
+          go build ./cmd/skr
         
       - name: Build Windows Executables
-        run: go build ./tools/importkey
-        env: 
+        run: |
+          go build ./tools/importkey
+        env:
           GOOS: windows
           GOARCH: amd64
   
@@ -47,6 +49,7 @@ jobs:
             verbose-report
             importkey.exe
             importkey
+            skr
 
   create_release:
     needs: build
@@ -66,3 +69,4 @@ jobs:
             verbose-report
             importkey.exe
             importkey
+            skr

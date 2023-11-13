@@ -12,6 +12,7 @@ on:
       - tools/get-snp-report/**
       - vendor/**
       - internal/**
+      - pkg/**
 
   push:
     branches:
@@ -23,6 +24,7 @@ on:
       - tools/get-snp-report/**
       - vendor/**
       - internal/**
+      - pkg/**
 
 jobs:
   push-skr-debug-image:

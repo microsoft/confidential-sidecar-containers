@@ -1,4 +1,4 @@
-# Attestation and Secure Key Release Sidecar Example
+# Attestation and Secure Key Release Sidecar ACI Example
 
 ## Table of Contents
 
@@ -16,9 +16,9 @@ In our confidential container group example, we will deploy the skr sidecar alon
 
 Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group. To generate security policies, install the Azure `confcom` CLI extension by following the instructions [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples).  
 
-The ARM template can be used directly to generate a security policy. The following command generates a security policy and automatically injects it into the template. Make sure `--debug-mode` option is included so that the generated policy allows shelling into container to see the released key in this example. NOTE: the current image used in the ARM template is built upon commit id a82b530.
+The ARM template can be used directly to generate a security policy. The following command generates a security policy and automatically injects it into the template. Make sure `--debug-mode` option is included so that the generated policy allows shelling into container to see the released key in this example.
 
-```
+```shell
 az confcom acipolicygen -a aci-skr-arm-template.json --debug-mode
 ```
 
@@ -36,7 +36,7 @@ The managed HSM instance endpoint corresponds to [`SkrClientAKVEndpoint`](aci-ar
 
 If you don't already have a valid attestation endpoint, create a [Microsoft Azure Attestation](https://learn.microsoft.com/en-us/azure/attestation/overview) endpoint to author the attestation token and run the following command to get the endpoint value:
 
-```
+```shell
 az attestation show --name "<ATTESTATION PROVIDER NAME>" --resource-group "<RESOURCE GROUP>"
 ```
 
@@ -50,13 +50,13 @@ After setting up an Azure Key Vault resource, generate a user-assigned managed i
 
 If you already have a user-assigned managed identity with the appropriate access permissions, run the following command to list the managed identities for a resource group:
 
-```
+```shell
 az identity list -g <RESOURCE GROUP>
 ```
 
 Or you can use the following command if you know the name of the managed identity and the resource group:
 
-```
+```shell
 az identity show -g <RESOURCE GROUP> -n <MANAGED IDENTITY NAME>
 ```
 
@@ -70,7 +70,7 @@ Update the [image registry credentials](aci-arm-template.json?plain=1#L123) on t
 
 The AAD token with permission to AKV/mHSM can be obtained with the following command:
 
-```
+```shell
 az account get-access-token --resource https://managedhsm.azure.net
 ```
 
@@ -88,7 +88,7 @@ Copy the key name into [SkrClientKID](aci-arm-template.json#L64) in the `aci-arm
 
 At this point, the `aci-arm-template.json` file should be filled out except for the `ccepolicy` field. After installing the [Azure `confcom` CLI extension](#policy-generation), run the following command to generate the security policy and include the `--debug-mode` option so that the policy allows users to shell into the container.
 
-```
+```shell
 az confcom acipolicygen -a aci-arm-template.json --debug-mode
 ```
 
@@ -102,13 +102,13 @@ Once the key vault resource is ready and the `importkeyconfig.json` file is comp
 
 A fake encryption key is used in the command below to see the key get released. To import the key into AKV/mHSM, use the following command:
 
-```
+```go
 go run /tools/importkey/main.go -c importkeyconfig.json -kh /path/to/encryptionKeyFile
 ```
 
 Upon successful import completion, you should see something similar to the following:
 
-```
+```json
 [34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
 https://<mhsm-name>.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
 {"version":"1.0.0","anyOf":[{"authority":"<authority-url-name>","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
@@ -116,7 +116,7 @@ https://<mhsm-name>.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cd
 
 In this case, use the following commands to verify the key has been successfully imported:
 
-```
+```shell
 az account set --subscription "<SUBSCRIPTION>"
 az keyvault key list --hsm-name <MHSM NAME> -o table
 ```
@@ -125,7 +125,7 @@ az keyvault key list --hsm-name <MHSM NAME> -o table
 
 Go to Azure portal and click on `deploy a custom template`, then click `Build your own template in the editor`. By this time, the `aci-arm-template.json` file should be completely filled out. Copy and paste the ARM template into the field start a deployment. Once deployment is done, to verify the key has been successful released, shell into the `skr-sidecar-container` container and see the log.txt and you should see the following log message:
 
-```
+```text
 level=debug msg=Releasing key blob: {doc-sample-key-release}
 ```
 
