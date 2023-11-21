@@ -28,7 +28,7 @@ else
 fi
 
 if [ -z "${MAA_ENDPOINT}" ]; then
-	echo "Error: Env MAA_ENDPOINT is not set. Please set up your own MAA instance or select from a region where MAA is offered (e.g. sharedeus2.eus2.attest.azure.net):"
+	echo "Error: Env MAA_ENDPOINT is not set. Please set up your own MAA instance or select from a region where MAA is offered (e.g. sharedeus.eus.attest.azure.net):"
 	echo ""
 	echo "https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/?products=azure-attestation"
 	exit 1

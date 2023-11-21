@@ -42,15 +42,14 @@ To set up a mHSM instance, follow the instructions [here with Azure CLI](https:/
 or through the [Azure portal](https://ms.portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.KeyVault%2FmanagedHSMs).
 You can follow the installation instructions for Azure CLI [here](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli).
 
-### 2. Obtain an Attestation Endpoint
+### 2. Obtain An Attestation Endpoint
 
-Users must have a working attestation endpoint to interact with the mHSM.
+Below are the MAA endpoints for the four regions Confidential Containers in AKS is currently available in. 
 
-If you don't already have a valid attestation endpoint, create a [Microsoft Azure Attestation](https://learn.microsoft.com/en-us/azure/attestation/overview) endpoint to author the attestation token and run the following command to get the endpoint value:
-
-```shell
-az attestation show --name "<ATTESTATION PROVIDER NAME>" --resource-group "<RESOURCE GROUP>"
-```
+East US: sharedeus.eus.attest.azure.net	
+West US: sharedwus.wus.attest.azure.net
+North Europe: sharedneu.neu.attest.azure.net
+West Europe: sharedweu.weu.attest.azure.net
 
 ### 3. Generate a Key Pair
 
@@ -77,7 +76,7 @@ For a mhsm instance with the full URL: `examplemhsm.managedhsm.azure.net`, the `
 az identity create -g $RESOURCE_GROUP -n $USER_ASSIGNED_IDENTITY_NAME | grep "id"
 # The following two exported env vars are used by the setup-key-mhsm.sh script
 export MANAGED_IDENTITY=<principle-id>
-export MAA_ENDPOINT=<maa-endpoint> # Choose a MAA instance for the attestation service, e.g. sharedeus2.eus2.attest.azure.net
+export MAA_ENDPOINT=<maa-endpoint> # Choose a MAA instance for the attestation service, e.g. sharedeus.eus.attest.azure.net
 
 # Login
 az login
