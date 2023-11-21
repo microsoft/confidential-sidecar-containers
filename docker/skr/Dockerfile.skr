@@ -8,12 +8,17 @@ RUN cd tools/get-snp-report && make && mv bin/get-snp-report / && mv bin/get-fak
 
 RUN cd cmd/skr && CGO_ENABLED=0 GOOS=linux go build -o /skr -ldflags="-s -w" main.go
 
-FROM mcr.microsoft.com/cbl-mariner/distroless/minimal:2.0
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
+
+RUN tdnf upgrade && tdnf install -y ca-certificates && tdnf clean all
 
 COPY --from=build /skr /get-snp-report /get-fake-snp-report ./bin/
 
 ENV BUILD_DIR=/go/src/github.com/microsoft/confidential-sidecar-containers
 COPY --from=build ${BUILD_DIR}/docker/skr/skr.sh /
+COPY --from=build ${BUILD_DIR}/docker/skr/tests/*_client.sh ${BUILD_DIR}/docker/skr/tests/skr_test.sh /tests/skr/
+
+RUN chmod +x /*.sh /tests/skr/*.sh
 
 # set the start command
 CMD [ "/skr.sh" ]

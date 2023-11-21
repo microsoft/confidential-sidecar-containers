@@ -172,6 +172,10 @@ func (maa MAA) Attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlob
 	logrus.Debugf("Posting MAA Attestation Request to %s", uri)
 	httpResponse, err := HTTPPRequest("POST", uri, maaRequestJSONData, "")
 	if err != nil {
+		// added debug information if needed
+		if httpResponse != nil && httpResponse.Header != nil && httpResponse.Header.Get("x-ms-request-id") != "" {
+			logrus.Debugf("MAA Response header: %s", httpResponse.Header.Get("x-ms-request-id"))
+		}
 		return "", errors.Wrapf(err, "maa post request failed")
 	}
 
