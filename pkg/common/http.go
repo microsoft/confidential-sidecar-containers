@@ -5,7 +5,7 @@ package common
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -58,16 +58,16 @@ func HTTPPRequest(httpType string, uri string, jsonData []byte, authorizationTok
 }
 
 func HTTPResponseBody(httpResponse *http.Response) ([]byte, error) {
-	if httpResponse.Status != "200 OK" && httpResponse.Status != "200 " {
-		return nil, errors.Errorf("http response status equal to %s", httpResponse.Status)
-	}
-
 	// Pull out response body
 	defer httpResponse.Body.Close()
-	httpResponseBodyBytes, err := ioutil.ReadAll(httpResponse.Body)
+	httpResponseBodyBytes, err := io.ReadAll(httpResponse.Body)
 	if err != nil {
 		return nil, errors.Wrapf(err, "reading http response body failed")
 	}
 
-	return httpResponseBodyBytes, nil
+	if httpResponse.Status != "200 OK" && httpResponse.Status != "200 " {
+		err = errors.Errorf("http response status equal to %s", httpResponse.Status)
+	}
+
+	return httpResponseBodyBytes, err
 }

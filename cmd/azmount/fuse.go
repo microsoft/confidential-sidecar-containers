@@ -18,46 +18,62 @@ import (
 //
 //     https://github.com/bazil/fuse
 
-func FuseSetup(mountpoint string) error {
-	c, err := fuse.Mount(
-		mountpoint,
-		fuse.FSName("azure_filesystem"),
-		fuse.Subtype("azurefs"),
-		fuse.ReadOnly(),
-	)
+func FuseSetup(mountpoint string, readWrite bool) error {
+
+	var c *fuse.Conn
+	var err error
+	if readWrite {
+		c, err = fuse.Mount(
+			mountpoint,
+			fuse.FSName("azure_filesystem"),
+			fuse.Subtype("azurefs"),
+		)
+	} else {
+		c, err = fuse.Mount(
+			mountpoint,
+			fuse.FSName("azure_filesystem"),
+			fuse.Subtype("azurefs"),
+			fuse.ReadOnly(),
+		)
+	}
+
 	if err != nil {
-		return errors.Wrapf(err, "can't start fuse")
+		return errors.Wrapf(err, "Can't start fuse")
 	}
 	defer c.Close()
 
 	// The execution flow stops here. This function is never left until there is
 	// a crash or the filesystem is unmounted by the user.
-	err = fs.Serve(c, FS{})
+	err = fs.Serve(c, FS{readWrite: readWrite})
 	if err != nil {
-		return errors.Wrapf(err, "can't serve fuse")
+		return errors.Wrapf(err, "Can't serve fuse")
 	}
 	return nil
 }
 
 // FS implements the file system.
-type FS struct{}
+type FS struct {
+	readWrite bool
+}
 
-func (FS) Root() (fs.Node, error) {
-	return Dir{}, nil
+func (fs FS) Root() (fs.Node, error) {
+	return Dir{readWrite: fs.readWrite}, nil
 }
 
 // Dir implements both Node and Handle for the root directory.
-type Dir struct{}
+type Dir struct {
+	readWrite bool
+}
 
 func (Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Inode = 1
-	a.Mode = os.ModeDir | 0o555
+	a.Mode = os.ModeDir | 0o777
 	return nil
 }
 
-func (Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
+func (d Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
 	if name == "data" {
-		return File{}, nil
+		return File{readWrite: d.readWrite}, nil
 	}
 	return nil, syscall.ENOENT
 }
@@ -71,11 +87,17 @@ func (Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 }
 
 // File implements both Node and Handle for the file.
-type File struct{}
+type File struct {
+	readWrite bool
+}
 
-func (File) Attr(ctx context.Context, a *fuse.Attr) error {
+func (f File) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Inode = 2
-	a.Mode = 0o444
+	if f.readWrite {
+		a.Mode = 0o777
+	} else {
+		a.Mode = 0o444
+	}
 	a.Size = uint64(filemanager.GetFileSize())
 	return nil
 }
@@ -112,4 +134,39 @@ func (f File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadRe
 	err, data := filemanager.GetBytes(int64(offset), int64(to))
 	resp.Data = data
 	return err
+}
+
+func (f *File) ReadAll(ctx context.Context) ([]byte, error) {
+	return nil, nil
+}
+
+func (f File) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
+	if req.Offset < 0 {
+		// Before beginning of file.
+		return fuse.Errno(syscall.EINVAL)
+	}
+
+	offset := uint64(req.Offset)
+	fileSize := uint64(filemanager.GetFileSize())
+
+	if offset >= fileSize {
+		// Beyond end of file.
+		return nil
+	}
+
+	to := min(fileSize, offset+uint64(len(req.Data)))
+	if to == offset {
+		return nil
+	}
+
+	err := filemanager.SetBytes(int64(offset), req.Data)
+	if err == nil {
+		resp.Size = len(req.Data)
+	}
+	return err
+}
+
+func (f File) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
+	filemanager.ClearCache()
+	return nil
 }

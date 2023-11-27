@@ -13,7 +13,7 @@ if [ -f "$keyFilePath" ]; then
     echo "keyfile exists"
 else
     echo "[!] Generating keyfile..."
-    dd if=/dev/random of="$keyFilePath" count=1 bs=32
+    dd if=/dev/urandom of="$keyFilePath" count=1 bs=32
 fi
 
 echo "Key in hex string format"
@@ -25,7 +25,6 @@ truncate -s 32 "$keyFilePath"
 echo "[!] Creating encrypted image..."
 
 rm -f "$encryptedImage"
-touch "$encryptedImage"
 truncate --size 64M "$encryptedImage"
 
 sudo cryptsetup luksFormat --type luks2 "$encryptedImage" \

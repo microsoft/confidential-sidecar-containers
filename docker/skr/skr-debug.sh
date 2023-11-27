@@ -8,7 +8,7 @@
 echo starting sshd
 /usr/sbin/sshd &
 
-CmdlineArgs="-logfile ./log.txt"
+CmdlineArgs=""
 
 if [ -z "${SkrSideCarArgs}" ]; then
   SkrSideCarArgs=$1
@@ -28,6 +28,15 @@ echo Port = $Port
 
 if [ -n "${Port}" ]; then
   CmdlineArgs="${CmdlineArgs} -port ${Port}"
+fi
+
+# LogFile and LogLevel are expected to be passed in as environment variables
+if [ -n "${LogFile}" ]; then
+  CmdlineArgs="${CmdlineArgs} -logFile ${LogFile}"
+fi
+
+if [ -n "${LogLevel}" ]; then
+  CmdlineArgs="${CmdlineArgs} -logLevel ${LogLevel}"
 fi
 
 echo CmdlineArgs = $CmdlineArgs

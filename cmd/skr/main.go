@@ -8,40 +8,43 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"strconv"
 
 	"github.com/Microsoft/confidential-sidecar-containers/internal/httpginendpoints"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
+	server "github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/grpcserver"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/keyprovider"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-)
 
-type AzureInformation struct {
-	// Endpoint of the certificate cache service from which
-	// the certificate chain endorsing hardware attestations
-	// can be retrieved. This is optional only when the container
-	// will expose attest/maa and key/release APIs.
-	CertFetcher attest.CertFetcher `json:"certcache,omitempty"`
-	// Identifier of the managed identity to be used
-	// for authenticating with AKV. This is optional and
-	// useful only when the container group has been assigned
-	// more than one managed identity.
-	Identity common.Identity `json:"identity,omitempty"`
-}
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+)
 
 func usage() {
 	fmt.Printf("Usage of %s:\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
+// TODO:
+// - vcek source is different
+// - aci gets security policy and hashes it
+
 func main() {
 	azureInfoBase64string := flag.String("base64", "", "optional base64-encoded json string with azure information")
-	logLevel := flag.String("loglevel", "debug", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
+	logLevel := flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
 	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
-	port := flag.String("port", "8080", "Port on which to listen")
+	httpPort := flag.String("port", "8080", "Port on which to listen")
 	allowTestingMismatchedTCB := flag.Bool("allowTestingMismatchedTCB", false, "For TESTING purposes only. Corrupts the TCB value")
+	// NOTE: these 4 input arguments are typically only used in AKS, not ACI
+	grpcPort := flag.String("keyprovider_sock", "127.0.0.1:50000", "Port on which the grpc key provider to listen")
+	infile := flag.String("infile", "", "The file with its content to be wrapped")
+	key_path := flag.String("keypath", "", "The path to the wrapping key")
+	outfile := flag.String("outfile", "", "The file to save the wrapped data")
 
 	// for testing mis-matched TCB versions allowTestingWithMismatchedTCB
 	// and CorruptedTCB
@@ -49,7 +52,7 @@ func main() {
 	// WARNING!!!
 	// If the security policy does not control the arguments to this process then
 	// this hostname could be set to 0.0.0.0 (an external interface) rather than 127.0.0.1 (visible only
-	// witin the container group/pod)and so expose the attestation and key release outside of the secure uvm
+	// within the container group/pod) and so expose the attestation and key release outside of the secure uvm
 
 	// Leaving this line here, as a comment, to aid debugging.
 	// hostname := flag.String("hostname", "localhost", "address on which to listen (dangerous)")
@@ -62,7 +65,7 @@ func main() {
 
 	if *logFile != "" {
 		// If the file doesn't exist, create it. If it exists, append to it.
-		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			logrus.Fatal(err)
 		}
@@ -80,38 +83,80 @@ func main() {
 	logrus.Infof("Starting %s...", os.Args[0])
 
 	logrus.Infof("Args:")
-	logrus.Debugf("   Log Level:     %s", *logLevel)
-	logrus.Debugf("   Log File:      %s", *logFile)
-	logrus.Debugf("   Port:          %s", *port)
+	logrus.Infof("   Log Level:     %s", *logLevel)
+	logrus.Infof("   Log File:      %s", *logFile)
+	logrus.Debugf("   Port:          %s", *httpPort)
 	logrus.Debugf("   Hostname:      %s", *hostname)
 	logrus.Debugf("   azure info:    %s", *azureInfoBase64string)
 	logrus.Debugf("   corrupt tcbm:  %t", *allowTestingMismatchedTCB)
 
-	EncodedUvmInformation, err := common.GetUvmInformation() // from the env.
-	if err != nil {
-		logrus.Fatalf("Failed to extract UVM_* environment variables: %s", err.Error())
+	if *infile != "" {
+		bytes, err := os.ReadFile(*infile)
+		if err != nil {
+			log.Fatalf("Can't read input file %v", *infile)
+		}
+		if *key_path == "" {
+			log.Fatalf("The key path is not specified for wrapping")
+		}
+		if *outfile == "" {
+			log.Fatalf("The output file is not specified")
+		}
+
+		if _, err := os.Stat(*key_path + "-info.json"); err != nil {
+			log.Fatalf("The wrapping key info is not found")
+		}
+
+		annotationBytes, e := server.DirectWrap(bytes, *key_path)
+		if e != nil {
+			log.Fatalf("%v", e)
+		}
+
+		outstr := base64.StdEncoding.EncodeToString(annotationBytes)
+		if err := os.WriteFile(*outfile, []byte(outstr), 0644); err != nil {
+			log.Fatalf("Failed to save the wrapped data to %v", *outfile)
+		}
+		log.Printf("Success! The wrapped data is saved to %v", *outfile)
+		return
 	}
 
-	info := AzureInformation{}
+	info := server.AzureInformation{}
 
 	// Decode base64 attestation information only if it s not empty
+	logrus.Info("Decoding base64 attestation information if not empty...")
 	if *azureInfoBase64string != "" {
 		bytes, err := base64.StdEncoding.DecodeString(*azureInfoBase64string)
 		if err != nil {
-			logrus.Fatalf("Failed to decode base64: %s", err.Error())
+			logrus.Fatalf("Failed to decode base64 attestation info: %s", err.Error())
 		}
 
 		err = json.Unmarshal(bytes, &info)
 		if err != nil {
-			logrus.Fatalf("Failed to unmarshal: %s", err.Error())
+			logrus.Fatalf("Failed to unmarshal attestion info json into AzureInformation: %s", err.Error())
 		}
 	}
 
-	// See above comment about hostname and risk of breaking confidentiality
-	url := *hostname + ":" + *port
+	EncodedUvmInformation, err := common.GetUvmInformation() // from the env.
+	if err != nil {
+		logrus.Infof("Failed to extract UVM_* environment variables: %s", err.Error())
+	}
 
+	if common.ThimCertsAbsent(&EncodedUvmInformation.InitialCerts) {
+		logrus.Info("ThimCerts is absent, retrieving THIMCerts from THIM endpoint.")
+		thimCerts, err := info.CertFetcher.GetThimCerts("")
+		if err != nil {
+			logrus.Fatalf("Failed to retrieve thim certs: %s", err.Error())
+		}
+
+		EncodedUvmInformation.InitialCerts = *thimCerts
+	}
+
+	// See above comment about hostname and risk of breaking confidentiality
+	url := *hostname + ":" + *httpPort
+
+	logrus.Trace("Getting initial TCBM value...")
 	var tcbm string
 	if *allowTestingMismatchedTCB {
+		// NOTE: this should only be used for testing purposes
 		logrus.Debugf("setting tcbm to CorruptedTCB value: %s\n", CorruptedTCB)
 		tcbm = CorruptedTCB
 	} else {
@@ -129,7 +174,23 @@ func main() {
 		Tcbm:        thimTcbm,
 	}
 
-	setupServer(&certState, &info.Identity, &EncodedUvmInformation, url)
+	logrus.Info("Starting HTTP server...")
+	go setupServer(&certState, &info.Identity, &EncodedUvmInformation, url)
+
+	lis, err := net.Listen("tcp", *grpcPort)
+	if err != nil {
+		log.Fatalf("failed to listen on port %v: %v", *grpcPort, err)
+	}
+	log.Printf("Listening on port %v", *grpcPort)
+	//start grpc server
+	s := grpc.NewServer()
+	server := server.Server{ServerCertState: &certState, EncodedUvmInformation: &EncodedUvmInformation, Azure_info: &info}
+	keyprovider.RegisterKeyProviderServiceServer(s, &server)
+	reflection.Register(s)
+	log.Printf("server listening at %v", lis.Addr())
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to start GRPC server: %v", err)
+	}
 }
 
 func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo *common.UvmInformation, url string) {

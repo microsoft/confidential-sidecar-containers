@@ -15,6 +15,12 @@ import (
 
 var ready bool
 
+const (
+	AZURE_CLIENT_ID            = "AZURE_CLIENT_ID"
+	AZURE_TENANT_ID            = "AZURE_TENANT_ID"
+	AZURE_FEDERATED_TOKEN_FILE = "AZURE_FEDERATED_TOKEN_FILE"
+)
+
 type MAAAttestData struct {
 	// MAA endpoint which authors the MAA token
 	MAAEndpoint string `json:"maa_endpoint" binding:"required"`
@@ -90,7 +96,21 @@ func PostRawAttest(c *gin.Context) {
 		return
 	}
 
-	rawReport, err := attest.RawAttest(inittimeDataBytes, runtimeDataBytes)
+	var attestationReportFetcher attest.AttestationReportFetcher
+	if attest.IsSNPVM() {
+
+		attestationReportFetcher, err = attest.NewAttestationReportFetcher()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+	} else {
+		// Use dummy report if SEV device is not available
+		hostData := attest.GenerateMAAHostData(inittimeDataBytes)
+		attestationReportFetcher = attest.UnsafeNewFakeAttestationReportFetcher(hostData)
+	}
+
+	reportData := attest.GenerateMAAReportData(runtimeDataBytes)
+	rawReport, err := attestationReportFetcher.FetchAttestationReportHex(reportData)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	}
@@ -120,7 +140,7 @@ func PostMAAAttest(c *gin.Context) {
 		return
 	}
 
-	maa := attest.MAA{
+	maa := common.MAA{
 		Endpoint:   attestData.MAAEndpoint,
 		TEEType:    "SevSnpVM",
 		APIVersion: "api-version=2020-10-01",
@@ -167,19 +187,19 @@ func PostKeyRelease(c *gin.Context) {
 		return
 	}
 
-	akv := skr.AKV{
+	akv := common.AKV{
 		Endpoint:    newKeyReleaseData.AKVEndpoint,
-		APIVersion:  "api-version=7.3-preview",
+		APIVersion:  "api-version=7.4",
 		BearerToken: newKeyReleaseData.AccessToken,
 	}
 
-	maa := attest.MAA{
+	maa := common.MAA{
 		Endpoint:   newKeyReleaseData.MAAEndpoint,
 		TEEType:    "SevSnpVM",
 		APIVersion: "api-version=2020-10-01",
 	}
 
-	skrKeyBlob := skr.KeyBlob{
+	skrKeyBlob := common.KeyBlob{
 		KID:       newKeyReleaseData.KID,
 		Authority: maa,
 		AKV:       akv,

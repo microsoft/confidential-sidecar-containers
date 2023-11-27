@@ -67,36 +67,6 @@ func Subtype(fstype string) MountOption {
 	}
 }
 
-// Deprecated: Ignored, OS X remnant.
-func LocalVolume() MountOption {
-	return dummyOption
-}
-
-// Deprecated: Ignored, OS X remnant.
-func VolumeName(name string) MountOption {
-	return dummyOption
-}
-
-// Deprecated: Ignored, OS X remnant.
-func NoAppleDouble() MountOption {
-	return dummyOption
-}
-
-// Deprecated: Ignored, OS X remnant.
-func NoAppleXattr() MountOption {
-	return dummyOption
-}
-
-// Deprecated: Ignored, OS X remnant.
-func NoBrowse() MountOption {
-	return dummyOption
-}
-
-// Deprecated: Ignored, OS X remnant.
-func ExclCreate() MountOption {
-	return dummyOption
-}
-
 // DaemonTimeout sets the time in seconds between a request and a reply before
 // the FUSE mount is declared dead.
 //
@@ -188,40 +158,21 @@ func WritebackCache() MountOption {
 	}
 }
 
-// Deprecated: Not used, OS X remnant.
-type OSXFUSEPaths struct {
-	// Prefix for the device file. At mount time, an incrementing
-	// number is suffixed until a free FUSE device is found.
-	DevicePrefix string
-	// Path of the load helper, used to load the kernel extension if
-	// no device files are found.
-	Load string
-	// Path of the mount helper, used for the actual mount operation.
-	Mount string
-	// Environment variable used to pass the path to the executable
-	// calling the mount helper.
-	DaemonVar string
+// CacheSymlinks enables the kernel to cache symlink contents.
+func CacheSymlinks() MountOption {
+	return func(conf *mountConfig) error {
+		conf.initFlags |= InitCacheSymlinks
+		return nil
+	}
 }
 
-// Deprecated: Not used, OS X remnant.
-var (
-	OSXFUSELocationV3 = OSXFUSEPaths{
-		DevicePrefix: "/dev/osxfuse",
-		Load:         "/Library/Filesystems/osxfuse.fs/Contents/Resources/load_osxfuse",
-		Mount:        "/Library/Filesystems/osxfuse.fs/Contents/Resources/mount_osxfuse",
-		DaemonVar:    "MOUNT_OSXFUSE_DAEMON_PATH",
+// ExplicitInvalidateData stops the kernel from invalidating cached file data automatically.
+// Use e.g. `InvalidateNodeData` to invalidate cached data as needed.
+func ExplicitInvalidateData() MountOption {
+	return func(conf *mountConfig) error {
+		conf.initFlags |= InitExplicitInvalidateData
+		return nil
 	}
-	OSXFUSELocationV2 = OSXFUSEPaths{
-		DevicePrefix: "/dev/osxfuse",
-		Load:         "/Library/Filesystems/osxfusefs.fs/Support/load_osxfusefs",
-		Mount:        "/Library/Filesystems/osxfusefs.fs/Support/mount_osxfusefs",
-		DaemonVar:    "MOUNT_FUSEFS_DAEMON_PATH",
-	}
-)
-
-// Deprecated: Ignored, OS X remnant.
-func OSXFUSELocations(paths ...OSXFUSEPaths) MountOption {
-	return dummyOption
 }
 
 // AllowNonEmptyMount allows the mounting over a non-empty directory.
@@ -283,6 +234,16 @@ func LockingFlock() MountOption {
 func LockingPOSIX() MountOption {
 	return func(conf *mountConfig) error {
 		conf.initFlags |= InitPOSIXLocks
+		return nil
+	}
+}
+
+// HandleKillPriv enables SUID/SGID/cap management in the FUSE server.
+//
+// This is the newer `InitHandleKillPrivV2` interface from FUSE protocol 7.33, not the deprecated one from 7.26.
+func HandleKillPriv() MountOption {
+	return func(conf *mountConfig) error {
+		conf.initFlags |= InitHandleKillPrivV2
 		return nil
 	}
 }

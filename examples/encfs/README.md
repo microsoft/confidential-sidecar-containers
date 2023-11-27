@@ -1,57 +1,165 @@
 # Encrypted filesystem container example
 
 ## Table of Contents
-  - [Managed identity](#managed-identity)
-  - [Security policy generation](#security-policy-generation)
-  - [Import encryption key](#import-encryption-key)
-  - [Encrypted filesystem](#encrypted-filesystem)
-  - [Testing](#testing)
-  - [Deployment](#deployment)
-  - [Step by step example](#step-by-step-example)
+- [Policy generation](#policy-generation)
+- [Step by Step Example](#step-by-step-example)
 
-### Managed identity
-The user needs to generate a user-assigned managed idenity which will be attached to the container group so that the containers can have the right access permissions to Azure services and resources. More information about creating identities can be found [here.](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)
+### Policy generation
+Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group. To generate security policies, install the Azure `confcom` CLI extension by following the instructions [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples).  
 
-### Security policy generation
-Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group. There is an az tool available for generating policies. See [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples) for installing Azure `confcom` CLI extension.  
+The ARM template can be used directly to generate a security policy. The following command generates a security policy and automatically injects it into the template. Make sure `--debug-mode` option is included so that the generated policy allows shelling into container to see the released key in this example. Note this should only be used for debugging and not recommended for production systems. We are going to include this option since this is an example.
 
-The ARM template can be used directly to generate a security policy. The following command generates a security policy and automatically injects it into the template. 
+```
+az confcom acipolicygen -a aci-skr-arm-template.json --debug-mode
+```
 
-```az confcom acipolicygen -a aci-arm-template.json```
+The ARM template file includes two entries: (i) encrypted filesystem sidecar container which whitelists the `/encfs.sh` as entry point command and the environment variable *EncfsSideCarArgs* used by the script, and (ii) an application container which whitelists a while loop command as entry point command.
 
-The ARM template file file includes two entries: (i) encrypted filesystem sidecar container which whitelists the /encfs.sh as entry point command and the environment variable *EncfsSideCarArgs* used by the script, and (ii) an application container which whitelists a while loop command as entry point command. NOTE: the current image used in the ARM template is built upon commit id a82b530. 
+### Step by Step Example 
 
-### Import encryption key
-The user needs to instantiate an Azure Key Vault resource that supports storing keys in an HSM: a [Premium vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview) or an [MHSM resource](https://docs.microsoft.com/en-us/azure/key-vault/managed-hsm/overview). For the former, the user needs to assign 
-the *Key Vault Crypto Officer* and *Key Vault Crypto User* roles to the user-assigned managed identity and for the latter, the user needs to assign *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys to the user-assigned managed identity.
+This example is is made to be run on Linux/WSL. Also make sure the line endings in the scripts used in this example are set to LF instead of CRLF. 
+The MAA endpoint is the value of env var [Authority Endpoint](encfs-sidecar-args.json#L12). 
+See "obtain an attestation endpoint" section on how to get this endpoint. 
+The managed HSM instance endpoint corresponds to [AKV Endpoint](encfs-sidecar-args.json#L15). 
+We will also define and import a key into the managed HSM as shown in [`importkeyconfig.json`](importkeyconfig.json#L2)
+See "Setup Azure Key Vault and Generate User Managed Identity" section on how to obtain the mHSM endpoint. 
 
-Once the key vault resource is ready, the user can import `RSA-HSM` or `oct-HSM` keys into it using the `importkey` tool placed under `<parent_repo_dir>/tools/importkey` after updating the `importkeyconfig.json` with the required information as discussed in the tools' readme file. For instance, the hostdata claim value needs to be set to the hash digest of the security policy, which can be obtained by executing the following command:
 
-`go run <parent_dir>/tools/securitypolicydigest/main.go -p <base64-std-encoded-string-of-security-policy>`
+#### 1. Obtain an Attestation Endpoint
 
-And the AAD token with permission to AKV/mHSM can be obtained with the following command:
+If you don't already have a valid attestation endpoint, create a [Microsoft Azure Attestation](https://learn.microsoft.com/en-us/azure/attestation/overview) endpoint to author the attestation token and run the following command to get the endpoint value:
 
-`az account get-access-token --resource https://managedhsm.azure.net`
+```
+az attestation show --name "<ATTESTATION PROVIDER NAME>" --resource-group "<RESOURCE GROUP>"
+```
 
-Once the `importkeyconfig.json` is updated, execute the following command:
+Copy the AttestURI endpoint value (sans https://) to the [Attestation Authority endpoint](importkeyconfig.json#L6) in `importkeyconfig.json` and to [Attestation Authority endpoint](encfs-sidecar-args.json#L12) in `encfs-sidecar-args.json`.
 
-`cd <parent_dir>/tools/importkey`
 
-`go run main.go -c <parent_dir>/examples/encfs/importkeyconfig.json -kh <hexstring encoding oct-HSM key> -out`
+#### 2. Setup Azure Key Vault and Generate User Managed Identity
 
-`go run main.go -c <parent_dir>/examples/encfs/importkeyconfig.json -kp private-key.pem -out`
+The user needs to instantiate an Azure Key Vault resource that supports storing keys in an mHSM: a [Premium vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview) or an [mHSM resource](https://docs.microsoft.com/en-us/azure/key-vault/managed-hsm/overview).
 
-`go run main.go -c <parent_dir>/examples/encfs/importkeyconfig.json -out`
+After setting up an Azure Key Vault resource, generate a user-assigned managed identity that will be attached to the container group so that the containers have the correct access permissions to Azure services and resources. 
+The managed identity needs *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV key vault or *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys if using AKV managed HSM. 
+More information about creating identities can be found [here.](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)
 
-For `RSA-HSM` keys, the `importkey` (if prompted using the `-out` flag) derives an octet key from the RSA private key. Note that it is safe
-to use the private RSA key as entropy for a symmetric key as logn as the RSA key pair is not used for any other cryptographic operation.
+If you already have a user-assigned managed identity with the appropriate access permissions, run the following command to list the managed identities for a resource group:
 
-### Encrypted filesystem
-The user needs to instantiate an [Azure storage container](https://docs.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-blobs-upload) onto which the encrypted filesystem will be uploaded. The roles *Reader* and *Storage Blob Reader* roles need to be assigned to the user-assigned managed identity.
+```
+az identity list -g <RESOURCE GROUP>
+```
 
-The script `generatefs/generatefs.sh` creates `encfs.img` with the contents of the `generatefs/filesystem` directory. You may need to adjust the size of the image in the script, as it isn't calculated automatically. 
+Or you can use the following command if you know the name of the managed identity and the resource group:
 
-The script expects a symmetric key stored in binary format `keyfile.bin` previously created during key import phase. If not passed, the script will generate a new one and the user will need to follow the import key instructions.
+```
+az identity show -g <RESOURCE GROUP> -n <MANAGED IDENTITY NAME>
+```
+
+Replace [managed-identity-with-right-permissions-to-key-vault](aci-arm-template.json#L22) of `aci-arm-template.json` with the identity ID.
+
+
+#### 3. Populate Image Registry Credentials
+
+Update the [image registry credentials](aci-arm-template.json?plain=1#L94) on the ARM template in order to access a private container registry. 
+The credential could be either a managed identity or username/password. 
+This section is not needed for public images. If the credential needs to be a managed identity, the managed identity needs to be granted `AcrPull role` to the private images. 
+See this [doc](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-authentication-managed-identity?tabs=azure-cli#example-1-access-with-a-user-assigned-identity)
+
+
+#### 4. Obtain the AAD token
+
+The AAD token with permission to AKV/mHSM can be obtained with the following command:
+
+```
+az account get-access-token --resource https://managedhsm.azure.net
+```
+
+#### 5. Fill in Key Information
+
+Replace [AAD token](importkeyconfig.json#L11) and [ENCFS AKV endpoint](importkeyconfig.json#L9) in `importkeyconfig.json` with the output accessToken and the mHSM endpoint.
+Replace [ENCFS AKV endpoint](encfs-sidecar-args.json#L15) in `enfcs-sidecar-args.json` with the mHSM endpoint.
+
+After setting up an Azure Key Vault resource, fill in the `importkeyconfig.json` file with the name of the key to be created and imported into the key vault [Key name](importkeyconfig.json#L3). 
+Additionally, fill in `encfs-sidecar-args.json` with the name of the key to be created and imported into the key vault [Key name](encfs-sidecar-args.json#L9).
+
+Additionally, fill in the optional [key derivation](importkeyconfig.json#L14) for RSA keys and [Key type: `RSA-HSM` or `oct-HSM`](importkeyconfig.json#L4) fields or remove these fields from the `importkeyconfig.json` file. 
+Fill in [key derivation](encfs-sidecar-args.json#L18) and [Key type: `RSA-HSM` or `oct-HSM`](encfs-sidecar-args.json#L10) in `encfs-sidecar-args.json` or remove them as well as well. 
+
+
+#### 6. Create Azure Storage Container 
+The user needs to instantiate an [Azure Storage Container](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-create?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json&tabs=azure-portal) onto which the encrypted filesystem will be uploaded.
+Obtain the url of the uploaded encrypted file system image. You need to know the name of the container under which the file system gets uploaded. And the full url should be in the following format: 
+
+```
+https://<azure-storage-account>.blob.core.windows.net/<container-name>/encfs.img
+```
+
+Fill in the [azure url](encfs-sidecar-args.json#L5) in `encfs-sidecar-args.json`. At this point, the `encfs-sidecar-args.json` file should be completely filled out and the user needs to base64 encode the contents and copy it to [`EncfsSideCarArgs`](aci-arm-template.json#L36).
+
+
+#### 7. Generate Security Policy
+
+Configure the [LogFile](aci-arm-template.json#L39) and [LogLevel](aci-arm-template.json#L43) fields on the `aci-arm-template.json`. 
+eg. `log.txt` as the value of [LogFile] so that users can cat `log.txt` at the root of encrypted-filesystem-sidecar-container container. 
+The default logging is `warning` level. At this point, the `aci-arm-template.json` file should be filled out except for the `ccePolicy` field. 
+Set the value of the `ccePolicy` to an empty string. After installing the [Azure `confcom` CLI extension](#policy-generation), run the following command to generate the security policy and include the `--debug-mode` option so that the policy allows users to shell into the container. 
+The `--debug-mode` option is only needed for testing purposes and should not be used in production, as it allows users to shell into the containers. 
+Note this should only be used for debugging and not recommended for production systems. 
+We are using this option since this is an example run. 
+
+```
+az confcom acipolicygen -a aci-arm-template.json --debug-mode
+```
+
+This should automatically populate the [cce policy](aci-arm-template.json#L112) field of `aci-arm-template.json.` 
+If you run the tool on an ARM template with the `ccePolicy` field already populated, the tool will prompt you to overwrite the existing policy.
+
+The security policy tool outputs the sha-256 hash of the policy upon completion. 
+Copy this output and replace the [hash-digest-of-the-security-policy](importkeyconfig.json#L22) string of the `importkeyconfig.json` file.
+
+
+#### 8. Import Keys into mHSM/AKV
+
+Once the key vault resource is ready and the `importkeyconfig.json` file is completely filled out, the user can import `RSA-HSM` or `oct-HSM` keys into it using the `importkey` tool placed under `<parent_repo_dir>/tools/importkey` as discussed in the tools' [readme file](https://github.com/microsoft/confidential-sidecar-containers/tree/main/tools/importkey).
+
+Starting from release 2.6, we provide importkey binaries so that users do not have to rely on certain Golang modules. Go to the [release page](https://github.com/microsoft/confidential-sidecar-containers/releases) and download the appropriate binary for your environment. 
+To import the key into AKV/mHSM, use the following command:
+
+```bash 
+./importkey -c importkeyconfig.json -out=true
+```
+Users have the option of adding salt to their key if they configured `RSA-HSM` key type on `importkeyconfig.json`. Users can come up with their own salt but it must be a hex encoded string. If choose to use salt, the salt must appear in both `importkeyconfig.json` and`encfs-sidecar-args.json`.   
+Upon successful import completion, you should see something similar to the following: 
+
+```
+[34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
+https://<mhsm-name>.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
+{"version":"0.2","anyOf":[{"authority":"<authority-url-name>","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
+```
+
+In this case, use the following commands to verify the key has been successfully imported: 
+
+```
+az account set --subscription "<SUBSCRIPTION>"
+az keyvault key list --hsm-name <mHSM NAME> -o table
+```
+The main.go golang script generates a private rsa key or an oct key named `keyfile.bin` based on the key type configuration on `importkeyconfig.json`.
+It then uploads the binary key file named `keyfile.bin` to the mHSM under the [key ID](importkeyconfig.json#L3) along with the key released policy from `importkeyconfig.json`. 
+
+#### 9. Encrypted Filesystem
+After instantiating an [Azure Storage Container](https://learn.microsoft.com/en-us/azure/storage/common/storage-account-create?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json&tabs=azure-portal) onto which the encrypted filesystem will be uploaded. 
+The roles *Reader* and *Storage Blob Reader* roles need to be assigned to the user-assigned managed identity. 
+Additionally, the role of *Storage Blob Contributor* needs to be assigned for a read-write filesystem.
+
+Copy the `keyfile.bin` generated from last step to `generatefs/generatefs.sh` folder. 
+
+The script `generatefs/generatefs.sh` does the following in order: 
+
+1. Encrypts the contents of the `generatefs/filesystem` directory with `keyfile.bin` 
+2. Creates an encrypted file system image named `encfs.img`.
+
+You may need to adjust the [size of the image](generatefs.shL#26) in the script, as it isn't calculated automatically.
 
 ```
 [!] Generating keyfile...
@@ -60,7 +168,6 @@ The script expects a symmetric key stored in binary format `keyfile.bin` previou
 32 bytes copied, 0.00142031 s, 22.5 kB/s
 keyfile exists
 Key in hex string format
-b'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef'
 [!] Creating encrypted image...
 Key slot 0 created.
 Command successful.
@@ -79,16 +186,23 @@ lost+found  test.txt
 [!] Closing device...
 ```
 
-The user needs to upload the blob to the previously generated storage container 
+The user needs to upload the blob to the previously generated storage container by uploading to the Azure Portal, using [az storage blob upload](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-cli), or using [azcopy](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json). 
+When uploading the blob, the type must be specified as a "page blob" for a read-write filesystem. 
+However, block blobs are allowed for read-only filesystems.
 
-```azcopy copy --blob-type=PageBlob ./generatefs/encfs.img 'https://<storage-container-uri>.blob.core.windows.net/private-container/encfs.img?<SAS_token_to_container_with_write_create_read_permissions>```
+```az storage blob upload --file generatefs/encfs.img --container-name <storage container name> --name <name of blob of the image generated> --account-name <storage account name> --type <page or block blob> --auth-mode login```
 
-## Testing
-In our confidential container group example, we will deploy the encrypted filesystem sidecar along with a simple container that runs indefinitely. The simple container will have access to the remote filesystem mounted by the sidecar container.
+```azcopy copy --blob-type=PageBlob ./generatefs/encfs.img 'https://<storage-container-uri>.blob.core.windows.net/private-container/encfs.img```
 
-### Deployment
-The `aci-arm-template.json` provides an ACI ARM template which can be parametrized using the security policy obtained above, the registry name (and credentials if private), the user-assigned managed identity, and the encrypted filesystem sidecar's *EncfsSideCarArgs* set to the base64-std-encoded-string of the sidecar's runtime attribute specified in the `encfs-sidecar-args.json` 
+The url of the uploaded blob needs to be copied into [`encfs-sidecar-args.json`](encfs-sidecar-args.json#L5) file. 
 
+At this point, the `encfs-sidecar-args.json` file should be completely filled out and the user needs to base64 encode the contents and copy it to [`EncfsSideCarArgs`](aci-arm-template.json#L36).
+
+
+#### 10. Deployment
+
+Go to Azure portal and click on `deploy a custom template`, then click `Build your own template in the editor`. 
+By this time, the `aci-arm-template.json` file should be completely filled out. Copy and paste the ARM template into the field start a deployment. 
 Once the deployment completes, the user can shell into the applicaiton container and execute the following commands:
 
 ```
@@ -103,77 +217,4 @@ Alternatively, the whitelisted command in test-encfs-container outputs the follo
 ```
 This is a file inside the filesystem.
 This is a file inside the filesystem.
-
 ```
-
-### Step by step example 
-
-**Preparation**: 
-
-Please follow [Encrypted filesystem](#encrypted-filesystem) to generate and upload the encrypted file system to container storage as a page blob. Once done, update the following ARM template managed identity portion that has the correct role based access. The [ARM template managed identity](aci-arm-template.json?plain=1#L22) needs *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV key vault. *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys if using AKV managed HSM. Follow [Managed identity](#managed-identity) for detailed instruction. The same identity should also have the Reader and Storage Blob Reader/Contributor roles to the storage container on which the encrypted model image has been uploaded. Update the [image registry credentials](aci-arm-template.json?plain=1#L83) on the ARM template in order to access the private container registry. The credential could be either managed identity or username/password. In our case, you do not need this section because we are using a public image. 
-
-**Encfs sidecar argument**: 
-
-Update the encfs sidecar argument JSON string as the following: 
-
-[remote file system mount_point](encfs-sidecar-args.json?plain=1#L4)<br />
-[azure blob storage url](encfs-sidecar-args.json?plain=1#L5)<br />
-[imported encryption key name](encfs-sidecar-args.json?plain=1#L8)<br />
-[MAA endpoint](encfs-sidecar-args.json?plain=1#11)<br />
-[mHSM endpoint](encfs-sidecar-args.json?plain=1#L14)<br />
-
-The value of [`EncfsSideCarArgs`](aci-arm-template.json?plain=1#L34) on the ARM template should be the base64 encoding of the encfs sidecar argument above. 
-
-**Generate security policy**: 
-
-Run the following command to generate the security policy and include the `--debug-mode` option so that the security policy allows users to shell into the container for debugging purposes. 
-
-    az confcom acipolicygen -a aci-arm-template.json --debug-mode
-
-
-**Key import**: 
-
-    git clone git@github.com:microsoft/confidential-sidecar-containers.git 
-
-Use the tools in this repository to obtain the security hash of the generated policy and to import key into the AKV/mHSM. Copy the value of the generated `ccePolicy` from the ARM template. At the root of the clone repo, obtain the security hash of the policy by running: 
-
-    go run tools/securitypolicydigest/main.go -p ccePolicyValue
-
-At the end of the command output, you should see something similar to the following: 
-
-    inittimeData sha-256 digest **aaa4e****cc09d**
-
-**Obtain the AAD token**: 
-
-    az account get-access-token --resource https://managedhsm.azure.net
-
-Fill in the `keyimportconfig.json` file with the following information: 
-
-[imported key name](importkeyconfig.json?plain=1#L3)<br />
-[MAA endpoint](importkeyconfig.json?plain=1#L6)<br />
-[mHSM endpoint](importkeyconfig.json?plain=1#L9)<br />
-[AAD token](importkeyconfig.json?plain=1#L11)<br />
-[security hash of policy](importkeyconfig.json?plain=1#L22)<br />
-
-Import the key into mHSM with the following command. The value of the -kh flag should be the encryption key you obtained during file system generation. 
-
-    go run /tools/importkey/main.go -c keyimportconfig.json -kh encryptionKey
-
-Upon successful import completion, you should see something similar to the following:
-
-```
-[34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
-https://accmhsm.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
-{"version":"0.2","anyOf":[{"authority":"https://sharedeus2.eus2.test.attest.azure.net","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
-```
-
-In this case, I use the following command to verify my key has been successfully imported: 
-
-```
-az account set --subscription "my subscription"
-az keyvault key list --hsm-name mhsm-name -o table 
-``` 
-
-**Deployment**: 
-
-Go to Azure portal and click on `deploy a custom template`, then click `Build your own template in the editor`. By this time, the `ccePolicy` field should have been generated and filled in the previous `az confcom acipolicygen` command. Copy and paste the ARM template into the field start a deployment. Once deployment is done, verify file system mounting. See [Deployment](#deployment) for detail.

@@ -5,7 +5,7 @@
 
 # Important note: This script is meant to run from inside the container
 
-CmdlineArgs="-logfile ./log.txt"
+CmdlineArgs=""
 
 if [ -z "${SkrSideCarArgs}" ]; then
   SkrSideCarArgs=$1
@@ -25,6 +25,15 @@ echo Port = $Port
 
 if [ -n "${Port}" ]; then
   CmdlineArgs="${CmdlineArgs} -port ${Port}"
+fi
+
+# LogFile and LogLevel are expected to be passed in as environment variables
+if [ -n "${LogFile}" ]; then
+  CmdlineArgs="${CmdlineArgs} -logfile ${LogFile}"
+fi
+
+if [ -n "${LogLevel}" ]; then
+  CmdlineArgs="${CmdlineArgs} -loglevel ${LogLevel}"
 fi
 
 echo CmdlineArgs = $CmdlineArgs
