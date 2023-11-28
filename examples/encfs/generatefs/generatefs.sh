@@ -5,9 +5,30 @@
 
 keyFilePath=keyfile.bin
 encryptedImage=encfs.img
+hashDevice=hash.img
 
-deviceName=cryptdevice1
-deviceNamePath="/dev/mapper/$deviceName"
+cryptDeviceName=cryptdevice1-gen
+verityDeviceName=veritydevice1-gen
+
+cryptDeviceNamePath="/dev/mapper/$cryptDeviceName"
+verityDeviceNamePath="/dev/mapper/$verityDeviceName"
+
+verity=false
+
+# Parse arguments
+for arg in "$@"
+do
+    case $arg in
+        --verity=true)
+        verity=true
+        shift
+        ;;
+        --verity=false)
+        verity=false
+        shift
+        ;;
+    esac
+done
 
 if [ -f "$keyFilePath" ]; then
     echo "keyfile exists"
@@ -56,3 +77,9 @@ echo "[!] Closing device..."
 sudo umount "$mountPoint"
 
 sudo cryptsetup luksClose "$deviceName"
+
+# setup dm-verity data and hash device if --verity=true
+if [ "$verity" = true ]; then
+  rm -f "$hashDevice"
+  sudo veritysetup -v --debug format $encryptedImage $hashDevice | grep 'Root hash:' | tail -c 65 | head -c 64 > root_hash
+fi
