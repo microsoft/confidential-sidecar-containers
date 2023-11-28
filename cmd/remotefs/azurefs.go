@@ -300,10 +300,11 @@ func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob common.KeyDeri
 //     by the actual code that gets the key. It is saved to a temporary file so
 //     that it can be passed to cryptsetup. It can be removed afterwards.
 //
-//  3. Open encrypted filesystem with cryptsetup. The result is a block device in
-//     “/dev/mapper/remote-crypt-[filesystem-index]“.
+//  3. If the dm-verity is enabled, open encrypted filesystem with veritysetup. 
+//  The result is a block device in “/dev/mapper/remote-verity-[filesystem-index]“.
 //
-//  4. Config dm-verity on /dev/mapper/remote-crypt-[filesystem-index]
+//  4. Open encrypted filesystem (if the dm-verity is enabled, open verity block device instead) 
+//  with cryptsetup. The result is a block device in “/dev/mapper/remote-crypt-[filesystem-index]“.
 //
 //  5. Mount block device as a read-only filesystem.
 //
