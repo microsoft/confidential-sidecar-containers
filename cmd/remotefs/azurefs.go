@@ -110,7 +110,7 @@ func cryptsetupOpen(source string, deviceName string, keyFilePath string) error 
 }
 
 // veritysetupCommand runs veritysetup with the provided arguments
-func veritysetupCommand(args []string) (string, error) {
+func veritysetupCommand(args []string) error {
 	cmd := exec.Command("veritysetup", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -120,7 +120,7 @@ func veritysetupCommand(args []string) (string, error) {
 }
 
 // veritysetupOpen runs "veritysetup open" with right arguments
-func veritysetupOpen(dataDevicePath string, dmVerityName string, hashDevicePath string, rootHash string) (string, error) {
+func veritysetupOpen(dataDevicePath string, dmVerityName string, hashDevicePath string, rootHash string) error {
 	openArgs := []string{
 		"open", dataDevicePath, dmVerityName, hashDevicePath, rootHash}
 	return veritysetupCommand(openArgs)
