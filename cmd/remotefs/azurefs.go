@@ -427,13 +427,14 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 		if err != nil {
 			return errors.Wrapf(err, "luksOpen failed: %s", deviceName)
 		}
+	} else {
+		// no dm-verity
+		err = _cryptsetupOpen(dataLocalFile, deviceName, keyFilePath)
+		if err != nil {
+			return errors.Wrapf(err, "luksOpen failed: %s", deviceName)
+		}
+		logrus.Debugf("Device opened: %s", deviceName)
 	}
-	// no dm-verity
-	err = _cryptsetupOpen(dataLocalFile, deviceName, keyFilePath)
-	if err != nil {
-		return errors.Wrapf(err, "luksOpen failed: %s", deviceName)
-	}
-	logrus.Debugf("Device opened: %s", deviceName)
 
 	// 5) Mount block device as a read-only filesystem.
 	tempMountFolder, err := filepath.Abs(filepath.Join(fs.MountPoint, fmt.Sprintf("../.filesystem-%d", index)))
