@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
-	"strings"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -37,7 +36,6 @@ var (
 	_azmountRun                    = azmountRun
 	_containerMountAzureFilesystem = containerMountAzureFilesystem
 	_cryptsetupOpen                = cryptsetupOpen
-	_veritysetupFormat             = veritysetupFormat
 	_veritysetupOpen               = veritysetupOpen
 	ioutilWriteFile                = ioutil.WriteFile
 	osGetenv                       = os.Getenv
@@ -118,7 +116,7 @@ func veritysetupCommand(args []string) (string, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to execute veritysetup: %s", string(output))
 	}
-	return string(output), nil
+	return nil
 }
 
 // veritysetupOpen runs "veritysetup open" with right arguments
@@ -126,29 +124,6 @@ func veritysetupOpen(dataDevicePath string, dmVerityName string, hashDevicePath 
 	openArgs := []string{
 		"open", dataDevicePath, dmVerityName, hashDevicePath, rootHash}
 	return veritysetupCommand(openArgs)
-}
-
-// veritysetupFormat runs "veritysetup format" with right arguments
-func veritysetupFormat(dataDevicePath string, hashDevicePath string) (string, error) {
-	openArgs := []string{
-		"format", dataDevicePath, hashDevicePath}
-	return veritysetupCommand(openArgs)
-}
-
-// extract root hash from the veritysetup output
-func getRootHash(formatOutput string) (string, error) {
-	if len(formatOutput) < ROOTHASH_OFFSET + ROOTHASH_LENGTH {
-		return "", errors.New("Index Out of Bound")
-	}
-	// remove space and escape sequences
-	replacer := strings.NewReplacer(" ","", "\n", "", "\t", "")
-	replacedString := replacer.Replace(formatOutput)
-	index := strings.Index(replacedString,"Roothash:")
-	if index < 0 {
-		return "", errors.New("Incorrect Format Output")
-	}
-	rootHash := replacedString[index+ROOTHASH_OFFSET : index+ROOTHASH_OFFSET+ROOTHASH_LENGTH]
-	return rootHash, nil
 }
 
 // store root hash for future verification
@@ -401,11 +376,10 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 	if fs.DmVerity.Enable == true {
 		verityDeviceName = fmt.Sprintf("remote-verity-%d", index)
 		verityDevicePath = "/dev/mapper/" + verityDeviceName
-		openOutput, err := _veritysetupOpen(dataLocalFile, verityDeviceName, hashLocalFile, fs.DmVerity.RootHash)
+		err = _veritysetupOpen(dataLocalFile, verityDeviceName, hashLocalFile, fs.DmVerity.RootHash)
 		if err != nil {
 			return errors.Wrapf(err, "Fail to open dm-verity device")
 		}
-		logrus.Debugf("veritysetup open output message: %s", openOutput)
 		// store root hash for future verification
 		err = storeRootHash(fs.DmVerity.RootHash, fs.MountPoint, index)
 		if err != nil {
