@@ -58,12 +58,6 @@ var (
 	allowTestingWithRawKey = false
 )
 
-// Constant
-// offset of "Roothash:"
-const ROOTHASH_OFFSET int = 9
-// length of roothash
-const ROOTHASH_LENGTH int = 64
-
 // azmountRun starts azmount with the specified arguments, and leaves it running
 // in the background.
 func azmountRun(imageLocalFolder string, azureImageUrl string, azureImageUrlPrivate bool, azmountLogFile string, cacheBlockSize string, numBlocks string, readWrite bool) error {
