@@ -345,11 +345,28 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 	cacheBlockSize := "512"
 	numBlocks := "32"
 
+	// Filesystem cannot be both writable and dm-verity protected
+	if fs.ReadWrite && fs.DmVerity.Enable {
+		logrus.Fatalf("Dm-verity protected file system is not writable!")
+	}
+	// get dataTempDir and hashTempDir
+	dataTempDir := filepath.Join(tempDir, "data")
+	hashTempDir := filepath.Join(tempDir, "hash")
+	var hashLocalFile string
+
 	// 1) Mount remote image
 	logrus.Debugf("Mounting remote image %s", fs.AzureUrl)
-	imageLocalFile, err := mountAzureFile(tempDir, index, fs.AzureUrl, fs.AzureUrlPrivate, cacheBlockSize, numBlocks, fs.ReadWrite)
+	dataLocalFile, err := mountAzureFile(dataTempDir, index, fs.AzureUrl, fs.AzureUrlPrivate, cacheBlockSize, numBlocks, fs.ReadWrite)
 	if err != nil {
 		return errors.Wrapf(err, "failed to mount remote file: %s", fs.AzureUrl)
+	}
+	// mount hash device if dm-verity is set true
+	if fs.DmVerity.Enable == true {
+		logrus.Debugf("Mounting remote hash device %s", fs.DmVerity.HashUrl)
+		hashLocalFile, err = mountAzureFile(hashTempDir, index, fs.DmVerity.HashUrl, fs.AzureUrlPrivate, cacheBlockSize, numBlocks, fs.ReadWrite)
+		if err != nil {
+			return errors.Wrapf(err, "failed to mount remote hashDevice: %s", fs.DmVerity.HashUrl)
+		}
 	}
 
 	// 2) Obtain keyfile
@@ -376,50 +393,49 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 		}
 	}()
 
-	// 3) Open encrypted filesystem with cryptsetup. The result is a block
+	// 3) Open encrypted filesystem with veritysetup if dm-verity is set true. 
+	// The result is a block device in /dev/mapper/remote-verity-[filesystem-index].
+	var verityDeviceName string
+	var verityDevicePath string
+	// open verity device	
+	if fs.DmVerity.Enable == true {
+		verityDeviceName = fmt.Sprintf("remote-verity-%d", index)
+		verityDevicePath = "/dev/mapper/" + verityDeviceName
+		openOutput, err := _veritysetupOpen(dataLocalFile, verityDeviceName, hashLocalFile, fs.DmVerity.RootHash)
+		if err != nil {
+			return errors.Wrapf(err, "Fail to open dm-verity device")
+		}
+		logrus.Debugf("veritysetup open output message: %s", openOutput)
+		// store root hash for future verification
+		err = storeRootHash(fs.DmVerity.RootHash, fs.MountPoint, index)
+		if err != nil {
+			return errors.Wrapf(err, "Failed to store root hash as a file")
+		}
+		logrus.Infof("Successfully open dm-verity device")
+	}
+
+	// 4) Open encrypted filesystem with cryptsetup. The result is a block
 	// device in /dev/mapper/remote-crypt-[filesystem-index] so that it is
 	// unique from all other filesystems.
 	var deviceName = fmt.Sprintf("remote-crypt-%d", index)
 	var deviceNamePath = "/dev/mapper/" + deviceName
 
 	logrus.Debugf("Opening device at: %s", deviceNamePath)
-	err = _cryptsetupOpen(imageLocalFile, deviceName, keyFilePath)
+	// read from dm-verity device
+	if fs.DmVerity.Enable == true {
+		err = _cryptsetupOpen(verityDevicePath, deviceName, keyFilePath)
+		if err != nil {
+			return errors.Wrapf(err, "luksOpen failed: %s", deviceName)
+		}
+	}
+	// no dm-verity
+	err = _cryptsetupOpen(dataLocalFile, deviceName, keyFilePath)
 	if err != nil {
 		return errors.Wrapf(err, "luksOpen failed: %s", deviceName)
 	}
 	logrus.Debugf("Device opened: %s", deviceName)
 
-	// 4) Config the decrypted filesystem in dm-verity format
-	hashDeviceName := fmt.Sprintf("hash-device-%d", index)
-	hashDevicePath := "/dev/mapper/" + hashDeviceName
-	verityDeviceName := fmt.Sprintf("remote-verity-%d", index)
-	verityDevicePath := "/dev/mapper/" + verityDeviceName
-	// format dm-verity
-	formatOutput, err := veritysetupFormat(deviceNamePath, hashDevicePath)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to Format dm-verity Device")
-	}
-	logrus.Debugf("veritysetup format output message: %s", formatOutput)
-	// get root hash
-	rootHash, err := getRootHash(string(formatOutput))
-	if err != nil {
-		return errors.Wrapf(err, "Wrong dm-verity format output")
-	}
-	logrus.Debugf("dm-verity root hash: %s", rootHash)
-	// open dm-verity device
-	openOutput, err := veritysetupOpen(deviceNamePath, verityDeviceName, hashDevicePath, rootHash)
-	if err != nil {
-		return errors.Wrapf(err, "Fail to open dm-verity device")
-	}
-	logrus.Debugf("veritysetup open output message: %s", openOutput)
-	logrus.Debugf("Successfully format and open dm-verity device")
-	// store root hash for future verification
-	err = storeRootHash(rootHash, fs.MountPoint, index)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to store root hash as a file")
-	}
-
-	// 5) Mount dm-verity block device as a read-only filesystem.
+	// 5) Mount block device as a read-only filesystem.
 	tempMountFolder, err := filepath.Abs(filepath.Join(fs.MountPoint, fmt.Sprintf("../.filesystem-%d", index)))
 	if err != nil {
 		return errors.Wrapf(err, "failed to resolve absolute path of mount point %s for filesystem-%d", fs.MountPoint, index)
@@ -439,8 +455,9 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 		return errors.Wrapf(err, "mkdir failed: %s", tempMountFolder)
 	}
 
-	if err := unixMount(verityDevicePath, tempMountFolder, "ext4", flags, data); err != nil {
-		return errors.Wrapf(err, "failed to mount filesystem: %s", verityDevicePath)
+	logrus.Debugf("Mounting filesystem %s to mount folder %s", deviceNamePath, tempMountFolder)
+	if err := unixMount(deviceNamePath, tempMountFolder, "ext4", flags, data); err != nil {
+		return errors.Wrapf(err, "failed to mount filesystem: %s", deviceNamePath)
 	}
 
 	// 6) Create a symlink to the folder where the filesystem is mounted.
