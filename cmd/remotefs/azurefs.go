@@ -114,7 +114,7 @@ func veritysetupCommand(args []string) (string, error) {
 	cmd := exec.Command("veritysetup", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to execute veritysetup: %s", string(output))
+		return errors.Wrapf(err, "failed to execute veritysetup: %s", string(output))
 	}
 	return nil
 }
