@@ -159,6 +159,10 @@ The script `generatefs/generatefs.sh` does the following in order:
 1. Encrypts the contents of the `generatefs/filesystem` directory with `keyfile.bin` 
 2. Creates an encrypted file system image named `encfs.img`.
 
+Running `generatefs/generatefs.sh` with command line option `--verity=true` will do these extra steps:
+3. Create hash tree for `encfs.img`
+4. Store hash tree as `hash.img` and dm-verity root hash as `root_hash`
+
 You may need to adjust the [size of the image](generatefs.shL#26) in the script, as it isn't calculated automatically.
 
 ```
@@ -194,7 +198,12 @@ However, block blobs are allowed for read-only filesystems.
 
 ```azcopy copy --blob-type=PageBlob ./generatefs/encfs.img 'https://<storage-container-uri>.blob.core.windows.net/private-container/encfs.img```
 
+If you run encfs with dm-verity, also upload dm-verity hash image
+```azcopy copy --blob-type=PageBlob ./generatefs/encfs.img 'https://<storage-container-uri>.blob.core.windows.net/private-container/hash.img```
+
 The url of the uploaded blob needs to be copied into [`encfs-sidecar-args.json`](encfs-sidecar-args.json#L5) file. 
+
+To apply dm-verity protection in encfs, set [dm_verity](encfs-sidecar-args.json#L9) flag as `true`, and fill in the [hash_url](encfs-sidecar-args.json#L10), and [root_hash](encfs-sidecar-args.json#L10).
 
 At this point, the `encfs-sidecar-args.json` file should be completely filled out and the user needs to base64 encode the contents and copy it to [`EncfsSideCarArgs`](aci-arm-template.json#L36).
 
