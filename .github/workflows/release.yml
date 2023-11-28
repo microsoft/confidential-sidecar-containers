@@ -1,0 +1,72 @@
+name: Create Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:        
+      - '*'
+    paths:
+      - .github/workflows/release.yml
+      - tools/get-snp-report/**
+      - tools/importkey/**
+      - pkg/common/akv.go
+      - pkg/common/keyblob.go
+      
+env:
+  GO_VERSION: "1.19.x"
+
+jobs:
+  build:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build Linux Executables
+        run: |
+          pushd tools/get-snp-report && make && popd
+          cp -a tools/get-snp-report/bin/* .
+          go build ./tools/importkey
+          go build ./cmd/skr
+        
+      - name: Build Windows Executables
+        run: |
+          go build ./tools/importkey
+        env:
+          GOOS: windows
+          GOARCH: amd64
+  
+      - name: Upload Executables
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries
+          path: |
+            get-snp-report
+            verbose-report
+            importkey.exe
+            importkey
+            skr
+
+  create_release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries
+          
+      - name: Publish release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            get-snp-report
+            verbose-report
+            importkey.exe
+            importkey
+            skr

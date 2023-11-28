@@ -12,7 +12,7 @@ The skr sidecar can be queried by application containers hosted in the same pod 
 The ``examples/skr`` shows an example of how the skr sidecar can be deployed and tested within a confidential container group on ACI.
 
 ## Fetching an attestion report.
-``tools/get-snp-report provides a tool which will return an SNP attestation report from the AMD PSP via linux IOCTLs. it can take a hex encoded report data value on the command line. The output is a hex encoded binary object. If piped through hex2report it can be read by people. There are two implementations inside the one tool to support the different IOCTLs requirements between linux 5.15 and 6.1 and later.
+``tools/get-snp-report`` provides a tool which will return an SNP attestation report from the AMD PSP via linux IOCTLs. it can take a hex encoded report data value on the command line. The output is a hex encoded binary object. If piped through hex2report it can be read by people. There are two implementations inside the one tool to support the different IOCTLs requirements between linux 5.15 and 6.1 and later.
 
 ### Third-party code 
 We modified the [AES unwrap key without padding method](https://github.com/NickBall/go-aes-key-wrap/blob/master/keywrap.go) to implement the aes key unwrap with padding method.
@@ -23,6 +23,7 @@ The ``docker/encfs/build.sh`` script builds all necessary Go tools (for encrypte
 The encrypted filesystem sidecar uses the SKR library to release key material from Azure Key Vault instances required for mounting the encrypted filesystems required by the application.
 
 The ``examples/encfs`` shows an example of how the encrypted filesystem sidecar can be deployed within a confidential container group on ACI.
+
 ## Dependencies:
 - Golang 1.19 or later
 - Docker

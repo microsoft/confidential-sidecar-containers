@@ -5,25 +5,28 @@
 
 # Important note: This script is meant to run from inside the container
 
-if [[ -z "${EncfsSideCarArgs}" ]]; then
-  EncfsSideCarArgs=$1
+CmdlineArgs=""
+
+# we expect all the arguments to be passed in as environment variables, if at all
+if [ -n "${EncfsSideCarArgs}" ]; then
+  CmdlineArgs="${CmdlineArgs} -base64 ${EncfsSideCarArgs}"
 fi
 
-echo EncfsSideCarArgs = $EncfsSideCarArgs
+if [ -n "${LogFile}" ]; then
+  CmdlineArgs="${CmdlineArgs} -logfile ${LogFile}"
+fi
 
-if [[ -z "${EncfsSideCarArgs}" ]]; then
-  if /bin/remotefs -logfile /log.txt; then
-    echo "1" > result
-  else
-    echo "0" > result
-  fi
+if [ -n "${LogLevel}" ]; then
+  CmdlineArgs="${CmdlineArgs} -loglevel ${LogLevel}"
+fi
+
+echo CmdlineArgs = $CmdlineArgs
+
+if /bin/remotefs $CmdlineArgs; then
+  echo "1" > result
 else
-  if /bin/remotefs -logfile /log.txt -base64 $EncfsSideCarArgs; then
-    echo "1" > result
-  else
-    echo "0" > result
-  fi
+  echo "0" > result
 fi
 
 # Wait forever
-while true; do sleep 1; done
+sleep infinity

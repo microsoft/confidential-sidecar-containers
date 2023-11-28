@@ -6,8 +6,8 @@
             "endpoint": "<authority-of-key-imported-to-akv>"
         },
         "akv": {
-            "endpoint": "key-vault-akv-endpoint",
-            "api_version": "api-version=7.3-preview",
+            "endpoint": "<key-vault-akv-endpoint>",
+            "api_version": "api-version=7.4",
             "bearer_token": "<aad-token-with-permissions-to-akv>"
         }
     },

@@ -6,11 +6,9 @@ package common
 import (
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
-	"strconv"
-
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -31,45 +29,51 @@ type THIMCerts struct {
 	CacheControl     string `json:"cacheControl"`
 }
 
-func (thimCerts *THIMCerts) GetLocalCerts(encodedHostCertsFromTHIM string) (string, uint64, error) {
-	var thimTcbm uint64
-	hostCertsFromTHIM, err := base64.StdEncoding.DecodeString(encodedHostCertsFromTHIM)
+func ParseTHIMCertsFromString(base64EncodedHostCertsFromTHIM string) (THIMCerts, error) {
+	certificatesRaw, err := base64.StdEncoding.DecodeString(base64EncodedHostCertsFromTHIM)
 	if err != nil {
-		return "", thimTcbm, errors.Wrapf(err, "base64 decoding platform certs failed")
+		return THIMCerts{}, errors.Wrapf(err, "base64 decoding platform certs failed")
 	}
 
-	if GenerateTestData {
-		ioutil.WriteFile("uvm_host_amd_certificate.json", hostCertsFromTHIM, 0644)
-	}
-
-	//var certsFromTHIM THIMCerts
-	err = json.Unmarshal(hostCertsFromTHIM, &thimCerts)
+	certificates := THIMCerts{}
+	err = json.Unmarshal([]byte(certificatesRaw), &certificates)
 	if err != nil {
-		return "", thimTcbm, errors.Wrapf(err, "json unmarshal platform certs failed")
+		return THIMCerts{}, errors.Wrapf(err, "failed to unmarshal THIM certificate")
 	}
+	return certificates, nil
+}
 
-	certsString := thimCerts.VcekCert + thimCerts.CertificateChain
-
-	if GenerateTestData {
-		ioutil.WriteFile("uvm_host_amd_certificate.pem", []byte(certsString), 0644)
-	}
-
-	logrus.Debugf("certsFromTHIM:\n\n%s\n\n", certsString)
-	logrus.Debugf("thimTcbm: %s\n\n", thimCerts.Tcbm)
-
-	thimTcbm, err = strconv.ParseUint(thimCerts.Tcbm, 16, 64)
+func ParseTHIMCertsFromByte(base64EncodedHostCertsFromTHIM []byte) (THIMCerts, error) {
+	certificates := THIMCerts{}
+	err := json.Unmarshal(base64EncodedHostCertsFromTHIM, &certificates)
 	if err != nil {
-		return "", thimTcbm, errors.Wrap(err, "Unable to convert TCBM from THIM certificates to a uint64")
+		return THIMCerts{}, errors.Wrapf(err, "failed to unmarshal THIM certificate")
+	}
+	return certificates, nil
+}
+
+func ConcatenateCerts(thimCerts THIMCerts) []byte {
+	return []byte(thimCerts.VcekCert + thimCerts.CertificateChain)
+}
+
+func ParseTHIMTCBM(thimCerts THIMCerts) (uint64, error) {
+	thimTcbm, err := strconv.ParseUint(thimCerts.Tcbm, 16, 64)
+	if err != nil {
+		return thimTcbm, errors.Wrapf(err, "Unable to convert TCBM from THIM certificates %s to a uint64", thimCerts.Tcbm)
 	}
 
-	return certsString, thimTcbm, nil
+	return thimTcbm, nil
 }
 
 type UvmInformation struct {
-	EncodedSecurityPolicy   string    // customer security policy
+	EncodedSecurityPolicy   string    // base64 customer security policy
 	InitialCerts            THIMCerts // platform certificates for the actual physical host
-	EncodedUvmReferenceInfo string    // endorsements for the particular UVM image
+	EncodedUvmReferenceInfo string    // base64 encoded endorsements for the particular UVM image
 }
+
+// this will always be set in ACI by the contol plane and is optionally set in K8s.  Need to
+// use a default if the customer does not set
+const uvmSecurityCtxDirDefault = "/opt/confidential-containers/share/kata-containers"
 
 // Late in Public Preview, we made a change to pass the UVM information
 // via files instead of environment variables.
@@ -81,13 +85,30 @@ type UvmInformation struct {
 
 // Matching PR https://github.com/microsoft/hcsshim/pull/1708
 
-func GetUvmInformation() (UvmInformation, error) {
+func GetUvmSecurityCtxDir() (string, error) {
 	securityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
-	if securityContextDir != "" {
-		return GetUvmInformationFromFiles()
+	if securityContextDir == "" {
+		logrus.Debugf("UVM_SECURITY_CONTEXT_DIR not set.  Using system default %q", uvmSecurityCtxDirDefault)
+		securityContextDir = uvmSecurityCtxDirDefault
 	} else {
-		return GetUvmInformationFromEnv()
+		logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s", securityContextDir)
 	}
+	return securityContextDir, nil
+}
+
+func GetUvmInformation() (UvmInformation, error) {
+	contextDir, err := GetUvmSecurityCtxDir()
+	var info UvmInformation
+	if len(contextDir) > 0 {
+		info, err = GetUvmInformationFromFiles()
+		if err != nil {
+			logrus.Debugf("getting UVM information from directory %q failed. %s", contextDir, err)
+		}
+	}
+	if len(info.EncodedUvmReferenceInfo) == 0 {
+		info, err = GetUvmInformationFromEnv()
+	}
+	return info, err
 }
 
 func GetUvmInformationFromEnv() (UvmInformation, error) {
@@ -96,11 +117,12 @@ func GetUvmInformationFromEnv() (UvmInformation, error) {
 	encodedHostCertsFromTHIM := os.Getenv("UVM_HOST_AMD_CERTIFICATE")
 
 	if GenerateTestData {
-		ioutil.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
+		os.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
 	}
 
 	if encodedHostCertsFromTHIM != "" {
-		_, _, err := encodedUvmInformation.InitialCerts.GetLocalCerts(encodedHostCertsFromTHIM)
+		var err error
+		encodedUvmInformation.InitialCerts, err = ParseTHIMCertsFromString(encodedHostCertsFromTHIM)
 		if err != nil {
 			return encodedUvmInformation, err
 		}
@@ -109,8 +131,8 @@ func GetUvmInformationFromEnv() (UvmInformation, error) {
 	encodedUvmInformation.EncodedUvmReferenceInfo = os.Getenv("UVM_REFERENCE_INFO")
 
 	if GenerateTestData {
-		ioutil.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
-		ioutil.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
+		os.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
+		os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
 	}
 
 	return encodedUvmInformation, nil
@@ -137,9 +159,19 @@ func readSecurityContextFile(dir string, filename string) (string, error) {
 func GetUvmInformationFromFiles() (UvmInformation, error) {
 	var encodedUvmInformation UvmInformation
 
-	securityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
-	if securityContextDir == "" {
-		return encodedUvmInformation, errors.New("UVM_SECURITY_CONTEXT_DIR not set")
+	securityContextDir, err := GetUvmSecurityCtxDir()
+	if err != nil {
+		return encodedUvmInformation, err
+	}
+
+	encodedUvmInformation.EncodedUvmReferenceInfo, err = GetReferenceInfoFile(securityContextDir, ReferenceInfoFilename)
+	if err != nil {
+		return encodedUvmInformation, err
+	}
+
+	if GenerateTestData {
+		os.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
+		os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
 	}
 
 	encodedHostCertsFromTHIM, err := readSecurityContextFile(securityContextDir, HostAMDCertFilename)
@@ -148,11 +180,11 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 	}
 
 	if GenerateTestData {
-		ioutil.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
+		os.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
 	}
 
 	if encodedHostCertsFromTHIM != "" {
-		_, _, err := encodedUvmInformation.InitialCerts.GetLocalCerts(encodedHostCertsFromTHIM)
+		encodedUvmInformation.InitialCerts, err = ParseTHIMCertsFromString(encodedHostCertsFromTHIM)
 		if err != nil {
 			return encodedUvmInformation, err
 		}
@@ -163,15 +195,17 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 		return encodedUvmInformation, errors.Wrapf(err, "reading security policy failed")
 	}
 
-	encodedUvmInformation.EncodedUvmReferenceInfo, err = readSecurityContextFile(securityContextDir, ReferenceInfoFilename)
+	return encodedUvmInformation, err
+}
+
+func GetReferenceInfoFile(securityContextDir string, ReferenceInfoFilename string) (string, error) {
+	encodedUvmReferenceInfo, err := readSecurityContextFile(securityContextDir, ReferenceInfoFilename)
 	if err != nil {
-		return encodedUvmInformation, errors.Wrapf(err, "reading uvm reference info failed")
+		return encodedUvmReferenceInfo, errors.Wrapf(err, "reading uvm reference info failed")
 	}
+	return encodedUvmReferenceInfo, nil
+}
 
-	if GenerateTestData {
-		ioutil.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
-		ioutil.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
-	}
-
-	return encodedUvmInformation, nil
+func ThimCertsAbsent(thim *THIMCerts) bool {
+	return len(thim.VcekCert) == 0 && len(thim.CertificateChain) == 0
 }

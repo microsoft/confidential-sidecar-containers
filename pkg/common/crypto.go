@@ -6,11 +6,15 @@ package common
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"math/big"
 
 	"github.com/lestrrat-go/jwx/jwk"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // constructJWKFromPrivateKey returns the JWK format of the public key of the RSA key pair
@@ -74,4 +78,57 @@ func PrivateKeyFromPEM(privatePEMString string) (*rsa.PrivateKey, error) {
 	} else {
 		return privateWrappingKey, nil
 	}
+}
+
+func RSAPrivateKeyFromJWK(jwKey *jwk.Key) (*rsa.PrivateKey, error) {
+	jwkJSONBytes, err := json.Marshal(jwKey)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Released key cannot be marshalled into bytes: %v", err)
+	}
+
+	var jwkData struct {
+		N string `json:"n"`
+		E string `json:"e"`
+		D string `json:"d"`
+		P string `json:"p"`
+		Q string `json:"q"`
+	}
+
+	if err := json.Unmarshal(jwkJSONBytes, &jwkData); err != nil {
+		return nil, errors.Wrapf(err, "Released key is not a RSA private key.")
+	}
+	n, err := base64.RawURLEncoding.DecodeString(jwkData.N)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Interpretting jwk key element failed")
+	}
+	e, err := base64.RawURLEncoding.DecodeString(jwkData.E)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Interpretting jwk key element failed")
+	}
+	d, err := base64.RawURLEncoding.DecodeString(jwkData.D)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Interpretting jwk key element failed")
+	}
+	p, err := base64.RawURLEncoding.DecodeString(jwkData.P)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Interpretting jwk key element failed")
+	}
+	q, err := base64.RawURLEncoding.DecodeString(jwkData.Q)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Interpretting jwk key element failed")
+	}
+
+	key := &rsa.PrivateKey{
+		PublicKey: rsa.PublicKey{
+			N: new(big.Int).SetBytes(n),
+			E: int(new(big.Int).SetBytes(e).Int64()),
+		},
+		D: new(big.Int).SetBytes(d),
+		Primes: []*big.Int{
+			new(big.Int).SetBytes(p),
+			new(big.Int).SetBytes(q),
+		},
+	}
+
+	return key, nil
 }

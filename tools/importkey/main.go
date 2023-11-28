@@ -16,22 +16,20 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
 	"golang.org/x/crypto/hkdf"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
 type importKeyConfig struct {
-	KeyDerivation skr.KeyDerivationBlob `json:"key_derivation,omitempty"`
-	Key           skr.KeyBlob           `json:"key"`
-	Claims        [][]skr.ClaimStruct   `json:"claims"`
-	Identity      common.Identity       `json:"identity,omitempty"`
+	KeyDerivation common.KeyDerivationBlob `json:"key_derivation,omitempty"`
+	Key           common.KeyBlob           `json:"key"`
+	Claims        [][]common.ClaimStruct   `json:"claims"`
+	Identity      common.Identity          `json:"identity,omitempty"`
 }
 
 type RSAKey struct {
@@ -57,14 +55,14 @@ type OctKey struct {
 func main() {
 	// variables declaration
 	var configFile string
-	var keyHexString string
+	var keyHexFile string
 	var keyRSAPEMFile string
 	var runInsideAzure bool
 	var outputOctetKeyfile bool
 
 	// flags declaration using flag package
 	flag.StringVar(&configFile, "c", "", "Specify config file to process")
-	flag.StringVar(&keyHexString, "kh", "", "Specify oct key bytes in hexstring [optional]")
+	flag.StringVar(&keyHexFile, "kh", "", "Specify path to oct key file or the contents of the oct key [optional]")
 	flag.StringVar(&keyRSAPEMFile, "kp", "", "Specify path to RSA key PEM file [optional]")
 	flag.BoolVar(&runInsideAzure, "a", false, "Run within Azure VM [optional]")
 	flag.BoolVar(&outputOctetKeyfile, "out", false, "Output octet key binary file")
@@ -77,7 +75,7 @@ func main() {
 	}
 
 	importKeyCfg := new(importKeyConfig)
-	if configBytes, err := ioutil.ReadFile(configFile); err != nil {
+	if configBytes, err := os.ReadFile(configFile); err != nil {
 		fmt.Println("Error reading Azure services configuration")
 		os.Exit(1)
 	} else if err = json.Unmarshal(configBytes, importKeyCfg); err != nil {
@@ -104,15 +102,15 @@ func main() {
 	}
 
 	// create release policy
-	var releasePolicy skr.ReleasePolicy
+	var releasePolicy common.ReleasePolicy
 
-	releasePolicy.Version = "0.2"
+	releasePolicy.Version = "1.0.0"
 
 	for _, allOfStatement := range importKeyCfg.Claims {
 		// authority denotes authorized MAA endpoint that can present MAA tokens to the AKV
 		releasePolicy.AnyOf = append(
 			releasePolicy.AnyOf,
-			skr.OuterClaimStruct{
+			common.OuterClaimStruct{
 				Authority: "https://" + importKeyCfg.Key.Authority.Endpoint,
 				AllOf:     allOfStatement,
 			},
@@ -125,7 +123,7 @@ func main() {
 	if importKeyCfg.Key.KTY == "RSA-HSM" {
 		var jwKey jwk.RSAPrivateKey
 		if keyRSAPEMFile == "" {
-			privateRSAKey, err := rsa.GenerateKey(rand.Reader, skr.RSASize)
+			privateRSAKey, err := rsa.GenerateKey(rand.Reader, common.RSASize)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -170,7 +168,7 @@ func main() {
 			key = jwKey
 		} else {
 
-			privateRSAKeyBytes, err := ioutil.ReadFile(keyRSAPEMFile)
+			privateRSAKeyBytes, err := os.ReadFile(keyRSAPEMFile)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -240,11 +238,19 @@ func main() {
 
 		var err error
 
-		if keyHexString == "" {
+		if keyHexFile == "" {
 			octKey = make([]byte, 32)
 			rand.Read(octKey)
+		} else if _, err = os.Stat(keyHexFile); err != nil {
+			// read string keyHexFile as contents of the key
+			octKey, err = hex.DecodeString(keyHexFile)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 		} else {
-			octKey, err = hex.DecodeString(keyHexString)
+			// read string from file keyHexFile as hexstring
+			octKey, err = os.ReadFile(keyHexFile)
 			if err != nil {
 				fmt.Println(err)
 				return
