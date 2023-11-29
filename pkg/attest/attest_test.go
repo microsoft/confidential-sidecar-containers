@@ -82,7 +82,7 @@ func Test_MAA(t *testing.T) {
 		t.Fatalf("failed to deserialize attestation report")
 	}
 
-	ValidMAAEndpoint := "sharedeus.eus.attest.azure.net"
+	ValidMAAEndpoint := "sharedeus2.eus2.test.attest.azure.net"
 	ValidTEEType := "SevSnpVM"
 	ValidMAAAPIVersion := "api-version=2020-10-01"
 
@@ -143,8 +143,7 @@ func Test_MAA(t *testing.T) {
 		keyBlob              []byte
 		uvmReferenceInfo     []byte
 
-		expectedError error
-		expectErr     bool
+		expectErr bool
 	}
 
 	testcases := []*testcase{
@@ -165,8 +164,7 @@ func Test_MAA(t *testing.T) {
 			keyBlob:              runtimedata_json_bin,
 			uvmReferenceInfo:     uvm_reference_info_bin,
 
-			expectedError: nil,
-			expectErr:     false,
+			expectErr: false,
 		},
 		// MAA_InvalidCertChain testing passes if the MAA responds with Bad Request
 		{
@@ -184,8 +182,7 @@ func Test_MAA(t *testing.T) {
 			keyBlob:              TestKeyBlobBytes,
 			uvmReferenceInfo:     uvm_reference_info_bin,
 
-			expectedError: errors.New("pulling maa post response failed: http response status equal to 400 Bad Request"),
-			expectErr:     true,
+			expectErr: true,
 		},
 		// MAA_InvalidKeyBlob testing passes if the MAA responds with Bad Request as the key blob does not match the one in the attestation report
 		{
@@ -203,8 +200,7 @@ func Test_MAA(t *testing.T) {
 			keyBlob:              make([]byte, 4),
 			uvmReferenceInfo:     uvm_reference_info_bin,
 
-			expectedError: errors.New("pulling maa post response failed: http response status equal to 400 Bad Request"),
-			expectErr:     true,
+			expectErr: true,
 		},
 		// MAA_TamperedKeyBlob testing passes if the MAA responds with Bad Request as the key blob does not match the one in the attestation report
 		{
@@ -222,8 +218,7 @@ func Test_MAA(t *testing.T) {
 			keyBlob:              TestKeyBlobBytesTampered,
 			uvmReferenceInfo:     uvm_reference_info_bin,
 
-			expectedError: errors.New("pulling maa post response failed: http response status equal to 400 Bad Request"),
-			expectErr:     true,
+			expectErr: true,
 		},
 		// MAA_InvalidPolicyBlob testing passes if the MAA responds with Bad Request as the policy does not match the one in the attestation report
 		{
@@ -241,8 +236,7 @@ func Test_MAA(t *testing.T) {
 			keyBlob:              TestKeyBlobBytes,
 			uvmReferenceInfo:     uvm_reference_info_bin,
 
-			expectedError: errors.New("pulling maa post response failed: http response status equal to 400 Bad Request"),
-			expectErr:     true,
+			expectErr: true,
 		},
 
 		// MAA_TamperedPolicyBlob testing passes if the MAA responds with Bad Request as the policy does not match the one in the attestation report
@@ -261,8 +255,7 @@ func Test_MAA(t *testing.T) {
 			keyBlob:              TestKeyBlobBytes,
 			uvmReferenceInfo:     uvm_reference_info_bin,
 
-			expectedError: errors.New("pulling maa post response failed: http response status equal to 400 Bad Request"),
-			expectErr:     true,
+			expectErr: true,
 		},
 		{
 			name: "MAA_CorruptedSNPReport",
@@ -279,8 +272,7 @@ func Test_MAA(t *testing.T) {
 			keyBlob:              ProductionTestKeyBlobBytes,
 			uvmReferenceInfo:     uvm_reference_info_bin,
 
-			expectedError: errors.New("pulling maa post response failed: http response status equal to 400 Bad Request"),
-			expectErr:     true,
+			expectErr: true,
 		},
 		{
 			name: "MAA_CorruptedSigSNPReport",
@@ -297,8 +289,7 @@ func Test_MAA(t *testing.T) {
 			keyBlob:              ProductionTestKeyBlobBytes,
 			uvmReferenceInfo:     uvm_reference_info_bin,
 
-			expectedError: errors.New("pulling maa post response failed: http response status equal to 400 Bad Request"),
-			expectErr:     true,
+			expectErr: true,
 		},
 		{
 			name: "MAA_NotMatchingCertChain",
@@ -315,8 +306,7 @@ func Test_MAA(t *testing.T) {
 			keyBlob:              ProductionTestKeyBlobBytes,
 			uvmReferenceInfo:     uvm_reference_info_bin,
 
-			expectedError: errors.New("pulling maa post response failed: http response status equal to 400 Bad Request"),
-			expectErr:     true,
+			expectErr: true,
 		},
 	}
 
@@ -326,12 +316,13 @@ func Test_MAA(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			resp, err := tc.maa.Attest(tc.snpAttestationReport, tc.vcekCertChain, tc.policyBlob, tc.keyBlob, tc.uvmReferenceInfo)
+			var httpError *common.HTTPError
 
 			if tc.expectErr && err == nil {
 				fmt.Printf("token: %v\n", resp)
 				t.Fatal("expected err got nil")
-			} else if tc.expectErr && err.Error() != tc.expectedError.Error() {
-				t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
+			} else if tc.expectErr && !errors.As(err, &httpError) {
+				t.Fatalf("received error does not contain HTTPError type")
 			} else if !tc.expectErr && err != nil {
 				t.Fatalf("did not expect err got %q", err.Error())
 			}

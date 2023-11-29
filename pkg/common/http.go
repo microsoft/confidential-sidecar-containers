@@ -11,6 +11,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+type HTTPError struct {
+	Status string
+}
+
+func (e HTTPError) Error() string {
+	return "http response status equal to " + e.Status
+}
+
 func httpClientDoRequest(req *http.Request) (*http.Response, error) {
 	httpClientDoWrapper := func() (interface{}, error) {
 		client := &http.Client{}
@@ -58,16 +66,20 @@ func HTTPPRequest(httpType string, uri string, jsonData []byte, authorizationTok
 }
 
 func HTTPResponseBody(httpResponse *http.Response) ([]byte, error) {
-	// Pull out response body
-	defer httpResponse.Body.Close()
-	httpResponseBodyBytes, err := io.ReadAll(httpResponse.Body)
-	if err != nil {
-		return nil, errors.Wrapf(err, "reading http response body failed")
+	// Pull out response body. We are using a LimitReader to prevent unlimited server response causing buffer overflow
+	var httpResponseBodyBytes []byte
+	if httpResponse != nil && httpResponse.Body != nil {
+		defer httpResponse.Body.Close()
+		respLen := httpResponse.ContentLength
+		//134MB is an arbitrary limit size that is appropriate for http reponse using bit manipulation
+		const respLenLimit134mb = 1 << 20
+		if respLen < 1 || respLen > respLenLimit134mb {
+			respLen = respLenLimit134mb
+		}
+		httpResponseBodyBytes, _ = io.ReadAll(io.LimitReader(httpResponse.Body, int64(respLen)))
 	}
-
-	if httpResponse.Status != "200 OK" && httpResponse.Status != "200 " {
-		err = errors.Errorf("http response status equal to %s", httpResponse.Status)
+	if httpResponse.StatusCode < 200 || httpResponse.StatusCode > 207 {
+		return nil, errors.Wrapf(&HTTPError{httpResponse.Status}, string(httpResponseBodyBytes))
 	}
-
-	return httpResponseBodyBytes, err
+	return httpResponseBodyBytes, nil
 }
