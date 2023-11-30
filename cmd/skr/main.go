@@ -42,6 +42,14 @@ func main() {
 	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
 	port := flag.String("port", "8080", "Port on which to listen")
 	allowTestingMismatchedTCB := flag.Bool("allowTestingMismatchedTCB", false, "For TESTING purposes only. Corrupts the TCB value")
+<<<<<<< HEAD
+=======
+	// NOTE: these 4 input arguments are typically only used in AKS, not ACI
+	grpcPort := flag.String("keyprovider_sock", os.Getenv("KEYPROVIDER_SOCK"), "Port on which the grpc key provider to listen")
+	infile := flag.String("infile", "", "The file with its content to be wrapped")
+	key_path := flag.String("keypath", "", "The path to the wrapping key")
+	outfile := flag.String("outfile", "", "The file to save the wrapped data")
+>>>>>>> e46223c (making the grpc server off by default)
 
 	// for testing mis-matched TCB versions allowTestingWithMismatchedTCB
 	// and CorruptedTCB
@@ -132,7 +140,25 @@ func main() {
 	}
 
 	logrus.Info("Starting HTTP server...")
-	setupServer(&certState, &info.Identity, &EncodedUvmInformation, url)
+	go setupServer(&certState, &info.Identity, &EncodedUvmInformation, url)
+
+	// only use GRPC if the keyprovider_sock env var is specified
+	if *grpcPort != "" {
+		lis, err := net.Listen("tcp", *grpcPort)
+		if err != nil {
+			log.Fatalf("failed to listen on port %v: %v", *grpcPort, err)
+		}
+		log.Printf("Listening on port %v", *grpcPort)
+		//start grpc server
+		s := grpc.NewServer()
+		server := server.Server{ServerCertState: &certState, EncodedUvmInformation: &EncodedUvmInformation, Azure_info: &info}
+		keyprovider.RegisterKeyProviderServiceServer(s, &server)
+		reflection.Register(s)
+		log.Printf("server listening at %v", lis.Addr())
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to start GRPC server: %v", err)
+		}
+	}
 }
 
 func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo *common.UvmInformation, url string) {

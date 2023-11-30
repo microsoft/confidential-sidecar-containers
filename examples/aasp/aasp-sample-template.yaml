@@ -10,13 +10,21 @@ spec:
   containers:
   - image: $AASP_IMAGE
     imagePullPolicy: Always
+<<<<<<< HEAD:examples/aasp/aasp-sample-template.yaml
     name: aasp
     command: [/bin/aasp]
+=======
+    name: skr
+    command:
+    - /skr.sh
+>>>>>>> e46223c (making the grpc server off by default):examples/skr/aks/skr-example-template.yaml
     env:
     - name: AaspSideCarArgs
       value: ewogICAgImNlcnRjYWNoZSI6IHsKCQkiZW5kcG9pbnRfdHlwZSI6ICJMb2NhbFRISU0iLAoJCSJlbmRwb2ludCI6ICIxNjkuMjU0LjE2OS4yNTQvbWV0YWRhdGEvVEhJTS9hbWQvY2VydGlmaWNhdGlvbiIKCX0gIAp9
     - name: UVM_SECURITY_CONTEXT_DIR
       value: /opt/confidential-containers/share/kata-containers
+    - name: KEYPROVIDER_SOCK
+      value: 127.0.0.1:50000
     volumeMounts:
     - mountPath: /opt/confidential-containers/share/kata-containers/reference-info-base64
       name: endorsement-location
