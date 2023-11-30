@@ -36,6 +36,10 @@ if [ -n "${LogLevel}" ]; then
   CmdlineArgs="${CmdlineArgs} -loglevel ${LogLevel}"
 fi
 
+if [ -n "${ServerType}" ]; then
+  CmdlineArgs="${CmdlineArgs} -server_type ${ServerType}"
+fi
+
 echo CmdlineArgs = $CmdlineArgs
 
 if /bin/skr $CmdlineArgs; then

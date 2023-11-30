@@ -4,6 +4,8 @@ The ```skr``` tool instantiates a web server ( <http://localhost>:<port>) which 
 
 The tool can be executed using the script [skr.sh](https://github.com/Microsoft/confidential-sidecar-containers/blob/main//docker/skr/skr.sh). If the port number is not specified, the port will default to 8080. This script take the environment variables `SkrSideCarArgs`, `Port`, `LogFile`, and `LogLevel` and passes them into `/bin/skr` with their corresponding flags.
 
+To use the GRPC server instead of the HTTP server, the tool can be executed using the same script [skr.sh](https://github.com/Microsoft/confidential-sidecar-containers/blob/main//docker/skr/skr.sh). But instead expecting the environment variables `Port`, `ServerType`, `LogFile`, and `LogLevel` and passes them into `/bin/skr` with their corresponding flags.
+
 ## HTTP API
 
 The `status` GET method returns the status of the server. The response carries a `StatusOK` header and a payload of the following format:

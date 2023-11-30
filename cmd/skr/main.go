@@ -30,18 +30,14 @@ func usage() {
 	flag.PrintDefaults()
 }
 
-// TODO:
-// - vcek source is different
-// - aci gets security policy and hashes it
-
 func main() {
 	azureInfoBase64string := flag.String("base64", "", "optional base64-encoded json string with azure information")
 	logLevel := flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
 	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
-	httpPort := flag.String("port", "8080", "Port on which to listen")
+	port := flag.String("port", "8080", "Port on which to listen")
 	allowTestingMismatchedTCB := flag.Bool("allowTestingMismatchedTCB", false, "For TESTING purposes only. Corrupts the TCB value")
 	// NOTE: these 4 input arguments are typically only used in AKS, not ACI
-	grpcPort := flag.String("keyprovider_sock", "127.0.0.1:50000", "Port on which the grpc key provider to listen")
+	serverType := flag.String("server_type", "http", "Choose whether to use http or grpc for the server type")
 	infile := flag.String("infile", "", "The file with its content to be wrapped")
 	key_path := flag.String("keypath", "", "The path to the wrapping key")
 	outfile := flag.String("outfile", "", "The file to save the wrapped data")
@@ -85,7 +81,7 @@ func main() {
 	logrus.Infof("Args:")
 	logrus.Infof("   Log Level:     %s", *logLevel)
 	logrus.Infof("   Log File:      %s", *logFile)
-	logrus.Debugf("   Port:          %s", *httpPort)
+	logrus.Debugf("   Port:          %s", *port)
 	logrus.Debugf("   Hostname:      %s", *hostname)
 	logrus.Debugf("   azure info:    %s", *azureInfoBase64string)
 	logrus.Debugf("   corrupt tcbm:  %t", *allowTestingMismatchedTCB)
@@ -151,7 +147,7 @@ func main() {
 	}
 
 	// See above comment about hostname and risk of breaking confidentiality
-	url := *hostname + ":" + *httpPort
+	url := *hostname + ":" + *port
 
 	logrus.Trace("Getting initial TCBM value...")
 	var tcbm string
@@ -174,22 +170,25 @@ func main() {
 		Tcbm:        thimTcbm,
 	}
 
-	logrus.Info("Starting HTTP server...")
-	go setupServer(&certState, &info.Identity, &EncodedUvmInformation, url)
-
-	lis, err := net.Listen("tcp", *grpcPort)
-	if err != nil {
-		log.Fatalf("failed to listen on port %v: %v", *grpcPort, err)
-	}
-	log.Printf("Listening on port %v", *grpcPort)
-	//start grpc server
-	s := grpc.NewServer()
-	server := server.Server{ServerCertState: &certState, EncodedUvmInformation: &EncodedUvmInformation, Azure_info: &info}
-	keyprovider.RegisterKeyProviderServiceServer(s, &server)
-	reflection.Register(s)
-	log.Printf("server listening at %v", lis.Addr())
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to start GRPC server: %v", err)
+	// default server is http, can optionally use grpc
+	if *serverType == "grpc" {
+		lis, err := net.Listen("tcp", url)
+		if err != nil {
+			log.Fatalf("failed to listen on port %v: %v", *port, err)
+		}
+		log.Printf("Listening on port %v", *port)
+		// start grpc server
+		s := grpc.NewServer()
+		server := server.Server{ServerCertState: &certState, EncodedUvmInformation: &EncodedUvmInformation, Azure_info: &info}
+		keyprovider.RegisterKeyProviderServiceServer(s, &server)
+		reflection.Register(s)
+		log.Printf("server listening at %v", lis.Addr())
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to start GRPC server: %v", err)
+		}
+	} else {
+		logrus.Info("Starting HTTP server...")
+		setupServer(&certState, &info.Identity, &EncodedUvmInformation, url)
 	}
 }
 

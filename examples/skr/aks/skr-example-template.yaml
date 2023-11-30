@@ -11,13 +11,17 @@ spec:
   - image: $SKR_IMAGE
     imagePullPolicy: Always
     name: skr
-    command: 
+    command:
     - /skr.sh
     env:
     - name: SkrSideCarArgs
       value: ewogICAgImNlcnRjYWNoZSI6IHsKCQkiZW5kcG9pbnRfdHlwZSI6ICJMb2NhbFRISU0iLAoJCSJlbmRwb2ludCI6ICIxNjkuMjU0LjE2OS4yNTQvbWV0YWRhdGEvVEhJTS9hbWQvY2VydGlmaWNhdGlvbiIKCX0gIAp9
     - name: UVM_SECURITY_CONTEXT_DIR
       value: /opt/confidential-containers/share/kata-containers
+    - name: Port
+      value: "50000"
+    - name: ServerType
+      value: "grpc"
     volumeMounts:
     - mountPath: /opt/confidential-containers/share/kata-containers/reference-info-base64
       name: endorsement-location

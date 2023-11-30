@@ -160,8 +160,10 @@ Push the container images to your container registry.
 
 ### 7. Running the SKR Container in a TEE
 
-Use the SKR container as a GRPC service during runtime to unwrap the secret with the private key stored in mHSM.
+Use the SKR container as a gRPC service during runtime to unwrap the secret with the private key stored in mHSM.
 This step ensures that the private key is securely retrieved in the SKR container and used for unwrapping the wrapped secret.
+Note that gRPC is off by default and the environment variable `ServerType` can be set to `grpc` to enable the gRPC server and disable the HTTP server.
+An example `Port` value for gRPC is `50000`.
 
 You can run an example deployment of a confidential pod with the `SKR` container and a `example-unwrap` container that invokes the secret provisioning APIs of the `SKR` container. Use the [example pod yaml file](skr-example-template.yaml) to deploy the pod. First, create an image pull secret (this example uses an Azure Container Registry) then deploy the pod with kubectl using the following command:
 
