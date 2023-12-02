@@ -53,18 +53,18 @@ sudo cryptsetup luksFormat --type luks2 "$encryptedImage" \
     --cipher aes-xts-plain64 \
     --pbkdf pbkdf2 --pbkdf-force-iterations 1000
 
-sudo cryptsetup luksOpen "$encryptedImage" "$deviceName" \
+sudo cryptsetup luksOpen "$encryptedImage" "$cryptDeviceName" \
     --key-file "$keyFilePath" \
     --integrity-no-journal --persistent
 
 echo "[!] Formatting as ext4..."
 
-sudo mkfs.ext4 "$deviceNamePath"
+sudo mkfs.ext4 "$cryptDeviceNamePath"
 
 echo "[!] Mounting..."
 
 mountPoint=`mktemp -d`
-sudo mount -t ext4 "$deviceNamePath" "$mountPoint" -o loop
+sudo mount -t ext4 "$cryptDeviceNamePath" "$mountPoint" -o loop
 
 echo "[!] Copying contents to encrypted device..."
 
@@ -76,7 +76,7 @@ echo "[!] Closing device..."
 
 sudo umount "$mountPoint"
 
-sudo cryptsetup luksClose "$deviceName"
+sudo cryptsetup luksClose "$cryptDeviceName"
 
 # setup dm-verity data and hash device if --verity=true
 if [ "$verity" = true ]; then
