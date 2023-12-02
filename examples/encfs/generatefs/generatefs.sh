@@ -53,9 +53,15 @@ sudo cryptsetup luksFormat --type luks2 "$encryptedImage" \
     --cipher aes-xts-plain64 \
     --pbkdf pbkdf2 --pbkdf-force-iterations 1000
 
-sudo cryptsetup luksOpen "$encryptedImage" "$cryptDeviceName" \
-    --key-file "$keyFilePath" \
-    --integrity-no-journal --persistent
+if [ "$verity" = true ]; then
+    sudo cryptsetup luksOpen "$encryptedImage" "$cryptDeviceName" \
+        --key-file "$keyFilePath" \
+        --persistent
+else
+    sudo cryptsetup luksOpen "$encryptedImage" "$cryptDeviceName" \
+        --key-file "$keyFilePath" \
+        --integrity-no-journal --persistent
+fi
 
 echo "[!] Formatting as ext4..."
 

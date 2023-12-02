@@ -92,13 +92,25 @@ func cryptsetupCommand(args []string) error {
 }
 
 // cryptsetupOpen runs "cryptsetup luksOpen" with the right arguments.
-func cryptsetupOpen(source string, deviceName string, keyFilePath string) error {
-	openArgs := []string{
-		// Open device with the key passed to luksFormat
-		"luksOpen", source, deviceName, "--key-file", keyFilePath,
-		// Don't use a journal to increase performance
-		"--integrity-no-journal",
-		"--persistent"}
+func cryptsetupOpen(source string, deviceName string, keyFilePath string, integrity bool) error {
+	var openArgs []string
+	if integrity {
+		logrus.Debugf("Opening dm-crypt device with dm-integrity")
+		// open with dm-integrity
+		openArgs = []string{
+			// Open device with the key passed to luksFormat
+			"luksOpen", source, deviceName, "--key-file", keyFilePath,
+			// Don't use a journal to increase performance
+			"--integrity-no-journal",
+			"--persistent"}
+	} else {
+		// open without dm-integrity
+		logrus.Debugf("Opening dm-crypt device without dm-integrity")
+		openArgs = []string{
+			// Open device with the key passed to luksFormat
+			"luksOpen", source, deviceName, "--key-file", keyFilePath,
+			"--persistent"}
+	}
 
 	return cryptsetupCommand(openArgs)
 }
@@ -392,13 +404,14 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 	logrus.Debugf("Opening device at: %s", deviceNamePath)
 	// read from dm-verity device
 	if fs.DmVerity.Enable == true {
-		err = _cryptsetupOpen(verityDevicePath, deviceName, keyFilePath)
+		// with dm-verity, no need for dm-integrity
+		err = _cryptsetupOpen(verityDevicePath, deviceName, keyFilePath, false)
 		if err != nil {
 			return errors.Wrapf(err, "luksOpen failed: %s", deviceName)
 		}
 	} else {
-		// no dm-verity
-		err = _cryptsetupOpen(dataLocalFile, deviceName, keyFilePath)
+		// no dm-verity, use dm-integrity
+		err = _cryptsetupOpen(dataLocalFile, deviceName, keyFilePath, true)
 		if err != nil {
 			return errors.Wrapf(err, "luksOpen failed: %s", deviceName)
 		}
