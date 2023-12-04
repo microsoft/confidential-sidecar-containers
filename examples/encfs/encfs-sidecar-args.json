@@ -6,8 +6,7 @@
          "azure_url_private": true,
          "read_write": true,
          "dm_verity": {
-            "enable": false,
-            "hash_url": "<hash-device-azure-blob-storage-url>",
+            "hash_device_url": "<hash-device-azure-blob-storage-url>",
             "root_hash": "<dm-verity-root-hash>"
          },
          "key": {
