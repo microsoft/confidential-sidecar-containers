@@ -5,6 +5,10 @@
          "azure_url": "<azure-blob-storage-url>",
          "azure_url_private": true,
          "read_write": true,
+         "dm_verity": {
+            "hash_device_url": "<hash-device-azure-blob-storage-url>",
+            "root_hash": "<dm-verity-root-hash>"
+         },
          "key": {
             "kid": "<key-vault-akv-key-identifier>",
             "kty": "<key-type-of-key-imported-to-akv>",

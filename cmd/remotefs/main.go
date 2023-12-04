@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -44,6 +45,8 @@ type AzureFilesystem struct {
 	RawKeyHexString string `json:"raw_key,omitempty"`
 	// This is a flag specifying if this file system is read-write
 	ReadWrite bool `json:"read_write,omitempty"`
+	// This is the information used to open dm-verity protected device
+	DmVerity common.DmVerity `json:"dm_verity,omitempty"`
 }
 
 func usage() {
@@ -90,6 +93,16 @@ func main() {
 		logrus.Fatalf("Failed to create temp dir: %s", err.Error())
 	}
 	logrus.Infof("Temporary directory: %s", tempDir)
+
+	// create dataTempDir and hashTempDir
+	err = os.Mkdir(filepath.Join(tempDir, "data"), 0700)
+	if err != nil {
+		logrus.Fatalf("Failed to create dir: %s", err.Error())
+	}
+	err = os.Mkdir(filepath.Join(tempDir, "hash"), 0700)
+	if err != nil {
+		logrus.Fatalf("Failed to create dir: %s", err.Error())
+	}
 
 	// Decode information
 	bytes, err := base64.StdEncoding.DecodeString(*base64string)
