@@ -12,7 +12,7 @@ the tool can derive a symmetric key using the RSA key material and the key_deriv
 For testing purposes, it is possible to pass the raw hexstring key as opposed to SKR information.
 Additionally, a read_write flag must be specified to determine if the filesystem is read-write, otherwise the filesystem
 defaults to read-only.
-This tool also provides dm-verity protection for the file system's integrity. Dm-verity and read-write cannot both be set to true.
+This tool also provides dm-verity protection for the file system's integrity. Dm-verity and read-write cannot both be applied to encfs.
 
 ```
 {
@@ -23,8 +23,7 @@ This tool also provides dm-verity protection for the file system's integrity. Dm
             "azure_url_private": true,
             "read_write": false,   
             "dm_verity": {
-                "enable": true,
-                "hash_url": "https://samplename.blob.core.windows.net/public-container/hash-1.img",
+                "hash_device_url": "https://samplename.blob.core.windows.net/public-container/hash-device-1.img",
                 "root_hash": "64c697c5cda30dbda3eeeba627170fd74c183878865c94da44e178151cf2970e"
             },
             "key": {

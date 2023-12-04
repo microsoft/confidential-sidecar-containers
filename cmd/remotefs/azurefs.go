@@ -327,8 +327,14 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 	cacheBlockSize := "512"
 	numBlocks := "32"
 
+	// if dm-verity info is specified in encfs arg, enable dm-verity
+	DmVerity := false
+	if fs.DmVerity.HashDeviceUrl != "" && fs.DmVerity.RootHash != "" {
+		DmVerity = true
+	}
+
 	// Filesystem cannot be both writable and dm-verity protected
-	if fs.ReadWrite && fs.DmVerity.Enable {
+	if fs.ReadWrite && DmVerity {
 		logrus.Fatalf("Dm-verity protected file system is not writable!")
 	}
 	// get dataTempDir and hashTempDir
@@ -343,11 +349,11 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 		return errors.Wrapf(err, "failed to mount remote file: %s", fs.AzureUrl)
 	}
 	// mount hash device if dm-verity is set true
-	if fs.DmVerity.Enable == true {
-		logrus.Debugf("Mounting remote hash device %s", fs.DmVerity.HashUrl)
-		hashLocalFile, err = mountAzureFile(hashTempDir, index, fs.DmVerity.HashUrl, fs.AzureUrlPrivate, cacheBlockSize, numBlocks, fs.ReadWrite)
+	if DmVerity == true {
+		logrus.Debugf("Mounting remote hash device %s", fs.DmVerity.HashDeviceUrl)
+		hashLocalFile, err = mountAzureFile(hashTempDir, index, fs.DmVerity.HashDeviceUrl, fs.AzureUrlPrivate, cacheBlockSize, numBlocks, fs.ReadWrite)
 		if err != nil {
-			return errors.Wrapf(err, "failed to mount remote hashDevice: %s", fs.DmVerity.HashUrl)
+			return errors.Wrapf(err, "failed to mount remote hashDevice: %s", fs.DmVerity.HashDeviceUrl)
 		}
 	}
 
@@ -380,7 +386,7 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 	var verityDeviceName string
 	var verityDevicePath string
 	// open verity device	
-	if fs.DmVerity.Enable == true {
+	if DmVerity == true {
 		verityDeviceName = fmt.Sprintf("remote-verity-%d", index)
 		verityDevicePath = "/dev/mapper/" + verityDeviceName
 		err = _veritysetupOpen(dataLocalFile, verityDeviceName, hashLocalFile, fs.DmVerity.RootHash)
@@ -403,7 +409,7 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 
 	logrus.Debugf("Opening device at: %s", deviceNamePath)
 	// read from dm-verity device
-	if fs.DmVerity.Enable == true {
+	if DmVerity == true {
 		// with dm-verity, no need for dm-integrity
 		err = _cryptsetupOpen(verityDevicePath, deviceName, keyFilePath, false)
 		if err != nil {
