@@ -24,7 +24,7 @@ RUN go build -v -o /usr/local/bin/app ./cmd/attestation-container/
 
 FROM builder-app AS builder-test
 WORKDIR /usr/src/app
-RUN pushd cmd/attestation-container && CGO_ENABLED=0 go test -c && popd && pushd pkg/attest && CGO_ENABLED=0 go test -c && popd && pushd pkg/common && CGO_ENABLED=0 go test -c
+RUN pushd cmd/attestation-container && CGO_ENABLED=0 go test -c -cover && popd && pushd pkg/attest && CGO_ENABLED=0 go test -c -cover && popd && pushd pkg/common && CGO_ENABLED=0 go test -c -cover
 
 # Run
 FROM mcr.microsoft.com/cbl-mariner/distroless/minimal:2.0 AS app-run
