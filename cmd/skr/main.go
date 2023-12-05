@@ -35,16 +35,17 @@ func usage() {
 // - aci gets security policy and hashes it
 
 func main() {
-	azureInfoBase64string := flag.String("base64", "", "optional base64-encoded json string with azure information")
-	logLevel := flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
-	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
-	httpPort := flag.String("port", "8080", "Port on which to listen")
+	// all of the args using os.Getenv instead of getEnv have a default value of ""
+	azureInfoBase64string := flag.String("base64", os.Getenv("SKR_SIDE_CAR_ARGS"), "optional base64-encoded json string with azure information")
+	logLevel := flag.String("loglevel", common.GetEnv("LOG_LEVEL", "warning"), "Logging Level: trace, debug, info, warning, error, fatal, panic.")
+	logFile := flag.String("logfile", os.Getenv("LOG_FILE"), "Logging Target: An optional file name/path. Omit for console output.")
+	httpPort := flag.String("port", common.GetEnv("PORT", "8080"), "Port on which to listen")
 	allowTestingMismatchedTCB := flag.Bool("allowTestingMismatchedTCB", false, "For TESTING purposes only. Corrupts the TCB value")
 	// NOTE: these 4 input arguments are typically only used in AKS, not ACI
-	grpcPort := flag.String("keyprovider_sock", "127.0.0.1:50000", "Port on which the grpc key provider to listen")
-	infile := flag.String("infile", "", "The file with its content to be wrapped")
-	key_path := flag.String("keypath", "", "The path to the wrapping key")
-	outfile := flag.String("outfile", "", "The file to save the wrapped data")
+	grpcPort := flag.String("keyprovider_sock", common.GetEnv("KEYPROVIDER_SOCK", "127.0.0.1:50000"), "Port on which the grpc key provider to listen")
+	infile := flag.String("infile", os.Getenv("IN_FILE"), "The file with its content to be wrapped")
+	key_path := flag.String("keypath", os.Getenv("KEY_PATH"), "The path to the wrapping key")
+	outfile := flag.String("outfile", os.Getenv("OUT_FILE"), "The file to save the wrapped data")
 
 	// for testing mis-matched TCB versions allowTestingWithMismatchedTCB
 	// and CorruptedTCB

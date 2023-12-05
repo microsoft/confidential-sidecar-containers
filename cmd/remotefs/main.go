@@ -52,9 +52,9 @@ func usage() {
 }
 
 func main() {
-	base64string := flag.String("base64", "", "base64-encoded json string with all information")
-	logLevel := flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
-	logFile := flag.String("logfile", "", "Logging Target: An optional file name/path. Omit for console output.")
+	base64string := flag.String("base64", os.Getenv("BASE64"), "base64-encoded json string with all information")
+	logLevel := flag.String("loglevel", common.GetEnv("LOG_LEVEL", "warning"), "Logging Level: trace, debug, info, warning, error, fatal, panic.")
+	logFile := flag.String("logfile", os.Getenv("LOG_FILE"), "Logging Target: An optional file name/path. Omit for console output.")
 
 	flag.Usage = usage
 
