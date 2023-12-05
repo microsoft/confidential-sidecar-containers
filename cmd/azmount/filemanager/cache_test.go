@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -367,7 +366,7 @@ func DoAllTests(m *testing.M, readWrite bool) {
 	}
 
 	// Create temporary folder
-	tempDir, err := ioutil.TempDir("", "aztemp")
+	tempDir, err := os.MkdirTemp("", "aztemp")
 	if err != nil {
 		fmt.Printf("Failed to create temp dir: %s\n", err.Error())
 	}

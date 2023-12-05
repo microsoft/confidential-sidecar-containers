@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,7 +35,7 @@ var (
 	_azmountRun                    = azmountRun
 	_containerMountAzureFilesystem = containerMountAzureFilesystem
 	_cryptsetupOpen                = cryptsetupOpen
-	ioutilWriteFile                = ioutil.WriteFile
+	ioutilWriteFile                = os.WriteFile
 	osGetenv                       = os.Getenv
 	osMkdirAll                     = os.MkdirAll
 	osRemoveAll                    = os.RemoveAll
