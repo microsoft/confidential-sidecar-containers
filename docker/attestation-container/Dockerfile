@@ -8,15 +8,19 @@
 ARG variant=run
 
 # Build
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.19-fips-cbl-mariner2.0 AS builder-app
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.21-fips-cbl-mariner2.0 AS builder-app
 WORKDIR /usr/src/app
+
+# Set environment variables for golang fips build
+# https://github.com/microsoft/go/tree/microsoft/main/eng/doc/fips#usage-build
+# using allowcryptofallback to allow use of non-fips crypto since not directly using openssl in code and otherwise causes a seg fault
+ENV GOOS=linux CGO_ENABLED=0 GOEXPERIMENT=systemcrypto,allowcryptofallback
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
 COPY . .
 RUN go mod download && go mod verify
 
-# Note: Use CGO_ENABLED=0 to build statically-linked binaries deployable in scratch image
-RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/app ./cmd/attestation-container/
+RUN go build -v -o /usr/local/bin/app ./cmd/attestation-container/
 
 FROM builder-app AS builder-test
 WORKDIR /usr/src/app
