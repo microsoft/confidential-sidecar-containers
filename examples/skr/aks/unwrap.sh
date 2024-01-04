@@ -15,7 +15,7 @@ if [ ! -f "$infile" ]; then
   exit 1
 fi
 
-if [[ -z "${KEY_PROVIDER_PORT}" ]]; then
+if [ -z "${KEY_PROVIDER_PORT}" ]; then
   echo "Info: Env KEY_PROVIDER_PORT is not set. Use default port 50000"
   KEY_PROVIDER_PORT=50000
 fi

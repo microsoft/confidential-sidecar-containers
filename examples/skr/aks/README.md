@@ -17,6 +17,8 @@
 This guide provides instructions on how to perform secret provisioning in AKS using the SKR container.
 By following these instructions, users can ensure that their secrets are securely stored and can be used by their applications.
 
+Note: These instructions assume the usage of an Azure Key Vault and Microsoft Azure Attestation Endpoint, however the steps can be adapted for other key vaults and attestation services.
+
 ## Export Environment Variables
 
 ```bash
@@ -44,21 +46,34 @@ You can follow the installation instructions for Azure CLI [here](https://learn.
 
 ### 2. Obtain An Attestation Endpoint
 
-Below are the MAA endpoints for the four regions Confidential Containers in AKS is currently available in. 
+Below are the MAA endpoints for the four regions in which Confidential Containers on AKS is currently available.
 
-East US: sharedeus.eus.attest.azure.net	
-West US: sharedwus.wus.attest.azure.net
-North Europe: sharedneu.neu.attest.azure.net
-West Europe: sharedweu.weu.attest.azure.net
+- East US: sharedeus.eus.attest.azure.net
+- West US: sharedwus.wus.attest.azure.net
+- North Europe: sharedneu.neu.attest.azure.net
+- West Europe: sharedweu.weu.attest.azure.net
 
 ### 3. Generate a Key Pair
 
 This is a one time effort.
 Once the key is created, it can be used to protect as many secrets as desired.
 
-The `setup-key-mhsm.sh` script creates a private/public key pair in the keyvault and a key release policy with the file name `keyname-release-policy.json`.
-The public key is then downloaded as `keyname-pub.pem` and a key info file is generated.
+The `setup-key-mhsm.sh` script creates a private/public key pair in the keyvault and a key release policy with the file name `<keyname>-release-policy.json`.
+The public key is then downloaded as `<keyname>-pub.pem` and `<keyname>-info.json`, a key info file, is generated and stored locally.
 Both the public key and the key info file are used for wrapping the secret.
+
+If using an already existing key pair, create the key info file in the same directory as the key and with the name `<keyname>-info.json` and the following format:
+
+```json
+{
+  "public_key_path": "/path/to/public/key-file",
+  "kms_endpoint": "<mhsm-endpoint>",
+  "attester_endpoint": "<MAA-endpoint>"
+}
+```
+
+Note: The endpoints do not include the `https://` prefix.
+
 The script also assigns the necessary access role (Managed HSM Crypto User) to the Managed Identity.
 Depending on the operating system, make sure the end of line sequence(LF vs CRLF) is set correctly before running the script.
 
@@ -104,6 +119,8 @@ The wrapped file will be used to generate an argument that gets passed into grpc
 ```bash
 skr --infile plaintext --keypath ./testkey000 --outfile wrapped
 ```
+
+Note: The skr tool assumes that the key info file is in the same directory as the key with the name `<keyname>-info.json`, as seen in [Step 3. Generate a Key Pair](#3-generate-a-key-pair).
 
 ### 5. Create a Federated Credential Identity
 

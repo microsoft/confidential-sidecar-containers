@@ -52,7 +52,7 @@ err: AKV post request failed: HTTP GET failed: Post "https://<mhsm-name>.managed
 
 Ensure that:
 
-- the name of the mHSM is correct in the ARM template and matches the name of the mHSM in the importkeyconfig.json file
+- the name of the mHSM is correct in the ARM template or key-info.json (for AKS) and matches the name of the mHSM in the importkeyconfig.json file
 
 ## "CreateContainerRequest is blocked by policy" error (Confidential Containers in AKS Only)
 
