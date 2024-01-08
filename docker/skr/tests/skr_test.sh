@@ -39,11 +39,11 @@ fi
 
 # LogFile and LogLevel are expected to be passed in as environment variables
 if [ -n "${LogFile}" ]; then
-  CmdlineArgs="${CmdlineArgs} -logFile ${LogFile}"
+  CmdlineArgs="${CmdlineArgs} -logfile ${LogFile}"
 fi
 
 if [ -n "${LogLevel}" ]; then
-  CmdlineArgs="${CmdlineArgs} -port ${LogLevel}"
+  CmdlineArgs="${CmdlineArgs} -loglevel ${LogLevel}"
 fi
 
 echo CmdlineArgs = $CmdlineArgs
