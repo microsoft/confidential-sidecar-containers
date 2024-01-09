@@ -72,18 +72,18 @@ type KeyUnwrapParams struct {
 }
 
 type AnnotationPacket struct {
-	Kid              string `json:"kid"`
-	WrappedData      []byte `json:"wrapped_data"`
-	Iv               []byte `json:"iv,omitempty"`
-	WrapType         string `json:"wrap_type,omitempty"`
-	KmsEndpoint      string `json:"kms_endpoint,omitempty"`
-	AttesterEndpoint string `json:"attester_endpoint,omitempty"`
+	Kid         string `json:"kid"`
+	WrappedData []byte `json:"wrapped_data"`
+	Iv          []byte `json:"iv,omitempty"`
+	WrapType    string `json:"wrap_type,omitempty"`
+	AKVEndpoint string `json:"akv_endpoint,omitempty"`
+	MAAEndpoint string `json:"maa_endpoint,omitempty"`
 }
 
 type RSAKeyInfo struct {
-	PublicKeyPath    string `json:"public_key_path"`
-	KmsEndpoint      string `json:"kms_endpoint"`
-	AttesterEndpoint string `json:"attester_endpoint"`
+	PublicKeyPath string `json:"public_key_path"`
+	AKVEndpoint   string `json:"akv_endpoint"`
+	MAAEndpoint   string `json:"maa_endpoint"`
 }
 
 type keyProviderInput struct {
@@ -135,8 +135,8 @@ func directWrap(optsdata []byte, key_path string) ([]byte, error) {
 	}
 	log.Printf("%v", keyInfo)
 
-	annotation.AttesterEndpoint = keyInfo.AttesterEndpoint
-	annotation.KmsEndpoint = keyInfo.KmsEndpoint
+	annotation.MAAEndpoint = keyInfo.MAAEndpoint
+	annotation.AKVEndpoint = keyInfo.AKVEndpoint
 
 	pubpem, err := os.ReadFile(keyInfo.PublicKeyPath)
 	if err != nil {
@@ -187,7 +187,7 @@ func (s *Server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKe
 	aa := tokens[0]
 	kid := tokens[1]
 	if !strings.EqualFold(aa, AASP) {
-		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", aa)
+		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you sent the request to a wrong endpoint?", aa)
 	}
 	log.Printf("Attestation agent: %v, kid: %v", aa, kid)
 
@@ -245,12 +245,12 @@ func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	log.Printf("Annotation packet: %v", annotation)
 
 	mhsm := common.AKV{
-		Endpoint:   annotation.KmsEndpoint,
+		Endpoint:   annotation.AKVEndpoint,
 		APIVersion: "api-version=7.4",
 	}
 
 	maa := common.MAA{
-		Endpoint:   annotation.AttesterEndpoint,
+		Endpoint:   annotation.MAAEndpoint,
 		TEEType:    "SevSnpVM",
 		APIVersion: "api-version=2020-10-01",
 	}
@@ -340,8 +340,8 @@ func DirectWrap(optsdata []byte, key_path string) ([]byte, error) {
 	}
 	log.Printf("%v", keyInfo)
 
-	annotation.AttesterEndpoint = keyInfo.AttesterEndpoint
-	annotation.KmsEndpoint = keyInfo.KmsEndpoint
+	annotation.MAAEndpoint = keyInfo.MAAEndpoint
+	annotation.AKVEndpoint = keyInfo.AKVEndpoint
 
 	pubpem, err := os.ReadFile(keyInfo.PublicKeyPath)
 	if err != nil {

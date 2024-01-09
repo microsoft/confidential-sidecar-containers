@@ -67,8 +67,8 @@ If using an already existing key pair, create the key info file in the same dire
 ```json
 {
   "public_key_path": "/path/to/public/key-file",
-  "kms_endpoint": "<mhsm-endpoint>",
-  "attester_endpoint": "<MAA-endpoint>"
+  "akv_endpoint": "<mhsm-endpoint>",
+  "maa_endpoint": "<MAA-endpoint>"
 }
 ```
 

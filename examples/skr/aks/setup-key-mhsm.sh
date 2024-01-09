@@ -78,8 +78,8 @@ echo "......Assigned key read permission to managed identity ${MANAGED_IDENTITY}
 key_info_file=${key_name}-info.json
 echo {  > ${key_info_file}
 echo \"public_key_path\": \"${public_key_file}\", >> ${key_info_file}
-echo \"kms_endpoint\": \"${mhsm_name}.managedhsm.azure.net\", >> ${key_info_file}
-echo \"attester_endpoint\": \"${MAA_ENDPOINT}\" >> ${key_info_file}
+echo \"akv_endpoint\": \"${mhsm_name}.managedhsm.azure.net\", >> ${key_info_file}
+echo \"maa_endpoint\": \"${MAA_ENDPOINT}\" >> ${key_info_file}
 echo }  >> ${key_info_file}
 echo "......Generated key info file ${key_info_file}"
 echo "......Key setup successful!"
