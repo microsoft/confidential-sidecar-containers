@@ -45,7 +45,7 @@ char* encodeHexToString(uint8_t byte_array[], size_t len)
 
 void printBytes(const char *desc, const uint8_t *data, size_t len, bool swap)
 {
-    fprintf(stderr, "  %s: ", desc);
+    fprintf(stdout, "  %s: ", desc);
     int padding = 20 - strlen(desc);
     if (padding < 0)
         padding = 0;
@@ -53,13 +53,13 @@ void printBytes(const char *desc, const uint8_t *data, size_t len, bool swap)
         putchar(' ');
 
     for (size_t pos = 0; pos < len; pos++) {
-        fprintf(stderr, "%02x", data[swap ? len - pos - 1 : pos]);
+        fprintf(stdout, "%02x", data[swap ? len - pos - 1 : pos]);
         if (pos % 32 == 31)
             printf("\n                        ");
         else if (pos % 16 == 15)
             putchar(' ');
     }
-    fprintf(stderr, "\n");
+    fprintf(stdout, "\n");
 }
 
 void printReport(const snp_attestation_report *r)
