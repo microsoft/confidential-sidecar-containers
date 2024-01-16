@@ -42,7 +42,7 @@ Copy the AttestURI endpoint value (sans https://) to the [Attestation Authority 
 The user needs to instantiate an Azure Key Vault resource that supports storing keys in an mHSM: a [Premium vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview) or an [mHSM resource](https://docs.microsoft.com/en-us/azure/key-vault/managed-hsm/overview).
 
 After setting up an Azure Key Vault resource, generate a user-assigned managed identity that will be attached to the container group so that the containers have the correct access permissions to Azure services and resources.
-The managed identity needs *Key Vault Crypto Officer* and *Key Vault Crypto User* roles if using AKV key vault or *Managed HSM Crypto Officer* and *Managed HSM Crypto User* roles for /keys if using AKV managed HSM.
+The managed identity needs *Key Vault Crypto Service Release User* role (previously *Key Vault Crypto Officer* and *Key Vault Crypto User*) if using AKV key vault or *Managed HSM Crypto Service Release User* role (previously *Managed HSM Crypto Officer* and *Managed HSM Crypto User*) for keys if using AKV managed HSM.
 More information about creating identities can be found [here.](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)
 
 If you already have a user-assigned managed identity with the appropriate access permissions, run the following command to list the managed identities for a resource group:
