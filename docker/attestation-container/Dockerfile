@@ -33,7 +33,7 @@ COPY --from=builder-app /usr/local/bin/app /usr/local/bin/app
 FROM app-run AS app-dev
 COPY --from=builder-test /usr/src/app/cmd/attestation-container/attestation-container.test* /usr/local/bin/attestation-container.test 
 COPY --from=builder-test /usr/src/app/pkg/attest/attest.test* /usr/local/bin/attest.test 
-COPY --from=builder-test /usr/src/app/pkg/common/test_security_context/* /test_security_context/
+COPY --from=builder-test /usr/src/app/pkg/common/security-context-test/* /security-context-test/
 COPY --from=builder-test /usr/src/app/pkg/common/common.test* /usr/local/bin/common.test 
 
 # Final 

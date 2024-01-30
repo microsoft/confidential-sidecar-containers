@@ -100,7 +100,7 @@ function clean_up {
 }
 
 az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'attest.test -test.v -test.coverprofile attest.cover' | tee -a $TMP_FILE
-az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'common.test --testdata-dir /test_security_context -test.v -test.coverprofile common.cover' | tee -a $TMP_FILE
+az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'common.test --testdata-dir /security-context-test -test.v -test.coverprofile common.cover' | tee -a $TMP_FILE
 az container exec --resource-group $AZURE_RESOURCE_GROUP --name $CONTAINER_GROUP_NAME --container-name attestation-container-dev --exec-command 'attestation-container.test -addr /mnt/uds/sock -test.v -test.coverprofile attestation-container.cover' | tee -a $TMP_FILE
 
 if grep "command terminated with non-zero exit code" $TMP_FILE; then

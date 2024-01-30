@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	testDataDir = flag.String("testdata-dir", "test_security_context/", "Path to 'security-context-*' directory for test")
+	testDataDir = flag.String("testdata-dir", "security-context-test/", "Path to 'security-context-*' directory for test")
 )
 
 func Test_ParseTHIMCerts(t *testing.T) {
@@ -50,7 +50,7 @@ func Test_ParseTHIMCerts(t *testing.T) {
 
 func Test_GetUvmInformation(t *testing.T) {
 	currentSecurityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
-	os.Setenv("UVM_SECURITY_CONTEXT_DIR", "test_security_context")
+	os.Setenv("UVM_SECURITY_CONTEXT_DIR", "security-context-test")
 	defer os.Setenv("UVM_SECURITY_CONTEXT_DIR", currentSecurityContextDir)
 	uvmInfo, err := GetUvmInformation()
 	if err != nil {

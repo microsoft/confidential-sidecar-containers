@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -87,11 +88,26 @@ const uvmSecurityCtxDirDefault = "/opt/confidential-containers/share/kata-contai
 
 func GetUvmSecurityCtxDir() (string, error) {
 	securityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
+	// no UVM_SECURITY_CONTEXT_DIR set, so iterate through the root directory
 	if securityContextDir == "" {
-		logrus.Debugf("UVM_SECURITY_CONTEXT_DIR not set.  Using system default %q", uvmSecurityCtxDirDefault)
+		files, err := os.ReadDir("/")
+		if err != nil {
+			return "", err
+		}
+		for _, file := range files {
+			if strings.Contains(file.Name(), "security-context-") {
+				// found the security context dir
+				securityContextDir = filepath.Join("/", file.Name())
+				break
+			}
+		}
+	}
+	// security context dir not found in root, must be running in AKS
+	if securityContextDir == "" {
+		logrus.Debugf("Running in Confidential AKS. Using system default security context directory: %q", uvmSecurityCtxDirDefault)
 		securityContextDir = uvmSecurityCtxDirDefault
 	} else {
-		logrus.Infof("UVM_SECURITY_CONTEXT_DIR is set to %s", securityContextDir)
+		logrus.Infof("Running in Confidential ACI. Using security context directory: %s", securityContextDir)
 	}
 	return securityContextDir, nil
 }
