@@ -38,7 +38,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # Initializes the CodeQL tools for scanning.
     
@@ -75,11 +75,11 @@ jobs:
     name: Go Build and Test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     # Sets up the Golang for running unit tests
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: "1.21"
 

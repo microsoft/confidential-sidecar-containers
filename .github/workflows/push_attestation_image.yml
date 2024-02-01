@@ -33,7 +33,7 @@ jobs:
     if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
@@ -56,7 +56,7 @@ jobs:
           echo "image_tag=$(echo ${branch_name:0:128} | sed 's/[^a-zA-Z0-9]/-/g')" >> $GITHUB_OUTPUT
 
       - name: Build and Push Docker Image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           file: docker/attestation-container/Dockerfile.run
           push: true
