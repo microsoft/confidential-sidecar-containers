@@ -18,7 +18,7 @@ on:
     # The branches below must be a subset of the branches above
     branches: [ "main" ]
   schedule:
-    - cron: '20 20 * * 6'
+    - cron: '0 0 * * *'
 
 jobs:
   analyze:
@@ -70,6 +70,21 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
+
+    - name: Aqua Security Trivy
+      uses: aquasecurity/trivy-action@0.17.0
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        exit-code: 1
+        severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
 
   build:
     name: Go Build and Test
