@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - main
-    tags:        
-      - '*'
+    tags-ignore:        
+      - 'main'
     paths:
       - .github/workflows/release.yml
       - tools/get-snp-report/**
