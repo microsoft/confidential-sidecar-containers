@@ -27,10 +27,8 @@ cleanup_unmount() {
   echo "Cleaning up by unmounting the following remote filesystem folder."
   for mount_point in "${mount_array[@]}"; do
     echo "attempting to unmount $mount_point"
-    output=$(umount $mount_point 2>&1)
-    exit_status=$?
-    echo "$output"
-    if [ $exit_status -eq 0 ]; then
+    umount $mount_point 2>&1
+    if [ $? -eq 0 ]; then
       echo "Unmounting was successful."
     else
       echo "Unmounting failed with exit status $exit_status."
@@ -61,6 +59,7 @@ process_encoded_string() {
         echo "${keys[@]}"
     else
         echo "Error: The decoded string is not a valid JSON object."
+        exit 1 
     fi
 }
 
