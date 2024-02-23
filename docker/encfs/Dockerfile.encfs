@@ -1,6 +1,6 @@
 FROM alpine:3.18.6
 
-RUN apk update && apk upgrade --no-cache && apk add --no-cache cryptsetup fuse3 curl
+RUN apk update && apk upgrade --no-cache && apk add --no-cache cryptsetup fuse3 curl bash jq
 
 COPY ./bin/azmount ./bin/remotefs ./bin/get-snp-report /bin/
 COPY encfs.sh /
