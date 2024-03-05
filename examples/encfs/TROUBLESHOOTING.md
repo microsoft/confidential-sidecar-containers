@@ -17,8 +17,7 @@ az account get-access-token --resource https://managedhsm.azure.net
 
 If the http response status is still 401 Unauthorized, check whether the identity you logged in has access to the AKV/mHSM you tried to import keys into. 
 
-2. If you see the following error: 
-
+2. 
 ```
 pulling AKV response body failed: {"error":{"code":"BadParameter","message":"JSON Web Key: k property of oct key is too large, maximum size is 64 (Activity ID: 41c*****d6)"}}: http response status equal to 400 Bad Request
 
@@ -26,8 +25,7 @@ pulling AKV response body failed: {"error":{"code":"BadParameter","message":"JSO
 
 This might indicate that you tried to import an rsa key as an oct key. Or at least the `kty` on `importkeyconfig.json` is inconsistent with the actual key you tried to import. Make sure you configure the right `kty` on `importkeyconfig.json`. 
 
-3. If you see the following error: 
-
+3. 
 ```
 Key not supported
 ```
@@ -51,7 +49,7 @@ Ensure that:
     2. update the "x-ms-sevsnpvm-hostdata" field in the importkeyconfig.json file with the updated security policy hash (output of step 1)
     3. re-run the importkey tool
 - the managed identity has the correct permissions to the keyvault: *Key Vault Crypto Service Release User* role (previously *Key Vault Crypto Officer* and *Key Vault Crypto User*) if using AKV key vault or *Managed HSM Crypto Service Release User* role (previously *Managed HSM Crypto Officer* and *Managed HSM Crypto User*) for keys if using AKV managed HSM
-- the MAA endpoints from both importkeyconfig.json and the base64 encoded "EncfsSideCarArgs" environment variable are wrong or have typos. 
+- the MAA endpoints from both importkeyconfig.json and the base64 encoded "EncfsSideCarArgs" environment variable are not wrong or have no typos. 
 
 ## 404 Not Found Error
 
