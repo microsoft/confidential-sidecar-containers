@@ -2,6 +2,7 @@
 
 ## 401 Unauthorized Error
 
+1. 
 When running the importkey tool, you may see the following error:
 
 ```text
@@ -13,6 +14,23 @@ Generate a new bearer token and copy it into the importkeyconfig.json.
 ```bash
 az account get-access-token --resource https://managedhsm.azure.net
 ```
+
+2. 
+```
+pulling AKV response body failed: {"error":{"code":"BadParameter","message":"JSON Web Key: k property of oct key is too large, maximum size is 64 (Activity ID: 41c*****d6)"}}: http response status equal to 400 Bad Request
+
+```
+
+This might indicate that you tried to import an rsa key as an oct key. Or at least the `kty` on `importkeyconfig.json` is inconsistent with the actual key you tried to import. Make sure you configure the right `kty` on `importkeyconfig.json`. 
+
+3. 
+```
+Key not supported
+```
+
+This means the `kty` on `importkeyconfig.json` is wrong. Currently the import key tool only supports two types of keys: `RSA-HSM` and `oct-HSM`. 
+
+
 
 ## 403 Forbidden Error
 
@@ -29,6 +47,7 @@ Ensure that:
     2. update the "x-ms-sevsnpvm-hostdata" field in the importkeyconfig.json file with the updated security policy hash (output of step 1)
     3. re-run the importkey tool
 - the managed identity has the correct permissions to the keyvault: *Key Vault Crypto Service Release User* role (previously *Key Vault Crypto Officer* and *Key Vault Crypto User*) if using AKV key vault or *Managed HSM Crypto Service Release User* role (previously *Managed HSM Crypto Officer* and *Managed HSM Crypto User*) for keys if using AKV managed HSM
+- the MAA endpoints from both importkeyconfig.json and the `SkrClientMAAEndpoint` are correct and have no typos. 
 
 ## 404 Not Found Error
 
@@ -41,6 +60,7 @@ err: pulling AKV response body failed: http response status equal to 404 Not Fou
 Ensure that:
 
 - the "kid" field in the importkeyconfig.json matches "SkrClientKID" field in the ARM template
+- if the "kid" fields match, ensure such a key with the "kid" exists in the AKV/mHSM.
 
 ## HTTP GET Failed Error
 
@@ -53,6 +73,16 @@ err: AKV post request failed: HTTP GET failed: Post "https://<mhsm-name>.managed
 Ensure that:
 
 - the name of the mHSM is correct in the ARM template or key-info.json (for AKS) and matches the name of the mHSM in the importkeyconfig.json file
+
+The error message might also be the following: 
+
+```text
+attestation failed: Retrieving MAA token from MAA endpoint failed: maa post request failed: HTTP GET failed: Post "https://<maa-endpoint>/attest/SevSnpVM?api-version=2020-10-01": dial tcp: lookup <maa-endpoint> on <maa-endpoint-ip>: no such host
+```
+
+Ensure that: 
+
+- the value of `SkrClientMAAEndpoint` on the ARM template is correct and matches the name of the MAA endpoint in the importkeyconfig.json file. And make sure the MAA endpoint actually exists. 
 
 ## "CreateContainerRequest is blocked by policy" error (Confidential Containers in AKS Only)
 

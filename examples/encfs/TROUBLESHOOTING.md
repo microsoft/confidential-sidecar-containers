@@ -49,7 +49,7 @@ Ensure that:
     2. update the "x-ms-sevsnpvm-hostdata" field in the importkeyconfig.json file with the updated security policy hash (output of step 1)
     3. re-run the importkey tool
 - the managed identity has the correct permissions to the keyvault: *Key Vault Crypto Service Release User* role (previously *Key Vault Crypto Officer* and *Key Vault Crypto User*) if using AKV key vault or *Managed HSM Crypto Service Release User* role (previously *Managed HSM Crypto Officer* and *Managed HSM Crypto User*) for keys if using AKV managed HSM
-- the MAA endpoints from both importkeyconfig.json and the base64 encoded "EncfsSideCarArgs" environment variable are not wrong or have no typos. 
+- the MAA endpoints from both importkeyconfig.json and the base64 encoded "EncfsSideCarArgs" environment variable are correct and have no typos. 
 
 ## 404 Not Found Error
 
