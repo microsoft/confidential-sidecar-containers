@@ -16,7 +16,7 @@ az account get-access-token --resource https://managedhsm.azure.net
 
 If the http response status is still 401 Unauthorized, check whether the identity you logged in has access to the AKV/mHSM you tried to import keys into. Refer [here](https://github.com/microsoft/confidential-sidecar-containers/tree/main/examples/skr/aci#2-generate-user-managed-identity) on how to setup the right role access for AKV/mHSM on the managed identity. 
 
-## Bad Request Error 
+## 400 Bad Request Error 
 
 ```
 pulling AKV response body failed: {"error":{"code":"BadParameter","message":"JSON Web Key: k property of oct key is too large, maximum size is 64 (Activity ID: 41c*****d6)"}}: http response status equal to 400 Bad Request
