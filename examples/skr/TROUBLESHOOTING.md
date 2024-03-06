@@ -83,7 +83,8 @@ attestation failed: Retrieving MAA token from MAA endpoint failed: maa post requ
 
 Ensure that: 
 
-- the value of `SkrClientMAAEndpoint` on the ARM template is correct and matches the name of the MAA endpoint in the importkeyconfig.json file. And make sure the MAA endpoint actually exists. 
+- the value of `SkrClientMAAEndpoint` on the ARM template is correct and matches the name of the MAA endpoint in the importkeyconfig.json file
+- make sure the MAA endpoint actually exists
 
 ## "CreateContainerRequest is blocked by policy" error (Confidential Containers in AKS Only)
 

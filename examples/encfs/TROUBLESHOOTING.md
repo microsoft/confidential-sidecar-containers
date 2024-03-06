@@ -109,7 +109,7 @@ Failed to mount filesystems: failed to mount filesystem index 0: failed to mount
 Ensure that:
 
 - the url of the uploaded blob is correctly copied into the [`encfs-sidecar-args.json`](encfs-sidecar-args.json#L5) file and before base64 encoding the contents of the file and copying to the [`EncfsSideCarArgs`](aci-arm-template.json#L36) field in the ARM template
-- the managed identity on the ARM template has the correct role access to the storage account/container. 
+- the managed identity on the ARM template has the correct role access to the storage account/container
 
 ## Cannot luksopen Error
 
