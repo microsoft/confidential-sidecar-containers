@@ -2,7 +2,6 @@
 
 ## 401 Unauthorized Error
 
-1. 
 When running the importkey tool, you may see the following error:
 
 ```text
@@ -15,22 +14,24 @@ Generate a new bearer token and copy it into the importkeyconfig.json.
 az account get-access-token --resource https://managedhsm.azure.net
 ```
 
-2. 
+If the http response status is still 401 Unauthorized, check whether the identity you logged in has access to the AKV/mHSM you tried to import keys into. Refer [here](https://github.com/microsoft/confidential-sidecar-containers/tree/main/examples/skr/aci#2-generate-user-managed-identity) on how to setup the right role access for AKV/mHSM on the managed identity. 
+
+## Bad Request Error 
+
 ```
 pulling AKV response body failed: {"error":{"code":"BadParameter","message":"JSON Web Key: k property of oct key is too large, maximum size is 64 (Activity ID: 41c*****d6)"}}: http response status equal to 400 Bad Request
 
 ```
 
-This might indicate that you tried to import an rsa key as an oct key. Or at least the `kty` on `importkeyconfig.json` is inconsistent with the actual key you tried to import. Make sure you configure the right `kty` on `importkeyconfig.json`. 
+This might indicate that you tried to import an rsa key as an oct key or that the `kty` on importkeyconfig.json is inconsistent with the actual key you tried to import.
 
-3. 
+## Key not supported Error 
+
 ```
 Key not supported
 ```
 
 This means the `kty` on `importkeyconfig.json` is wrong. Currently the import key tool only supports two types of keys: `RSA-HSM` and `oct-HSM`. 
-
-
 
 ## 403 Forbidden Error
 
@@ -47,7 +48,7 @@ Ensure that:
     2. update the "x-ms-sevsnpvm-hostdata" field in the importkeyconfig.json file with the updated security policy hash (output of step 1)
     3. re-run the importkey tool
 - the managed identity has the correct permissions to the keyvault: *Key Vault Crypto Service Release User* role (previously *Key Vault Crypto Officer* and *Key Vault Crypto User*) if using AKV key vault or *Managed HSM Crypto Service Release User* role (previously *Managed HSM Crypto Officer* and *Managed HSM Crypto User*) for keys if using AKV managed HSM
-- the MAA endpoints from both importkeyconfig.json and the `SkrClientMAAEndpoint` are correct and have no typos. 
+- the MAA endpoints from both importkeyconfig.json and the `SkrClientMAAEndpoint` are correct and have no typos 
 
 ## 404 Not Found Error
 
@@ -60,7 +61,7 @@ err: pulling AKV response body failed: http response status equal to 404 Not Fou
 Ensure that:
 
 - the "kid" field in the importkeyconfig.json matches "SkrClientKID" field in the ARM template
-- if the "kid" fields match, ensure such a key with the "kid" exists in the AKV/mHSM.
+- if the "kid" fields match, ensure such a key with the "kid" exists in the AKV/mHSM
 
 ## HTTP GET Failed Error
 
