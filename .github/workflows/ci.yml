@@ -43,7 +43,7 @@ jobs:
     # Initializes the CodeQL tools for scanning.
     
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
         # If you wish to specify custom queries, you can do so here or in a config file.
@@ -69,7 +69,7 @@ jobs:
        bash ./buildall.sh
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
 
     - name: Aqua Security Trivy
       uses: aquasecurity/trivy-action@0.17.0
@@ -94,7 +94,7 @@ jobs:
 
     # Sets up the Golang for running unit tests
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: "1.21"
 
