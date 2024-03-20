@@ -62,3 +62,15 @@ jobs:
           push: true
           tags: |
             ${{ secrets.REGISTRY_NAME }}.${{ secrets.REGISTRY_DOMAIN }}/attestation:${{ steps.get_image_tag.outputs.image_tag }}
+
+      - name: Run Attestation Tests
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          curl --fail-with-body -L \
+          -X POST \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ secrets.ACC_REPO_DISPATCH_TOKEN }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          https://api.github.com/repos/microsoft/confidential-aci-examples/dispatches \
+          -d '{"event_type":"attestation-test","client_payload":{"image_tag":"${{ steps.get_image_tag.outputs.image_tag }}","pr_number":"${{ github.event.number }}"}}'

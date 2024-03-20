@@ -1,0 +1,19 @@
+name: Create Pull Request Comment
+
+on:
+  repository_dispatch:
+    types: [pipeline-link-comment]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+                issue_number: ${{ github.event.client_payload.pr_number }},
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: 'Please ensure the following pipeline is passing: ${{ github.event.client_payload.pipeline_link }}'
+            })
