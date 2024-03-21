@@ -8,7 +8,7 @@
 ARG variant=run
 
 # Build
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.21-fips-cbl-mariner2.0 AS builder-app
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.22.1-fips-cbl-mariner2.0 AS builder-app
 WORKDIR /usr/src/app
 
 # Set environment variables for golang fips build
