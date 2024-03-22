@@ -1,8 +1,19 @@
+FROM mcr.microsoft.com/devcontainers/go:dev-1.22-bookworm AS build
+ENV PROJECT_DIR=/go/src/github.com/microsoft
+WORKDIR ${PROJECT_DIR}/confidential-sidecar-containers
+COPY . ./
+RUN cd tools/get-snp-report && make && mv bin/get-snp-report /
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o / ./cmd/azmount
+RUN CGO_ENABLED=0 GOOS=linux go build -o / ./cmd/remotefs
+
 FROM alpine:3.18.6
 
 RUN apk update && apk upgrade --no-cache && apk add --no-cache cryptsetup fuse3 curl bash jq
 
-COPY ./bin/azmount ./bin/remotefs ./bin/get-snp-report /bin/
-COPY encfs.sh /
+COPY --from=build /get-snp-report /azmount /remotefs ./bin/
+
+ENV BUILD_DIR=/go/src/github.com/microsoft/confidential-sidecar-containers
+COPY --from=build ${BUILD_DIR}/docker/encfs/encfs.sh /
 
 RUN chmod +x /*.sh; date > /made-date
