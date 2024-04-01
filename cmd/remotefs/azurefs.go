@@ -289,14 +289,14 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 		}
 	}
 
-	defer func() {
-		// Delete keyfile on exit
-		if inErr := osRemoveAll(keyFilePath); inErr != nil {
-			logrus.WithError(inErr).Debugf("failed to delete keyfile: %s", keyFilePath)
-		} else {
-			logrus.Debugf("Deleted keyfile: %s", keyFilePath)
-		}
-	}()
+	// defer func() {
+	// 	// Delete keyfile on exit
+	// 	if inErr := osRemoveAll(keyFilePath); inErr != nil {
+	// 		logrus.WithError(inErr).Debugf("failed to delete keyfile: %s", keyFilePath)
+	// 	} else {
+	// 		logrus.Debugf("Deleted keyfile: %s", keyFilePath)
+	// 	}
+	// }()
 
 	// 3) Open encrypted filesystem with cryptsetup. The result is a block
 	// device in /dev/mapper/remote-crypt-[filesystem-index] so that it is

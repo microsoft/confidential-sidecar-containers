@@ -91,6 +91,10 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
               name: 'EncfsSideCarArgs'
               value: sidecarArgsB64
             }
+            {
+              name: 'LogLevel'
+              value: 'debug'
+            }
           ]
           resources: {
             requests: {

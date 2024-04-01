@@ -7,9 +7,11 @@ RUN cd tools/get-snp-report && make && mv bin/get-snp-report /
 RUN CGO_ENABLED=0 GOOS=linux go build -o / ./cmd/azmount
 RUN CGO_ENABLED=0 GOOS=linux go build -o / ./cmd/remotefs
 
-FROM alpine:3.18.6
+FROM mcr.microsoft.com/azurelinux/base/core:3.0
+#FROM alpine:3.18.6
 
-RUN apk update && apk upgrade --no-cache && apk add --no-cache cryptsetup fuse3 curl bash jq
+RUN tdnf update -y && tdnf upgrade -y && tdnf install -y cryptsetup fuse3 jq && tdnf clean all
+#RUN apk update && apk upgrade --no-cache && apk add --no-cache cryptsetup fuse3 curl bash jq
 
 COPY --from=build /get-snp-report /azmount /remotefs ./bin/
 
