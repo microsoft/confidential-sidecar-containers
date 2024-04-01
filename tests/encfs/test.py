@@ -97,7 +97,7 @@ class EncFSTest(unittest.TestCase):
             images_push(**image_args)
             policies_gen(
                 deployment_name=id,
-                policy_type="generated",
+                policy_type="debug",
                 **image_args,
                 **azure_args,
             )
