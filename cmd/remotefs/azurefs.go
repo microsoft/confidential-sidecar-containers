@@ -35,6 +35,7 @@ var (
 	_azmountRun                    = azmountRun
 	_containerMountAzureFilesystem = containerMountAzureFilesystem
 	_cryptsetupOpen                = cryptsetupOpen
+	_cryptsetupOpenWithHeaderFile  = cryptsetupOpenWithHeaderFile
 	ioutilWriteFile                = os.WriteFile
 	osGetenv                       = os.Getenv
 	osMkdirAll                     = os.MkdirAll
@@ -88,11 +89,46 @@ func cryptsetupCommand(args []string) error {
 	return nil
 }
 
-// cryptsetupOpen runs "cryptsetup luksOpen" with the right arguments.
+// cryptsetupOpen runs "cryptsetup open" with the right arguments.
 func cryptsetupOpen(source string, deviceName string, keyFilePath string) error {
 	openArgs := []string{
 		// Open device with the key passed to luksFormat
-		"luksOpen", source, deviceName, "--key-file", keyFilePath,
+		"open", source, deviceName, "--key-file", keyFilePath,
+		// Don't use a journal to increase performance
+		"--integrity-no-journal",
+		"--persistent"}
+
+	return cryptsetupCommand(openArgs)
+}
+
+// cryptsetupOpenWithHeaderFile runs "cryptsetup open" with the right arguments the LUKS header separated into a different file.
+func cryptsetupOpenWithHeaderFile(source string, deviceName string, keyFilePath string) error {
+	headerFile := "luksheader.img"
+	// Create a header file with the first 16MB of the device
+	logrus.Infof("Creating LUKS header file %s with the first 16MB of %s", headerFile, source)
+	headerArgs := fmt.Sprintf("head -c 16777216 %s > %s", source, headerFile)
+	cmd := exec.Command("/bin/sh", "-c", headerArgs)
+	output, err := cmd.Output()
+	if err != nil {
+		return errors.Wrapf(err, "failed to redirect LUKS header into a separate file: %s", string(output))
+	}
+	logrus.Infof("LUKS header file created: %s", headerFile)
+
+	defer func() {
+		// Delete headerFile on exit
+		if inErr := osRemoveAll(headerFile); inErr != nil {
+			logrus.WithError(inErr).Debugf("failed to delete headerFile: %s", headerFile)
+		} else {
+			logrus.Debugf("Deleted headerFile: %s", headerFile)
+		}
+	}()
+
+	logrus.Infof("Opening device with LUKS header file %s", headerFile)
+	openArgs := []string{
+		// Open device with the key passed to luksFormat
+		"open", source, deviceName, "--key-file", keyFilePath,
+		// Use the header file
+		"--header", headerFile,
 		// Don't use a journal to increase performance
 		"--integrity-no-journal",
 		"--persistent"}
@@ -307,7 +343,11 @@ func containerMountAzureFilesystem(tempDir string, index int, fs AzureFilesystem
 	logrus.Debugf("Opening device at: %s", deviceNamePath)
 	err = _cryptsetupOpen(imageLocalFile, deviceName, keyFilePath)
 	if err != nil {
-		return errors.Wrapf(err, "luksOpen failed: %s", deviceName)
+		logrus.Warnf("Initial cryptsetup open failed: %v. Attempting fallback approach with separate LUKS header...", err)
+		err = _cryptsetupOpenWithHeaderFile(imageLocalFile, deviceName, keyFilePath)
+		if err != nil {
+			return errors.Wrapf(err, "cryptsetup open failed: %s", deviceName)
+		}
 	}
 	logrus.Debugf("Device opened: %s", deviceName)
 
