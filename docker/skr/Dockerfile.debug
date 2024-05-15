@@ -1,6 +1,6 @@
-FROM ubuntu:18.04
-RUN apt update
-RUN apt install --fix-missing -y net-tools wget curl bc jq bash vim ssh
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
+
+RUN tdnf update -y && tdnf upgrade -y && tdnf install wget curl jq tar ca-certificates vim openssh-server -y && tdnf clean all
 
 # clearly this is extremely insecure but is only for debugging
 # do not copy this.
@@ -14,7 +14,7 @@ RUN mkdir /run/sshd
 # which can be used to trick an attestation agent or relying party
 
 COPY ./bin/skr ./bin/get-snp-report ./bin/verbose-report /bin/
-COPY skr.sh skr-debug.sh tests/*_client.sh tests/skr_test.sh /
+COPY ./docker/skr/skr.sh ./docker/skr/skr-debug.sh ./docker/skr/tests/*_client.sh ./docker/skr/tests/skr_test.sh /
 RUN mkdir -p /tests/skr; mv *_client.sh /tests/skr; mv skr_test.sh /tests/skr
 RUN chmod +x /*.sh /tests/skr/*.sh; date > /made-date
 

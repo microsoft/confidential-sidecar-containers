@@ -22,6 +22,8 @@ pushd tools/get-snp-report
 make
 popd
 cp tools/get-snp-report/bin/get-snp-report ./bin
+# verbose-report is used in the skr debug image
+cp tools/get-snp-report/bin/verbose-report ./bin
 cp tools/get-snp-report/bin/get-fake-snp-report ./bin
 
 pushd docker/encfs
