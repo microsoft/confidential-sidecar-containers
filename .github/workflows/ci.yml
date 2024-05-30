@@ -129,6 +129,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: ./tests/scripts/install-c-aci-testing.sh
 
+      - name: Setup Docker
+        run: sudo usermod -aG docker $USER
+
       - name: Test Attestation
         run: |
           source cacitesting.env
