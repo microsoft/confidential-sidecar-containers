@@ -1,5 +1,9 @@
 name: Test Attestation
 
+permissions:
+   id-token: write
+   contents: read
+
 on:
   workflow_dispatch:
   pull_request:
