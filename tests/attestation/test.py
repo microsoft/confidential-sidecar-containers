@@ -17,12 +17,12 @@ class ExampleTest(unittest.TestCase):
     def test_example(self):
 
         target_dir = os.path.realpath(os.path.dirname(__file__))
-        id = os.getenv("ID", f"attestation-{str(uuid.uuid4())}")
+        id = os.getenv("ID", str(uuid.uuid4()))
 
         with target_run_ctx(
             target=target_dir,
             name=id,
-            tag=os.getenv("TAG", id),
+            tag=os.getenv("TAG") or id,
             follow=False,
             cleanup=True,
         ) as deployment_ids:
