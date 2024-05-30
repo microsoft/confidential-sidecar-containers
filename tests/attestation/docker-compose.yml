@@ -1,0 +1,25 @@
+version: '3'
+volumes:
+  uds:
+services:
+  primary:
+    image: $REGISTRY/attestation/primary:$TAG
+    build:
+      context: ../../
+      dockerfile: tests/attestation/primary.Dockerfile
+    network_mode: "host"
+    ports:
+      - "8000:8000"
+  attestation:
+    image: $REGISTRY/attestation/sidecar:$TAG
+    build:
+      context: ../../
+      dockerfile: docker/attestation-container/Dockerfile.run
+    command: ["app", "-socket-address", "/mnt/uds/sock"]
+    network_mode: "host"
+    ports:
+      - "8080:8080"
+    environment:
+      - AZURE_ATTESTATION_ENDPOINT=cacisidecars.eus.attest.azure.net
+    volumes:
+      - uds:/mnt/uds
