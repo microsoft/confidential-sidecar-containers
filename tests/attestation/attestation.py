@@ -165,13 +165,17 @@ def validate_attestation(
 
     # Validate report was generated based on the provided report data
     # (i.e. This is the report we requested)
+    print(f"Checking that report data in the attestation: {report_data.rstrip(b"\x00").decode()}")
+    print(f"Matches the report data we provided: {expected_report_data}")
     assert report_data.rstrip(b"\x00").decode() == expected_report_data
+    print(f"Success")
 
     # Get the certificate chain to validate that the report is ultimately
     # endorsed by a trusted AMD certificate
     vcek_cert, ark_cert, root_cert = get_certificate_chain(certificate_chain)
 
     # Validate the VCEK certificate signed the report
+    print("Verifying that the VCEK certificate signed the report")
     vcek_cert.public_key().verify(  # type: ignore
         encode_dss_signature(
             *(
@@ -182,16 +186,21 @@ def validate_attestation(
         attestation_bytes[: -len(signature)],
         ECDSA(SHA384()),  # type: ignore
     )  # type: ignore
+    print("Success")
 
-    # Validate the ARK certificate signed the VCEK certificate
+    print("Verifying that the ARK certificate signed the VCEK certificate")
     assert cert_signed_other_cert(ark_cert, vcek_cert)
+    print("Success")
 
-    # Validate the AMD root certificate signed the ARK certificate
+    print("Verifying that the Root certificate signed the ARK certificate")
     assert cert_signed_other_cert(root_cert, ark_cert)
+    print("Success")
 
-    # Validate the AMD root certificate matches the known good value
+    print("Validate the AMD root certificate matches the known good value")
     assert (
         root_cert.public_key().public_numbers()  # type: ignore
         == AMD_ROOT_PUBLIC_KEY.public_numbers()  # type: ignore
     )
+    print("Success")
 
+    print("All validation passed successfully")
