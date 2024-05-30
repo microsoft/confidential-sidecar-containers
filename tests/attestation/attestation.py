@@ -165,9 +165,10 @@ def validate_attestation(
 
     # Validate report was generated based on the provided report data
     # (i.e. This is the report we requested)
-    print(f"Checking that report data in the attestation: {report_data.rstrip(b"\x00").decode()}")
+    seen_report_data = report_data.rstrip(b"\x00").decode()
+    print(f"Checking that report data in the attestation: {seen_report_data}")
     print(f"Matches the report data we provided: {expected_report_data}")
-    assert report_data.rstrip(b"\x00").decode() == expected_report_data
+    assert seen_report_data == expected_report_data
     print(f"Success")
 
     # Get the certificate chain to validate that the report is ultimately
