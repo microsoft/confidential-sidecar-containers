@@ -130,6 +130,8 @@ jobs:
         run: ./tests/scripts/install-c-aci-testing.sh
 
       - name: Test Attestation
-        run: python -m unittest discover -s tests/attestation
+        run: |
+          source cacitesting.env
+          python -m unittest discover -s tests/attestation
 
 
