@@ -4,7 +4,7 @@
         "-s",
         "${workspaceFolder}/tests/",
         "-p",
-        "*.py"
+        "test.py"
     ],
     "python.testing.pytestEnabled": false,
     "debugpy.debugJustMyCode": false,
