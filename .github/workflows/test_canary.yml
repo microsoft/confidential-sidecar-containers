@@ -35,4 +35,4 @@ jobs:
       - name: Test Attestation
         run: |
           source cacitesting.env
-          LOCATION=eastus2euap python -m unittest discover -s tests/
+          LOCATION=eastus2euap python -m unittest discover -s tests/ -p 'test.py'

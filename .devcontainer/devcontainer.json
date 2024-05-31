@@ -2,17 +2,22 @@
 	"name": "Ubuntu",
 	"image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 	"features": {
+		"ghcr.io/devcontainers/features/azure-cli:1": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/devcontainers/features/python:1": {}
 	},
-	"postCreateCommand": "pip install -r requirements.txt",
+	"postCreateCommand": "./tests/scripts/install_c_aci_testing && pip install -r requirements.txt",
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"eamodio.gitlens",
 				"GitHub.copilot",
+				"GitHub.vscode-github-actions",
+				"ms-azuretools.vscode-bicep",
+				"ms-azuretools.vscode-docker",
 				"ms-python.black-formatter",
-				"ms-python.python",
-				"GitHub.vscode-github-actions"
+				"ms-python.python"
 			],
 			"settings": {
 				"files.associations": {
