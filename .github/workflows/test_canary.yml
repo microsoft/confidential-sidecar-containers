@@ -27,7 +27,7 @@ jobs:
       - name: Install c_aci_testing package
         env:
           GH_TOKEN: ${{ github.token }}
-        run: ./tests/scripts/install-c-aci-testing.sh
+        run: ./scripts/install-c-aci-testing.sh
 
       - name: Setup Docker
         run: sudo usermod -aG docker $USER
