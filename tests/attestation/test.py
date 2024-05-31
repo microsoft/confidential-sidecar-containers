@@ -8,7 +8,7 @@ import unittest
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from attestation.attestation import validate_attestation
+from attestation import validate_attestation
 
 from c_aci_testing.aci_get_ips import aci_get_ips
 from c_aci_testing.target_run import target_run_ctx
