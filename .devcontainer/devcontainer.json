@@ -1,0 +1,39 @@
+{
+	"name": "Ubuntu",
+	"image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+	"features": {
+		"ghcr.io/devcontainers/features/python:1": {}
+	},
+	"postCreateCommand": "pip install -r requirements.txt",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"eamodio.gitlens",
+				"GitHub.copilot",
+				"ms-python.black-formatter",
+				"ms-python.python",
+				"GitHub.vscode-github-actions"
+			],
+			"settings": {
+				"files.associations": {
+					"env": "shellscript"
+				},
+				"python.testing.unittestArgs": [
+					"-v",
+					"-s",
+					"./tests",
+					"-p",
+					"*.py"
+				],
+				"python.testing.pytestEnabled": false,
+				"python.testing.unittestEnabled": true,
+				"python.envFile": "${workspaceFolder}/cacitesting.env",
+				"python.defaultInterpreterPath": "/usr/local/python/current/bin/python",
+				"editor.defaultFormatter": "ms-python.black-formatter",
+				"files.exclude": {
+					"**/__pycache__": true
+				}
+			}
+		}
+	}
+}
