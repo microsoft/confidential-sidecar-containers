@@ -4,6 +4,7 @@ param tag string
 param ccePolicies object
 param managedIDGroup string = resourceGroup().name
 param managedIDName string
+param attestationEndpoint string
 
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   name: deployment().name
@@ -81,7 +82,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           environmentVariables: [
             {
               name: 'AZURE_ATTESTATION_ENDPOINT'
-              value: 'caciexamples.eus.attest.azure.net'
+              value: attestationEndpoint
             }
           ]
           volumeMounts: [

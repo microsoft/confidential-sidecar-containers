@@ -10,3 +10,4 @@ param ccePolicies={
   attestation: ''
 }
 param managedIDName='cacisidecars'
+param attestationEndpoint='https://confidentialsidecars.weu.attest.azure.net'
