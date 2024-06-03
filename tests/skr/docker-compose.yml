@@ -12,3 +12,12 @@ services:
     build:
       context: ../../
       dockerfile: docker/skr/Dockerfile.skr
+  grpc_sidecar:
+    image: $REGISTRY/skr/grpc_sidecar:$TAG
+    network_mode: "host"
+    environment:
+      - "ServerType=grpc"
+      - "Port=50000"
+    build:
+      context: ../../
+      dockerfile: docker/skr/Dockerfile.skr

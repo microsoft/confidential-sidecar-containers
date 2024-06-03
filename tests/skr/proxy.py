@@ -1,8 +1,44 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+import subprocess
 from flask import Flask, request, Response
 import requests
 
 app = Flask(__name__)
 
+def grpc_request(request, method):
+    response = subprocess.run([
+        "grpcurl",
+        "-v", "-plaintext",
+        "-d", request,
+        "127.0.0.1:50000",
+        f"keyprovider.KeyProviderService.{method}"
+    ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    return Response(
+        response.stdout if response.returncode == 0 else response.stderr,
+        status=200 if response.returncode == 0 else 500,
+    )
+
+@app.route('/say_hello', methods=['GET'])
+def grpc_say_hello():
+    return grpc_request('{"name":"GRPC interface test!"}', "SayHello")
+
+@app.route('/get_report', methods=['GET'])
+def grpc_get_report():
+    runtime_data = ""
+    try:
+        request_json = request.get_json()
+        runtime_data = request_json["runtime_data"] or ""
+    except Exception as e: ...
+
+    return grpc_request(
+        request=f'{{"reportDataHexString":"{runtime_data}"}}',
+        method="GetReport",
+    )
+
+# For requests which match the HTTP sidecar, just forward them on
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>', methods=['GET', 'POST'])
 def proxy(path):

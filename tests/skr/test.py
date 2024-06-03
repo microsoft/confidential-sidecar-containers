@@ -3,6 +3,7 @@
 
 import binascii
 import hashlib
+import re
 import struct
 import sys
 import requests
@@ -19,6 +20,35 @@ from key import generate_key, deploy_key
 from c_aci_testing.target_run import target_run_ctx
 from c_aci_testing.aci_get_ips import aci_get_ips
 
+def get_grpc_response(raw_response: bytes):
+    return json.loads(
+        re.findall(
+            r"Response contents:\s*(\{.*?\})",
+            raw_response.decode(),
+            re.DOTALL
+        )[0]
+    )
+
+def check_report_data(report: str, expected_report_data: str):
+
+    # Report data isn't returned as Hex, so we unhex around it
+    skr_report = struct.unpack_from(
+        f"<{SNP_REPORT_STRUCTURE}",
+        (
+            binascii.unhexlify(report[:160])
+            + report[160:224].encode()  # Report Data
+            + binascii.unhexlify(report[224:])
+        ),
+        0,
+    )
+
+    # SKR Sidecar decodes the base64 string and then hashes it before
+    # providing it to the SNP Attestation
+    seen_report_data = skr_report[10].rstrip(b"\x00").decode()
+    expected_report_data = hashlib.sha256(expected_report_data).hexdigest()
+    print(f"Checking seen report data: {seen_report_data}")
+    print(f"Matches provided report data: {expected_report_data}")
+    assert seen_report_data == expected_report_data
 
 class SkrTest(unittest.TestCase):
 
@@ -46,7 +76,7 @@ class SkrTest(unittest.TestCase):
     def tearDownClass(cls):
         cls.aci_context.__exit__(None, None, None)
 
-    def test_skr_status(self):
+    def test_skr_http_status(self):
 
         status_response = requests.get(
             f"http://{self.skr_ip}:8000/status",
@@ -54,7 +84,7 @@ class SkrTest(unittest.TestCase):
         print(f"Response from status check: {status_response.content}")
         assert status_response.status_code == 200
 
-    def test_skr_attest_raw(self):
+    def test_skr_http_attest_raw(self):
 
         input_report_data = b"EXAMPLE"
         attestation_resp = requests.post(
@@ -73,28 +103,12 @@ class SkrTest(unittest.TestCase):
         print(f"Response from attestation check: {attestation_resp.content}")
         assert attestation_resp.status_code == 200, attestation_resp.content.decode()
 
-        report_str = json.loads(attestation_resp.content.decode())["report"]
-
-        # Report data isn't returned as Hex, so we unhex around it
-        skr_report = struct.unpack_from(
-            f"<{SNP_REPORT_STRUCTURE}",
-            (
-                binascii.unhexlify(report_str[:160])
-                + report_str[160:224].encode()  # Report Data
-                + binascii.unhexlify(report_str[224:])
-            ),
-            0,
+        check_report_data(
+            report=json.loads(attestation_resp.content.decode())["report"],
+            expected_report_data=input_report_data,
         )
 
-        # SKR Sidecar decodes the base64 string and then hashes it before
-        # providing it to the SNP Attestation
-        seen_report_data = skr_report[10].rstrip(b"\x00").decode()
-        expected_report_data = hashlib.sha256(input_report_data).hexdigest()
-        print(f"Checking seen report data: {seen_report_data}")
-        print(f"Matches provided report data: {expected_report_data}")
-        assert seen_report_data == expected_report_data
-
-    def test_skr_attest_maa(self):
+    def test_skr_http_attest_maa(self):
 
         test_key = json.dumps(
             {
@@ -125,7 +139,7 @@ class SkrTest(unittest.TestCase):
         assert maa_response.status_code == 200, maa_response.content.decode()
         assert json.loads(maa_response.content.decode())["token"] != ""
 
-    def test_skr_key_release(self):
+    def test_skr_http_key_release(self):
 
         # Deploy a Key to the mHSM
         key_id = f"{self.id}-key"
@@ -153,6 +167,33 @@ class SkrTest(unittest.TestCase):
         )
         assert skr_response.status_code == 200, skr_response.content.decode()
         assert json.loads(json.loads(skr_response.content.decode())["key"])["k"] != ""
+
+    def test_skr_grpc_say_hello(self):
+
+        response = requests.get(
+            f"http://{self.skr_ip}:8000/say_hello",
+        )
+        print(f"Response from say_hello check: {response.content.decode()}")
+        assert response.status_code == 200
+
+        assert get_grpc_response(response.content)["message"] == "Hello GRPC interface test!"
+
+    def test_skr_grpc_get_report(self):
+
+        input_report_data = b"EXAMPLE"
+        response = requests.get(
+            f"http://{self.skr_ip}:8000/get_report",
+            headers={
+                "Content-Type": "application/json",
+            },
+            data=json.dumps(
+                {
+                    "runtime_data": base64.urlsafe_b64encode(input_report_data).decode(),
+                }
+            ),
+        )
+        print(f"Response from get_report check: {response.content.decode()}")
+        assert response.status_code == 200
 
 
 if __name__ == "__main__":

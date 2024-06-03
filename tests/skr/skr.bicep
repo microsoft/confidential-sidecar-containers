@@ -73,6 +73,34 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           }
         }
       }
+      {
+        name: 'grpc-sidecar'
+        properties: {
+          image: '${registry}/skr/grpc_sidecar:${tag}'
+          environmentVariables: [
+            {
+              name: 'ServerType'
+              value: 'grpc'
+            }
+            {
+              name: 'Port'
+              value: '50000'
+            }
+          ]
+          ports: [
+            {
+              protocol: 'TCP'
+              port: 50000
+            }
+          ]
+          resources: {
+            requests: {
+              memoryInGB: 4
+              cpu: 1
+            }
+          }
+        }
+      }
     ]
   }
 }
