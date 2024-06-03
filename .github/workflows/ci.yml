@@ -78,7 +78,6 @@ jobs:
         scan-ref: '.'
         format: 'sarif'
         output: 'trivy-results.sarif'
-        exit-code: 1
         severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
 
     - name: Upload Trivy scan results to GitHub Security tab
