@@ -20,6 +20,6 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - AZURE_ATTESTATION_ENDPOINT=cacisidecars.eus.attest.azure.net
+      - AZURE_ATTESTATION_ENDPOINT=$ATTESTATION_ENDPOINT
     volumes:
       - uds:/mnt/uds
