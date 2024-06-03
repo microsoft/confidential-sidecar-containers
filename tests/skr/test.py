@@ -1,0 +1,159 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+import binascii
+import hashlib
+import struct
+import sys
+import requests
+import uuid
+import os
+import unittest
+import base64
+import json
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from attestation.attestation import SNP_REPORT_STRUCTURE
+from key import generate_key, deploy_key
+
+from c_aci_testing.target_run import target_run_ctx
+from c_aci_testing.aci_get_ips import aci_get_ips
+
+
+class SkrTest(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+
+        target_dir = os.path.realpath(os.path.dirname(__file__))
+        cls.id = os.getenv("ID", str(uuid.uuid4()))
+
+        cls.attestation_endpoint = "confidentialsidecars.weu.attest.azure.net"
+        cls.hsm_endpoint = "cacisidecars.managedhsm.azure.net"
+
+        cls.aci_context = target_run_ctx(
+            target=target_dir,
+            name=cls.id,
+            tag=os.getenv("TAG") or id,
+            follow=False,
+            cleanup=False,
+        )
+
+        cls.skr_id, = cls.aci_context.__enter__()
+        cls.skr_ip = aci_get_ips(ids=cls.skr_id)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.aci_context.__exit__(None, None, None)
+
+    def test_skr_status(self):
+
+        status_response = requests.get(
+            f"http://{self.skr_ip}:8000/status",
+        )
+        print(f"Response from status check: {status_response.content}")
+        assert status_response.status_code == 200
+
+    def test_skr_attest_raw(self):
+
+        input_report_data = b"EXAMPLE"
+        attestation_resp = requests.post(
+            url=f"http://{self.skr_ip}:8000/attest/raw",
+            headers={
+                "Content-Type": "application/json",
+            },
+            data=json.dumps(
+                {
+                    "runtime_data": base64.urlsafe_b64encode(
+                        input_report_data
+                    ).decode(),
+                }
+            ),
+        )
+        print(f"Response from attestation check: {attestation_resp.content}")
+        assert attestation_resp.status_code == 200, attestation_resp.content.decode()
+
+        report_str = json.loads(attestation_resp.content.decode())["report"]
+
+        # Report data isn't returned as Hex, so we unhex around it
+        skr_report = struct.unpack_from(
+            f"<{SNP_REPORT_STRUCTURE}",
+            (
+                binascii.unhexlify(report_str[:160])
+                + report_str[160:224].encode()  # Report Data
+                + binascii.unhexlify(report_str[224:])
+            ),
+            0,
+        )
+
+        # SKR Sidecar decodes the base64 string and then hashes it before
+        # providing it to the SNP Attestation
+        seen_report_data = skr_report[10].rstrip(b"\x00").decode()
+        expected_report_data = hashlib.sha256(input_report_data).hexdigest()
+        print(f"Checking seen report data: {seen_report_data}")
+        print(f"Matches provided report data: {expected_report_data}")
+        assert seen_report_data == expected_report_data
+
+    def test_skr_attest_maa(self):
+
+        test_key = json.dumps(
+            {
+                "keys": [
+                    {
+                        "key_ops": ["encrypt"],
+                        "kid": "test-key",
+                        "kty": "oct-HSM",
+                        "k": "example",
+                    }
+                ]
+            }
+        )
+
+        maa_response = requests.post(
+            url=f"http://{self.skr_ip}:8000/attest/maa",
+            headers={
+                "Content-Type": "application/json",
+            },
+            data=json.dumps(
+                {
+                    "maa_endpoint": self.attestation_endpoint,
+                    "runtime_data": base64.urlsafe_b64encode(test_key.encode()).decode(),
+                }
+            ),
+        )
+
+        assert maa_response.status_code == 200, maa_response.content.decode()
+        assert json.loads(maa_response.content.decode())["token"] != ""
+
+    def test_skr_key_release(self):
+
+        # Deploy a Key to the mHSM
+        key_id = f"{self.id}-key"
+        with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_skr.rego")) as f:
+            deploy_key(
+                key_id=key_id,
+                attestation_endpoint=self.attestation_endpoint,
+                hsm_endpoint=self.hsm_endpoint,
+                key_data=generate_key(),
+                security_policy=f.read(),
+            )
+
+        skr_response = requests.post(
+            url=f"http://{self.skr_ip}:8000/key/release",
+            headers={
+                "Content-Type": "application/json",
+            },
+            data=json.dumps(
+                {
+                    "maa_endpoint": self.attestation_endpoint,
+                    "akv_endpoint": self.hsm_endpoint,
+                    "kid": key_id,
+                }
+            ),
+        )
+        assert skr_response.status_code == 200, skr_response.content.decode()
+        assert json.loads(json.loads(skr_response.content.decode())["key"])["k"] != ""
+
+
+if __name__ == "__main__":
+    unittest.main()
