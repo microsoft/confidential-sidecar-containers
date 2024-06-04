@@ -6,12 +6,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  cleanup_registry:
+  cleanup-registry:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Log in to Azure Container Registry
         run: |
           az acr login \
@@ -26,7 +26,7 @@ jobs:
         run: |
           repos=("skr" "skr_debug" "encfs" "attestation")
           branches=$(git ls-remote --heads origin | sed 's/[^a-zA-Z0-9]/-/g')
-          
+
           # Delete any tags which don't have a corresponding branch
           for repo in "${repos[@]}"; do
             tags=$(az acr repository show-tags --name $REGISTRY_NAME -u $REGISTRY_NAME -p $REGISTRY_PASSWORD --repository $repo | jq -r '.[]')
@@ -39,4 +39,28 @@ jobs:
                 az acr repository delete --name $REGISTRY_NAME -u $REGISTRY_NAME -p $REGISTRY_PASSWORD --image $repo:$tag --yes
               fi
             done
+          done
+
+  cleanup-aci:
+    name: Cleanup ACI
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION }}
+
+      - name: Delete All Container Groups
+        run: |
+          CONTAINERS=$(az container list \
+            --resource-group privacy-sandbox-dev
+
+          for container in $(echo $CONTAINERS | jq -r '.[].id'); do
+              echo "Deleting container group: ${container}"
+              az resource delete --ids ${container}
           done

@@ -1,0 +1,13 @@
+{
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "${workspaceFolder}/tests/",
+        "-p",
+        "test.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "debugpy.debugJustMyCode": false,
+    "python.testing.unittestEnabled": true,
+    "python.envFile": "${workspaceFolder}/cacitesting.env"
+}

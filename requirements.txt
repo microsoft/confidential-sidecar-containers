@@ -1,0 +1,4 @@
+cryptography==42.0.4
+requests
+grpcio
+flask
