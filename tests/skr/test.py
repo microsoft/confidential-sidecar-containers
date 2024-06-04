@@ -249,7 +249,7 @@ class SkrTest(unittest.TestCase):
                 "-infile", in_file_path,
                 "-keypath", os.path.join(temp_dir, key_id),
                 "-outfile", out_file_path,
-            ], cwd=self.target_dir, env={"TAG": self.tag})
+            ], cwd=self.target_dir, env={**os.environ, "TAG": self.tag})
             with open(out_file_path) as out_file:
                 wrapped_payload = out_file.read()
 
