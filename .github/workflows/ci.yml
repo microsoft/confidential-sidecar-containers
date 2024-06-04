@@ -158,7 +158,7 @@ jobs:
       - name: Setup Docker
         run: sudo usermod -aG docker $USER
 
-      - name: Test Attestation
+      - name: Test SKR
         run: |
           source cacitesting.env
           python -m unittest discover -s tests/skr
