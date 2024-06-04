@@ -59,6 +59,7 @@ class SkrTest(unittest.TestCase):
 
         cls.target_dir = os.path.realpath(os.path.dirname(__file__))
         cls.id = os.getenv("ID", str(uuid.uuid4()))
+        cls.tag = os.getenv("TAG") or cls.id
 
         cls.attestation_endpoint = "confidentialsidecars.weu.attest.azure.net"
         cls.hsm_endpoint = "cacisidecars.managedhsm.azure.net"
@@ -66,7 +67,7 @@ class SkrTest(unittest.TestCase):
         cls.aci_context = target_run_ctx(
             target=cls.target_dir,
             name=cls.id,
-            tag=os.getenv("TAG") or cls.id,
+            tag=cls.tag,
             follow=False,
             cleanup=True,
         )
@@ -240,7 +241,7 @@ class SkrTest(unittest.TestCase):
 
             # Encrypt a payload with the public key
             out_file_path = os.path.join(temp_dir, "out.txt")
-            subprocess.run([
+            subprocess.check_call([
                 "docker", "compose", "run",
                 "-v", "/tmp:/tmp",
                 "http_sidecar",
@@ -248,7 +249,7 @@ class SkrTest(unittest.TestCase):
                 "-infile", in_file_path,
                 "-keypath", os.path.join(temp_dir, key_id),
                 "-outfile", out_file_path,
-            ], cwd=self.target_dir)
+            ], cwd=self.target_dir, env={"TAG": self.tag})
             with open(out_file_path) as out_file:
                 wrapped_payload = out_file.read()
 
