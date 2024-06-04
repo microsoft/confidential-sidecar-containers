@@ -68,7 +68,7 @@ class SkrTest(unittest.TestCase):
             name=cls.id,
             tag=os.getenv("TAG") or id,
             follow=False,
-            cleanup=False,
+            cleanup=True,
         )
 
         cls.skr_id, = cls.aci_context.__enter__()
