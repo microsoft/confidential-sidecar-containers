@@ -66,7 +66,7 @@ class SkrTest(unittest.TestCase):
         cls.aci_context = target_run_ctx(
             target=cls.target_dir,
             name=cls.id,
-            tag=os.getenv("TAG") or id,
+            tag=os.getenv("TAG") or cls.id,
             follow=False,
             cleanup=True,
         )
