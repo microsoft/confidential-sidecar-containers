@@ -5,7 +5,9 @@ import binascii
 import hashlib
 import re
 import struct
+import subprocess
 import sys
+import tempfile
 import requests
 import uuid
 import os
@@ -15,7 +17,7 @@ import json
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from attestation.attestation import SNP_REPORT_STRUCTURE
-from key import generate_key, deploy_key
+from key import generate_key, deploy_key, generate_release_policy
 
 from c_aci_testing.target_run import target_run_ctx
 from c_aci_testing.aci_get_ips import aci_get_ips
@@ -55,14 +57,14 @@ class SkrTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
 
-        target_dir = os.path.realpath(os.path.dirname(__file__))
+        cls.target_dir = os.path.realpath(os.path.dirname(__file__))
         cls.id = os.getenv("ID", str(uuid.uuid4()))
 
         cls.attestation_endpoint = "confidentialsidecars.weu.attest.azure.net"
         cls.hsm_endpoint = "cacisidecars.managedhsm.azure.net"
 
         cls.aci_context = target_run_ctx(
-            target=target_dir,
+            target=cls.target_dir,
             name=cls.id,
             tag=os.getenv("TAG") or id,
             follow=False,
@@ -194,6 +196,85 @@ class SkrTest(unittest.TestCase):
         )
         print(f"Response from get_report check: {response.content.decode()}")
         assert response.status_code == 200
+
+    def test_skr_grpc_unwrap_key(self):
+
+        # Generate a key in the HSM
+        key_id = f"{self.id}-wrapping-key"
+        with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_skr.rego")) as f:
+            security_policy = generate_release_policy(
+                attestation_endpoint=self.attestation_endpoint,
+                host_data=hashlib.sha256(f.read().encode()).hexdigest()
+            )
+            subprocess.check_call([
+                "az", "keyvault", "key", "create",
+                "--id", f"https://{self.hsm_endpoint}/keys/{key_id}",
+                "--ops", "wrapKey", "unwrapkey", "encrypt", "decrypt",
+                "--kty", "RSA-HSM", "--size", "3072", "--exportable",
+                "--policy", f"{security_policy}"])
+
+        # Download the public key
+        payload = b"Oceans are full of water\nHorses have 4 legs"
+        with tempfile.TemporaryDirectory() as temp_dir:
+
+            in_file_path = os.path.join(temp_dir, "in.txt")
+            with open(in_file_path, "wb") as in_file:
+                in_file.write(payload)
+
+            public_key_path = os.path.join(temp_dir, f"{key_id}-pub.pem")
+            subprocess.check_call([
+                "az", "keyvault", "key", "download",
+                "--hsm-name", f'{self.hsm_endpoint.split(".")[0]}',
+                "--name", key_id,
+                "--f", public_key_path])
+
+            key_info_path = os.path.join(temp_dir, f"{key_id}-info.json")
+            with open(key_info_path, "w") as key_info_file:
+                key_info_file.write(json.dumps(
+                    {
+                        "public_key_path": public_key_path,
+                        "kms_endpoint": self.hsm_endpoint,
+                        "attester_endpoint": self.attestation_endpoint,
+                    }
+                ))
+
+            # Encrypt a payload with the public key
+            out_file_path = os.path.join(temp_dir, "out.txt")
+            subprocess.run([
+                "docker", "compose", "run",
+                "-v", "/tmp:/tmp",
+                "http_sidecar",
+                "/bin/skr",
+                "-infile", in_file_path,
+                "-keypath", os.path.join(temp_dir, key_id),
+                "-outfile", out_file_path,
+            ], cwd=self.target_dir)
+            with open(out_file_path) as out_file:
+                wrapped_payload = out_file.read()
+
+        response = requests.get(
+            f"http://{self.skr_ip}:8000/unwrap_key",
+            headers={
+                "Content-Type": "application/json",
+            },
+            data=json.dumps(
+                {
+                    "wrapped_data": wrapped_payload,
+                }
+            ),
+        )
+        print(f"Response from unwrap_key check: {response.content.decode()}")
+        assert response.status_code == 200
+
+        unwrapped_data = base64.b64decode(
+            json.loads(
+                base64.b64decode(
+                    get_grpc_response(response.content)["KeyProviderKeyWrapProtocolOutput"]
+                ).decode()
+            )["keyunwrapresults"]["optsdata"]
+        ).decode()
+        print(f"Unwrapped data: {unwrapped_data}")
+        assert unwrapped_data == payload.decode()
 
 
 if __name__ == "__main__":

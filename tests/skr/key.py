@@ -23,6 +23,32 @@ def generate_key():
         subprocess.check_call(f"truncate -s 32 {tmp_key_file.name}", shell=True)
         return binascii.hexlify(bData)
 
+def generate_release_policy(attestation_endpoint, host_data):
+    return json.dumps(
+        {
+            "version": "1.0.0",
+            "anyOf": [
+                {
+                    "authority": f"https://{attestation_endpoint}",
+                    "allOf": [
+                        {
+                            "claim": "x-ms-sevsnpvm-hostdata",
+                            "equals": host_data,
+                        },
+                        {
+                            "claim": "x-ms-compliance-status",
+                            "equals": "azure-compliant-uvm",
+                        },
+                        {
+                            "claim": "x-ms-sevsnpvm-is-debuggable",
+                            "equals": "false",
+                        },
+                    ],
+                }
+            ],
+        }
+    )
+
 def deploy_key(
     key_id: str,
     attestation_endpoint: str,
@@ -47,29 +73,9 @@ def deploy_key(
                 "release_policy": {
                     "contentType": "application/json; charset=utf-8",
                     "data": b64encode(
-                        json.dumps(
-                            {
-                                "version": "1.0.0",
-                                "anyOf": [
-                                    {
-                                        "authority": f"https://{attestation_endpoint}",
-                                        "allOf": [
-                                            {
-                                                "claim": "x-ms-sevsnpvm-hostdata",
-                                                "equals": hashlib.sha256(security_policy.encode()).hexdigest(),
-                                            },
-                                            {
-                                                "claim": "x-ms-compliance-status",
-                                                "equals": "azure-compliant-uvm",
-                                            },
-                                            {
-                                                "claim": "x-ms-sevsnpvm-is-debuggable",
-                                                "equals": "false",
-                                            },
-                                        ],
-                                    }
-                                ],
-                            }
+                        generate_release_policy(
+                            attestation_endpoint=attestation_endpoint,
+                            host_data=hashlib.sha256(security_policy.encode()).hexdigest(),
                         ).encode()
                     ).decode(),
                     "immutable": False,
