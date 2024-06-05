@@ -165,6 +165,7 @@ jobs:
       - name: Deploy the SKR container group
         env:
           ID: ${{ env.BASE_ID }}-skr
+          TAG: ${{ env.BASE_ID }}-skr
         run: |
           source cacitesting.env
           python -m c_aci_testing.target_run tests/skr \
@@ -182,6 +183,7 @@ jobs:
       - name: Test SKR
         env:
           ID: ${{ env.BASE_ID }}-skr
+          TAG: ${{ env.BASE_ID }}-skr
         run: |
           source cacitesting.env
           python -m unittest discover -s tests/skr
