@@ -167,7 +167,7 @@ jobs:
           ID: ${{ env.BASE_ID }}-skr
         run: |
           source cacitesting.env
-          python -m c_aci_testing.target_run --name $ID --no-follow
+          python -m c_aci_testing.target_run tests/skr --name $ID --no-follow
 
       - name: Re-Log into Azure
         uses: azure/login@v2
