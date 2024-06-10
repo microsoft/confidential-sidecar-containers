@@ -12,12 +12,19 @@ from attestation import validate_attestation
 
 from c_aci_testing.aci_get_ips import aci_get_ips
 from c_aci_testing.target_run import target_run_ctx
+from c_aci_testing.aci_param_set import aci_param_set
 
 class AttestationTest(unittest.TestCase):
     def test_attestation(self):
 
         target_dir = os.path.realpath(os.path.dirname(__file__))
         id = os.getenv("ID", str(uuid.uuid4()))
+
+        aci_param_set(
+            file_path=os.path.join(target_dir, "attestation.bicepparam"),
+            key="attestationEndpoint",
+            value=f'\'https://{os.getenv("ATTESTATION_ENDPOINT")}\''
+        )
 
         with target_run_ctx(
             target=target_dir,
