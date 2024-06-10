@@ -23,7 +23,7 @@ class AttestationTest(unittest.TestCase):
         aci_param_set(
             file_path=os.path.join(target_dir, "attestation.bicepparam"),
             key="attestationEndpoint",
-            value=f'\'https://{os.getenv("ATTESTATION_ENDPOINT")}\''
+            value=f'\'https://{os.environ["ATTESTATION_ENDPOINT"]}\''
         )
 
         with target_run_ctx(
