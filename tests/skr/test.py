@@ -61,8 +61,8 @@ class SkrTest(unittest.TestCase):
         cls.id = os.getenv("ID", str(uuid.uuid4()))
         cls.tag = os.getenv("TAG") or cls.id
 
-        cls.attestation_endpoint = os.getenv("ATTESTATION_ENDPOINT")
-        cls.hsm_endpoint = os.getenv("HSM_ENDPOINT")
+        cls.attestation_endpoint = os.environ["ATTESTATION_ENDPOINT"]
+        cls.hsm_endpoint = os.environ["HSM_ENDPOINT"]
 
         cls.aci_context = target_run_ctx(
             target=cls.target_dir,
