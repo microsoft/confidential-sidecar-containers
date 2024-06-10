@@ -244,7 +244,7 @@ class SkrTest(unittest.TestCase):
             subprocess.check_call([
                 "docker", "compose", "run",
                 "-v", "/tmp:/tmp",
-                "http_sidecar",
+                "sidecar",
                 "/bin/skr",
                 "-infile", in_file_path,
                 "-keypath", os.path.join(temp_dir, key_id),
