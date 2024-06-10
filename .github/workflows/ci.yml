@@ -164,8 +164,8 @@ jobs:
       # Deployment is separated from testing to avoid the AZ CLI login timeout
       - name: Deploy the SKR container group
         env:
-          ID: ${{ env.BASE_ID }}-skr
-          TAG: ${{ env.BASE_ID }}-skr
+          ID: skr-${{ env.BASE_ID }}
+          TAG: ${{ env.BASE_ID }}
         run: |
           source cacitesting.env
           python -m c_aci_testing.target_run tests/skr \
@@ -182,8 +182,8 @@ jobs:
 
       - name: Test SKR
         env:
-          ID: ${{ env.BASE_ID }}-skr
-          TAG: ${{ env.BASE_ID }}-skr
+          ID: skr-${{ env.BASE_ID }}
+          TAG: ${{ env.BASE_ID }}
         run: |
           source cacitesting.env
           python -m unittest discover -s tests/skr
