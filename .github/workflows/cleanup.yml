@@ -1,4 +1,8 @@
-name: Cleanup Registry
+name: Cleanup
+
+permissions:
+   id-token: write
+   contents: read
 
 on:
   schedule:
