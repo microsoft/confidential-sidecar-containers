@@ -1,4 +1,8 @@
-name: Cleanup Registry
+name: Cleanup
+
+permissions:
+   id-token: write
+   contents: read
 
 on:
   schedule:
@@ -57,8 +61,7 @@ jobs:
 
       - name: Delete All Container Groups
         run: |
-          CONTAINERS=$(az container list \
-            --resource-group privacy-sandbox-dev
+          CONTAINERS=$(az container list --resource-group confidential-sidecars)
 
           for container in $(echo $CONTAINERS | jq -r '.[].id'); do
               echo "Deleting container group: ${container}"
