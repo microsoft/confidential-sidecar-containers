@@ -1,0 +1,107 @@
+param location string
+param registry string
+param tag string
+param ccePolicies object
+param managedIDGroup string = resourceGroup().name
+param managedIDName string
+
+param sidecarArgsB64 string
+var mount_point = base64ToJson(sidecarArgsB64).azure_filesystems[0].mount_point
+
+
+resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
+  name: deployment().name
+  location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${resourceId(managedIDGroup, 'Microsoft.ManagedIdentity/userAssignedIdentities', managedIDName)}': {}
+    }
+  }
+  properties: {
+    osType: 'Linux'
+    sku: 'Confidential'
+    restartPolicy: 'Never'
+    ipAddress: {
+      ports: [
+        {
+          protocol: 'TCP'
+          port: 8000
+        }
+      ]
+      type: 'Public'
+    }
+    confidentialComputeProperties: {
+      ccePolicy: ccePolicies.encfs
+    }
+    imageRegistryCredentials: [
+      {
+        server: registry
+        identity: resourceId(managedIDGroup, 'Microsoft.ManagedIdentity/userAssignedIdentities', managedIDName)
+      }
+    ]
+    volumes: [
+      {
+        name: 'encfs'
+        emptyDir: {}
+      }
+    ]
+    containers: [
+      {
+        name: 'primary'
+        properties: {
+          image: '${registry}/encfs/primary:${tag}'
+          ports: [
+            {
+              protocol: 'TCP'
+              port: 8000
+            }
+          ]
+          volumeMounts: [
+            {
+              name: 'encfs'
+              mountPath: mount_point
+            }
+          ]
+          environmentVariables: [{name: 'ENCFS_MOUNT', value: mount_point}]
+          resources: {
+            requests: {
+              memoryInGB: 4
+              cpu: 1
+            }
+          }
+        }
+      }
+      {
+        name: 'sidecar'
+        properties: {
+          image: '${registry}/encfs/sidecar:${tag}'
+          securityContext: {
+            privileged: true
+          }
+          volumeMounts: [
+            {
+              name: 'encfs'
+              mountPath: mount_point
+            }
+          ]
+          command: ['/encfs.sh']
+          environmentVariables: [
+            {
+              name: 'EncfsSideCarArgs'
+              value: sidecarArgsB64
+            }
+          ]
+          resources: {
+            requests: {
+              memoryInGB: 4
+              cpu: 1
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+
+output ids array = [containerGroup.id]

@@ -1,0 +1,12 @@
+version: '3'
+services:
+  primary:
+    image: $REGISTRY/encfs/primary:$TAG
+    build:
+      context: .
+      dockerfile: primary.Dockerfile
+  sidecar:
+    image: $REGISTRY/encfs/sidecar:$TAG
+    build:
+      context: ../../
+      dockerfile: docker/encfs/Dockerfile.encfs
