@@ -1,0 +1,14 @@
+version: '3'
+services:
+  proxy:
+    image: $REGISTRY/skr/proxy:$TAG
+    network_mode: "host"
+    build:
+      context: .
+      dockerfile: proxy.Dockerfile
+  sidecar:
+    image: $REGISTRY/skr/sidecar:$TAG
+    network_mode: "host"
+    build:
+      context: ../../
+      dockerfile: docker/skr/Dockerfile.skr
