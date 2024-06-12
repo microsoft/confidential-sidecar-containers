@@ -6,7 +6,7 @@ param managedIDGroup string = resourceGroup().name
 param managedIDName string
 
 param sidecarArgsB64 string
-var mount_point = base64ToJson(sidecarArgsB64).azure_filesystems[0].mount_point
+var mount_point = '/mnt/remote'
 
 
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {

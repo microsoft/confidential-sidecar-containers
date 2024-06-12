@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import base64
+import binascii
 import json
 import subprocess
 import tempfile
@@ -14,7 +15,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from encfs import deploy_encfs
-from skr.key import deploy_key, generate_key
+from skr.key import generate_key, deploy_key
 
 from c_aci_testing.aci_is_live import aci_is_live
 from c_aci_testing.aci_param_set import aci_param_set
@@ -38,29 +39,7 @@ class EncFSTest(unittest.TestCase):
         key_id = f"{id}-key"
         test_file_content = "Hello, World!"
         mount_point = "/mnt/remote"
-        blob_ids = [f"{id}_block"]
-
-        aci_param_set(
-            file_path=os.path.join(target_dir, "encfs.bicepparam"),
-            key="sidecarArgsB64",
-            value="'" + base64.b64encode(json.dumps({
-                "azure_filesystems": [
-                    {
-                        "mount_point": f'{mount_point}/{blob_id}',
-                        "azure_url": f'https://{storage_account_name}.blob.core.windows.net/{storage_container_name}/{blob_id}',
-                        "azure_url_private": True,
-                        "read_write": True,
-                        "key": {
-                            "kid": key_id,
-                            "authority": {
-                            "endpoint": attestation_endpoint
-                            },
-                            "akv": {
-                            "endpoint": hsm_endpoint
-                            }
-                        }
-                    } for blob_id in blob_ids]
-            }).encode()).decode() + "'")
+        blobs = [(f"{id}-blob1", "page")]
 
         azure_args = {
             "subscription": os.getenv("SUBSCRIPTION"),
@@ -79,6 +58,29 @@ class EncFSTest(unittest.TestCase):
             images_push(**image_args)
             policies_gen(**image_args, **azure_args, deployment_name=id)
 
+            aci_param_set(
+                file_path=os.path.join(target_dir, "encfs.bicepparam"),
+                key="sidecarArgsB64",
+                value="'" + base64.urlsafe_b64encode(json.dumps({
+                    "azure_filesystems": [
+                        {
+                            "mount_point": f"{mount_point}/{blob_id}",
+                            "azure_url": f"https://{storage_account_name}.blob.core.windows.net/{storage_container_name}/{blob_id}",
+                            "azure_url_private": True,
+                            "read_write": True,
+                            "key": {
+                                "kid": key_id,
+                                "authority": {
+                                "endpoint": attestation_endpoint
+                                },
+                                "akv": {
+                                "endpoint": hsm_endpoint
+                                }
+                            }
+                        } for blob_id, _ in blobs
+                    ]
+                }).encode()).decode() + "'")
+
             with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_encfs.rego")) as f:
                 key_data = generate_key()
                 deploy_key(
@@ -92,37 +94,34 @@ class EncFSTest(unittest.TestCase):
             with tempfile.NamedTemporaryFile() as test_file:
                 test_file.write(test_file_content.encode())
                 test_file.flush()
-                for blob_type in ("block", "page"):
+                for blob_id, blob_type in blobs:
                     with deploy_encfs(
-                        blob_name=f"{id}_{blob_type}",
+                        blob_name=blob_id,
                         blob_type=blob_type,
-                        key=key_data,
+                        key=binascii.unhexlify(key_data),
                         storage_account_name=storage_account_name,
                         container_name=storage_container_name,
                     ) as filesystem:
                         subprocess.run([
-                            "sudo", "cp",
-                            test_file.name,
-                            os.path.join(filesystem, "test_file.txt")
+                            "sudo", "cp", test_file.name, os.path.join(filesystem, "file.txt")
                         ], check=True)
-                        print("test")
 
         with target_run_ctx(
             target=target_dir,
             name=id,
             tag=os.getenv("TAG") or id,
             follow=False,
-            cleanup=False,
+            cleanup=True,
             prefer_pull=True, # Images are built earlier, so don't rebuild
             gen_policies=False, # Policy generated to deploy key
         ) as deployment_ids:
             ip_address = aci_get_ips(ids=deployment_ids[0])
 
             response = requests.get(
-                f"http://{ip_address}:8000/read_file?path=test_file.txt",
+                f"http://{ip_address}:8000/read_file?path={blobs[0][0]}/file.txt",
             )
             assert response.status_code == 200
-            assert response.json()["contents"] == test_file_content
+            assert response.content.decode() == test_file_content
 
         # Cleanup happens after block has finished
 

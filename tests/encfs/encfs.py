@@ -2,7 +2,6 @@
 # Licensed under the MIT License.
 
 from contextlib import contextmanager
-import os
 import subprocess
 import tempfile
 
@@ -22,18 +21,10 @@ class CryptSetupFileSystem:
             shell=True,
         )
 
-    def __init__(self, key_path, file_system_path):
+    def __init__(self, key_path, image_path):
         self.key_path = key_path
-        self.file_system_path = file_system_path
-        subprocess.check_call([
-            "sudo", "apt-get", "update", "-y"
-        ])
-        subprocess.check_call([
-            "sudo", "DEBIAN_FRONTEND=noninteractive",
-            "apt-get", "install", "-y",
-            "cryptsetup",
-        ])
-        with open(file_system_path, "wb") as f:
+        self.image_path = image_path
+        with open(image_path, "wb") as f:
             f.seek(64 * 1024 * 1024 - 1)
             f.write(b"\0")
 
@@ -42,7 +33,7 @@ class CryptSetupFileSystem:
         self._run_command(
             "luksFormat",
             "--type luks2",
-            self.file_system_path,
+            self.image_path,
             "--key-file",
             f'"{self.key_path}"',
             "--batch-mode",
@@ -55,7 +46,7 @@ class CryptSetupFileSystem:
         # Open
         self._run_command(
             "luksOpen",
-            self.file_system_path,
+            self.image_path,
             self.DEVICE_NAME,
             "--key-file",
             self.key_path,
@@ -86,10 +77,9 @@ def deploy_encfs(
     storage_account_name: str,
     container_name: str,
 ):
-
     with tempfile.TemporaryDirectory() as workspace:
         with tempfile.NamedTemporaryFile(dir=workspace, prefix="key_") as key_file, \
-            tempfile.NamedTemporaryFile(dir=workspace, prefix="blob_") as blob_file:
+             tempfile.NamedTemporaryFile(dir=workspace, prefix="blob_") as blob_file:
 
             key_file.write(key)
             key_file.flush()
@@ -107,4 +97,7 @@ def deploy_encfs(
                 "--auth-mode", "login",
                 "--overwrite",
             ])
+
+    print(f"Deployed blob {blob_name} into the storage container")
+
 
