@@ -132,6 +132,8 @@ jobs:
         run: sudo usermod -aG docker $USER
 
       - name: Test Attestation
+        env:
+          ATTESTATION_ENDPOINT: ${{ vars.ATTESTATION_ENDPOINT }}
         run: |
           source cacitesting.env
           python -m unittest discover -s tests/attestation

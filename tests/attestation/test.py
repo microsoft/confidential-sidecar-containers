@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from attestation import validate_attestation
 
 from c_aci_testing.aci_get_ips import aci_get_ips
+from c_aci_testing.aci_param_set import aci_param_set
 from c_aci_testing.target_run import target_run_ctx
 
 class AttestationTest(unittest.TestCase):
@@ -18,6 +19,12 @@ class AttestationTest(unittest.TestCase):
 
         target_dir = os.path.realpath(os.path.dirname(__file__))
         id = os.getenv("ID", str(uuid.uuid4()))
+
+        aci_param_set(
+            file_path=os.path.join(target_dir, "attestation.bicepparam"),
+            key="attestationEndpoint",
+            value=f'\'https://{os.environ["ATTESTATION_ENDPOINT"]}\''
+        )
 
         with target_run_ctx(
             target=target_dir,
