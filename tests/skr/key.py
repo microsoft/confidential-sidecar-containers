@@ -39,6 +39,10 @@ def generate_release_policy(attestation_endpoint, host_data):
                             "claim": "x-ms-compliance-status",
                             "equals": "azure-compliant-uvm",
                         },
+                        {
+                            "claim": "x-ms-sevsnpvm-is-debuggable",
+                            "equals": "false",
+                        },
                     ],
                 }
             ],
