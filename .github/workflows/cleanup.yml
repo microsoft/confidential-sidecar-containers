@@ -47,11 +47,8 @@ jobs:
 
   cleanup-aci:
     name: Cleanup ACI
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Log into Azure
         uses: azure/login@v2
         with:
@@ -67,3 +64,66 @@ jobs:
               echo "Deleting container group: ${container}"
               az resource delete --ids ${container}
           done
+
+  cleanup-hsm:
+    name: Cleanup HSM Keys
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION }}
+
+      - name: Delete HSM Keys
+        run: |
+          az keyvault key list --hsm-name ${{ vars.HSM_NAME }} \
+            --query "[].kid" -o tsv | \
+            xargs -I{} az keyvault key delete --id {}
+
+  cleanup_registry:
+    name: Cleanup Container Registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION }}
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name ${{ secrets.REGISTRY_NAME }}
+
+      - name: Cleanup Registry
+        run: |
+          # The filter looks for at least one digit as a proxy for auto
+          # generated tags
+          az acr run \
+            --cmd "acr purge --filter '.*:.*\d+.*' --ago 1d" \
+            --registry ${{ secrets.REGISTRY_NAME }} \
+            /dev/null
+
+  cleanup-storage-account:
+    name: Cleanup Storage Account Blobs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION }}
+
+      - name: Delete Blobs
+        run: |
+          az storage blob list \
+            --auth-mode login \
+            --account-name ${{ vars.STORAGE_ACCOUNT_NAME }} \
+            --container-name ${{ vars.STORAGE_CONTAINER_NAME }} \
+            --query "[].name" -o tsv | \
+            xargs -I{} az storage blob delete \
+              --auth-mode login \
+              --account-name ${{ vars.STORAGE_ACCOUNT_NAME }} \
+              --container-name ${{ vars.STORAGE_CONTAINER_NAME }} --name {}
