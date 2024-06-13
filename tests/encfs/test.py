@@ -54,9 +54,6 @@ class EncFSTest(unittest.TestCase):
         }
 
         if not aci_is_live(**azure_args, name=id):
-            images_build(**image_args)
-            images_push(**image_args)
-            policies_gen(**image_args, **azure_args, deployment_name=id)
 
             aci_param_set(
                 file_path=os.path.join(target_dir, "encfs.bicepparam"),
@@ -80,6 +77,10 @@ class EncFSTest(unittest.TestCase):
                         } for blob_id, _ in blobs
                     ]
                 }).encode()).decode() + "'")
+
+            images_build(**image_args)
+            images_push(**image_args)
+            policies_gen(**image_args, **azure_args, deployment_name=id)
 
             with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_encfs.rego")) as f:
                 key_data = generate_key()
