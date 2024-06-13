@@ -15,5 +15,16 @@ def read_file():
     with open(file_path) as f:
         return f.read(), 200
 
+@app.route('/write_file', methods=['POST'])
+def write_file():
+
+    file_path = os.path.join(ENCFS_MOUNT, request.args.get("path"))
+    try:
+        with open(file_path, "w") as f:
+            f.write(request.data.decode())
+        return f'{request.args.get("path")} written to', 200
+    except OSError as e:
+        return e.strerror, 400
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)

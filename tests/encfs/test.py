@@ -40,7 +40,10 @@ class EncFSTest(unittest.TestCase):
         key_id = f"{id}-key"
         cls.test_file_content = "Hello, World!"
         mount_point = "/mnt/remote"
-        cls.blobs = [(f"{id}-blob1", "page")]
+        cls.blobs = [
+            (f"{id}-blob1", "page"),
+            (f"{id}-blob2", "block"),
+        ]
 
         azure_args = {
             "subscription": os.getenv("SUBSCRIPTION"),
@@ -65,7 +68,7 @@ class EncFSTest(unittest.TestCase):
                             "mount_point": f"{mount_point}/{blob_id}",
                             "azure_url": f"https://{storage_account_name}.blob.core.windows.net/{storage_container_name}/{blob_id}",
                             "azure_url_private": True,
-                            "read_write": True,
+                            "read_write": True if blob_type == "page" else False,
                             "key": {
                                 "kid": key_id,
                                 "authority": {
@@ -75,7 +78,7 @@ class EncFSTest(unittest.TestCase):
                                     "endpoint": hsm_endpoint
                                 }
                             }
-                        } for blob_id, _ in cls.blobs
+                        } for blob_id, blob_type in cls.blobs
                     ]
                 }).encode()).decode() + "'")
 
@@ -111,9 +114,9 @@ class EncFSTest(unittest.TestCase):
         cls.aci_context = target_run_ctx(
             target=target_dir,
             name=id,
-            tag=os.getenv("TAG") or id,
+            tag=tag,
             follow=False,
-            cleanup=True,
+            cleanup=False,
             prefer_pull=True, # Images are built earlier, so don't rebuild
             gen_policies=False, # Policy generated to deploy key
         )
@@ -126,13 +129,43 @@ class EncFSTest(unittest.TestCase):
         # Cleans up the ACI instance
         cls.aci_context.__exit__(None, None, None)
 
-    def test_encfs(self):
+    def test_read_rw_encfs(self):
 
         response = requests.get(
             f"http://{self.encfs_ip}:8000/read_file?path={self.blobs[0][0]}/file.txt",
         )
         assert response.status_code == 200
         assert response.content.decode() == self.test_file_content
+
+    def test_write_rw_encfs(self):
+
+        test_content = "Hello, EncFS!"
+        file_path = f"{self.blobs[0][0]}/new_file.txt"
+        response = requests.post(
+            f"http://{self.encfs_ip}:8000/write_file?path={file_path}",
+            test_content,
+        )
+        assert response.status_code == 200
+        assert response.content.decode() == f"{file_path} written to"
+
+    def test_read_ro_encfs(self):
+
+        response = requests.get(
+            f"http://{self.encfs_ip}:8000/read_file?path={self.blobs[1][0]}/file.txt",
+        )
+        assert response.status_code == 200
+        assert response.content.decode() == self.test_file_content
+
+    def test_write_ro_encfs(self):
+
+        test_content = "Hello, EncFS!"
+        file_path = f"{self.blobs[1][0]}/new_file.txt"
+        response = requests.post(
+            f"http://{self.encfs_ip}:8000/write_file?path={file_path}",
+            test_content,
+        )
+        assert response.status_code == 400
+        assert response.content == b"Read-only file system"
 
 
 if __name__ == "__main__":
