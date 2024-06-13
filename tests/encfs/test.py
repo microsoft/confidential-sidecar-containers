@@ -112,7 +112,7 @@ class EncFSTest(unittest.TestCase):
             name=id,
             tag=os.getenv("TAG") or id,
             follow=False,
-            cleanup=False,
+            cleanup=True,
             prefer_pull=True, # Images are built earlier, so don't rebuild
             gen_policies=False, # Policy generated to deploy key
         ) as deployment_ids:
