@@ -26,8 +26,9 @@ from c_aci_testing.target_run import target_run_ctx
 from c_aci_testing.aci_get_ips import aci_get_ips
 
 class EncFSTest(unittest.TestCase):
-    def test_encfs(self):
 
+    @classmethod
+    def setUpClass(cls):
         target_dir = os.path.realpath(os.path.dirname(__file__))
         id = os.getenv("ID", str(uuid.uuid4()))
         tag = os.getenv("TAG") or id
@@ -37,9 +38,9 @@ class EncFSTest(unittest.TestCase):
         storage_account_name = os.environ["STORAGE_ACCOUNT_NAME"]
         storage_container_name = os.environ["STORAGE_CONTAINER_NAME"]
         key_id = f"{id}-key"
-        test_file_content = "Hello, World!"
+        cls.test_file_content = "Hello, World!"
         mount_point = "/mnt/remote"
-        blobs = [(f"{id}-blob1", "page")]
+        cls.blobs = [(f"{id}-blob1", "page")]
 
         azure_args = {
             "subscription": os.getenv("SUBSCRIPTION"),
@@ -74,7 +75,7 @@ class EncFSTest(unittest.TestCase):
                                     "endpoint": hsm_endpoint
                                 }
                             }
-                        } for blob_id, _ in blobs
+                        } for blob_id, _ in cls.blobs
                     ]
                 }).encode()).decode() + "'")
 
@@ -93,9 +94,9 @@ class EncFSTest(unittest.TestCase):
                 )
 
             with tempfile.NamedTemporaryFile() as test_file:
-                test_file.write(test_file_content.encode())
+                test_file.write(cls.test_file_content.encode())
                 test_file.flush()
-                for blob_id, blob_type in blobs:
+                for blob_id, blob_type in cls.blobs:
                     with deploy_encfs(
                         blob_name=blob_id,
                         blob_type=blob_type,
@@ -107,7 +108,7 @@ class EncFSTest(unittest.TestCase):
                             "sudo", "cp", test_file.name, os.path.join(filesystem, "file.txt")
                         ], check=True)
 
-        with target_run_ctx(
+        cls.aci_context = target_run_ctx(
             target=target_dir,
             name=id,
             tag=os.getenv("TAG") or id,
@@ -115,16 +116,23 @@ class EncFSTest(unittest.TestCase):
             cleanup=True,
             prefer_pull=True, # Images are built earlier, so don't rebuild
             gen_policies=False, # Policy generated to deploy key
-        ) as deployment_ids:
-            ip_address = aci_get_ips(ids=deployment_ids[0])
+        )
 
-            response = requests.get(
-                f"http://{ip_address}:8000/read_file?path={blobs[0][0]}/file.txt",
-            )
-            assert response.status_code == 200
-            assert response.content.decode() == test_file_content
+        cls.encfs_id, = cls.aci_context.__enter__()
+        cls.encfs_ip = aci_get_ips(ids=cls.encfs_id)
 
-        # Cleanup happens after block has finished
+    @classmethod
+    def tearDownClass(cls):
+        # Cleans up the ACI instance
+        cls.aci_context.__exit__(None, None, None)
+
+    def test_encfs(self):
+
+        response = requests.get(
+            f"http://{self.encfs_ip}:8000/read_file?path={self.blobs[0][0]}/file.txt",
+        )
+        assert response.status_code == 200
+        assert response.content.decode() == self.test_file_content
 
 
 if __name__ == "__main__":
