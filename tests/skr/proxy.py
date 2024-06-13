@@ -51,7 +51,7 @@ def grpc_unwrap_key():
                     "dc": {
                         "Parameters": {
                             "attestation-agent": [
-                                base64.b64encode("aasp".encode()).decode()
+                                base64.b64encode("skr".encode()).decode()
                             ]
                         }
                     },
