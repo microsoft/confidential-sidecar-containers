@@ -71,10 +71,10 @@ class EncFSTest(unittest.TestCase):
                             "key": {
                                 "kid": key_id,
                                 "authority": {
-                                "endpoint": attestation_endpoint
+                                    "endpoint": attestation_endpoint
                                 },
                                 "akv": {
-                                "endpoint": hsm_endpoint
+                                    "endpoint": hsm_endpoint
                                 }
                             }
                         } for blob_id, _ in blobs

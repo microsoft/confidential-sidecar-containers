@@ -12,7 +12,7 @@
 		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/devcontainers/features/python:1": {}
 	},
-	"postCreateCommand": "./scripts/install-c-aci-testing.sh && python -m pip install -r requirements.txt",
+	"postCreateCommand": "./scripts/setup.sh",
 	"customizations": {
 		"vscode": {
 			"extensions": [
