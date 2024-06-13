@@ -20,7 +20,7 @@ if [ -z "${KEY_PROVIDER_PORT}" ]; then
   KEY_PROVIDER_PORT=50000
 fi
 
-AAA=`printf aasp | base64 -w0`
+AAA=`printf skr | base64 -w0`
 ANNO=`cat ${infile}`
 REQ=`echo "{\"op\":\"keyunwrap\",\"keywrapparams\":{},\"keyunwrapparams\":{\"dc\":{\"Parameters\":{\"attestation-agent\":[\"${AAA}\"]}},\"annotation\":\"${ANNO}\"}}" | base64 -w0`
 echo KeyProviderKeyWrapProtocolInput: ${REQ}
