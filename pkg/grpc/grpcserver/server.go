@@ -49,7 +49,7 @@ type AzureInformation struct {
 }
 
 const (
-	AASP = "aasp"
+	ATTESTATION_AGENT = "skr"
 )
 
 type DecryptConfig struct {
@@ -177,19 +177,19 @@ func (s *Server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKe
 	if len(ec.Parameters["attestation-agent"]) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "attestation-agent must be specified in the encryption config parameters: %v", ec)
 	}
-	aaKid, _ := base64.StdEncoding.DecodeString(ec.Parameters["attestation-agent"][0])
-	tokens := strings.Split(string(aaKid), ":")
+	attestationAgentKid, _ := base64.StdEncoding.DecodeString(ec.Parameters["attestation-agent"][0])
+	tokens := strings.Split(string(attestationAgentKid), ":")
 
 	if len(tokens) < 2 {
 		return nil, status.Errorf(codes.InvalidArgument, "Key id is not provided in the request")
 	}
 
-	aa := tokens[0]
+	attestation_agent := tokens[0]
 	kid := tokens[1]
-	if !strings.EqualFold(aa, AASP) {
-		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", aa)
+	if !strings.EqualFold(attestation_agent, ATTESTATION_AGENT) {
+		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", attestation_agent)
 	}
-	log.Printf("Attestation agent: %v, kid: %v", aa, kid)
+	log.Printf("Attestation agent: %v, kid: %v", attestation_agent, kid)
 
 	optsdata, err := base64.StdEncoding.DecodeString(input.KeyWrapParams.Optsdata)
 	if err != nil {
@@ -223,11 +223,11 @@ func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	if len(dc.Parameters["attestation-agent"]) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "attestation-agent must be specified in decryption config parameters: %v", str)
 	}
-	aa, _ := base64.StdEncoding.DecodeString(dc.Parameters["attestation-agent"][0])
-	log.Printf("Attestation agent name: %v", string(aa))
+	attestation_agent, _ := base64.StdEncoding.DecodeString(dc.Parameters["attestation-agent"][0])
+	log.Printf("Attestation agent name: %v", string(attestation_agent))
 
-	if !strings.EqualFold(string(aa), AASP) {
-		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", string(aa))
+	if !strings.EqualFold(string(attestation_agent), ATTESTATION_AGENT) {
+		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", string(attestation_agent))
 	}
 
 	var annotationBytes []byte
