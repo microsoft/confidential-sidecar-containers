@@ -214,7 +214,7 @@ jobs:
           tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
           subscription-id: ${{ vars.SUBSCRIPTION }}
 
-      - name: Test EncFs
+      - name: Test ENCFS
         env:
           ID: encfs-${{ env.BASE_ID }}
           TAG: ${{ env.BASE_ID }}
