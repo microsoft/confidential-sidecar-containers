@@ -134,8 +134,8 @@ class EncFSTest(unittest.TestCase):
         response = requests.get(
             f"http://{self.encfs_ip}:8000/read_file?path={self.blobs[0][0]}/file.txt",
         )
-        assert response.status_code == 200
-        assert response.content.decode() == self.test_file_content
+        assert response.status_code == 200, response.content.decode()
+        assert response.content.decode() == self.test_file_content, response.content.decode()
 
     def test_write_rw_encfs(self):
 
@@ -145,16 +145,16 @@ class EncFSTest(unittest.TestCase):
             f"http://{self.encfs_ip}:8000/write_file?path={file_path}",
             test_content,
         )
-        assert response.status_code == 200
-        assert response.content.decode() == f"{file_path} written to"
+        assert response.status_code == 200, response.content.decode()
+        assert response.content.decode() == f"{file_path} written to", response.content.decode()
 
     def test_read_ro_encfs(self):
 
         response = requests.get(
             f"http://{self.encfs_ip}:8000/read_file?path={self.blobs[1][0]}/file.txt",
         )
-        assert response.status_code == 200
-        assert response.content.decode() == self.test_file_content
+        assert response.status_code == 200, response.content.decode()
+        assert response.content.decode() == self.test_file_content, response.content.decode()
 
     def test_write_ro_encfs(self):
 
@@ -164,8 +164,8 @@ class EncFSTest(unittest.TestCase):
             f"http://{self.encfs_ip}:8000/write_file?path={file_path}",
             test_content,
         )
-        assert response.status_code == 400
-        assert response.content == b"Read-only file system"
+        assert response.status_code == 400, response.content.decode()
+        assert response.content == b"Read-only file system", response.content.decode()
 
 
 if __name__ == "__main__":
