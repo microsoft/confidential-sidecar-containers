@@ -1,8 +1,10 @@
 name: Test Canary
 
 permissions:
-   id-token: write
-   contents: read
+  id-token: write
+  contents: read
+  actions: read
+  security-events: write
 
 on:
   schedule:
