@@ -1,4 +1,4 @@
-name: "Test Canary"
+name: Test Canary
 
 permissions:
    id-token: write
@@ -32,7 +32,10 @@ jobs:
       - name: Setup Docker
         run: sudo usermod -aG docker $USER
 
-      - name: Test Attestation
+      - name: Test Sidecars
+        env:
+          ATTESTATION_ENDPOINT: ${{ vars.ATTESTATION_ENDPOINT }}
+          HSM_ENDPOINT: ${{ vars.HSM_ENDPOINT }}
         run: |
           source cacitesting.env
           LOCATION=eastus2euap python -m unittest discover -s tests/ -p 'test.py'
