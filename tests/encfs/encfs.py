@@ -21,53 +21,68 @@ class CryptSetupFileSystem:
             shell=True,
         )
 
+    def cleanup(self):
+        if self._dir:
+            subprocess.check_call(f"sudo umount {self._dir.name}", shell=True)
+        if self.is_open:
+            try:
+                self._run_command("luksClose", self.DEVICE_NAME)
+                self.is_open = False
+            finally:
+                self._dir.cleanup()
+
     def __init__(self, key_path, image_path):
         self.key_path = key_path
         self.image_path = image_path
+        self.is_open = False
         with open(image_path, "wb") as f:
             f.seek(64 * 1024 * 1024 - 1)
             f.write(b"\0")
 
     def __enter__(self):
-        # Format
-        self._run_command(
-            "luksFormat",
-            "--type luks2",
-            self.image_path,
-            "--key-file",
-            f'"{self.key_path}"',
-            "--batch-mode",
-            "--sector-size 4096",
-            "--cipher aes-xts-plain64",
-            "--pbkdf pbkdf2",
-            "--pbkdf-force-iterations 1000",
-        )
+        try:
+            # Format
+            self._run_command(
+                "luksFormat",
+                "--type luks2",
+                self.image_path,
+                "--key-file",
+                f'"{self.key_path}"',
+                "--batch-mode",
+                "--sector-size 4096",
+                "--cipher aes-xts-plain64",
+                "--pbkdf pbkdf2",
+                "--pbkdf-force-iterations 1000",
+            )
 
-        # Open
-        self._run_command(
-            "luksOpen",
-            self.image_path,
-            self.DEVICE_NAME,
-            "--key-file",
-            self.key_path,
-            # Don't use a journal to increase performance
-            "--integrity-no-journal",
-            "--persistent",
-        )
+            # Open
+            self._run_command(
+                "luksOpen",
+                self.image_path,
+                self.DEVICE_NAME,
+                "--key-file",
+                self.key_path,
+                # Don't use a journal to increase performance
+                "--integrity-no-journal",
+                "--persistent",
+            )
+            self.is_open = True
 
-        # Mount
-        subprocess.check_call(f"sudo mkfs.ext4 {self.DEVICE_NAME_PATH}", shell=True)
-        self._dir = tempfile.TemporaryDirectory()
-        subprocess.check_call(
-            f"sudo mount -t ext4 {self.DEVICE_NAME_PATH} {self._dir.name} -o loop",
-            shell=True,
-        )
-        return self._dir.name
+            # Mount
+            subprocess.check_call(f"sudo mkfs.ext4 {self.DEVICE_NAME_PATH}", shell=True)
+            self._dir = tempfile.TemporaryDirectory()
+            subprocess.check_call(
+                f"sudo mount -t ext4 {self.DEVICE_NAME_PATH} {self._dir.name} -o loop",
+                shell=True,
+            )
+            return self._dir.name
+
+        except Exception:
+            self.cleanup()
+            raise
 
     def __exit__(self, exc_type, exc_value, traceback):
-        subprocess.check_call(f"sudo umount {self._dir.name}", shell=True)
-        self._run_command("luksClose", self.DEVICE_NAME)
-        self._dir.cleanup()
+        self.cleanup()
 
 @contextmanager
 def deploy_encfs(
