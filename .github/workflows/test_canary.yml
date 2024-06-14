@@ -12,30 +12,6 @@ on:
 jobs:
   test-sidecars:
     name: Test Sidecars
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Log into Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
-          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
-          subscription-id: ${{ vars.SUBSCRIPTION }}
-
-      - name: Install c_aci_testing package
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: ./scripts/install-c-aci-testing.sh
-
-      - name: Setup Docker
-        run: sudo usermod -aG docker $USER
-
-      - name: Test Sidecars
-        env:
-          ATTESTATION_ENDPOINT: ${{ vars.ATTESTATION_ENDPOINT }}
-          HSM_ENDPOINT: ${{ vars.HSM_ENDPOINT }}
-        run: |
-          source cacitesting.env
-          LOCATION=eastus2euap python -m unittest discover -s tests/ -p 'test.py'
+    uses: ./.github/workflows/ci.yml
+    with:
+      location: 'eastus2euap'
