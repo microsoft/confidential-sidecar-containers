@@ -19,7 +19,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   }
   properties: {
     accessTier: 'Hot'
-    allowBlobPublicAccess: true
     allowSharedKeyAccess: false
   }
 }
