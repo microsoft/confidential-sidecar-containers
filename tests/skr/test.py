@@ -17,7 +17,7 @@ import json
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from attestation.attestation import SNP_REPORT_STRUCTURE
-from key import generate_key, deploy_key, generate_release_policy
+from .key import generate_key, deploy_key, generate_release_policy
 
 from c_aci_testing.target_run import target_run_ctx
 from c_aci_testing.aci_get_ips import aci_get_ips
