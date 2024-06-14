@@ -14,8 +14,11 @@ import sys
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from encfs import deploy_encfs
 from skr.key import generate_key, deploy_key
+try:
+    from .encfs import deploy_encfs
+except ImportError:
+    from encfs import deploy_encfs
 
 from c_aci_testing.aci_is_live import aci_is_live
 from c_aci_testing.aci_param_set import aci_param_set
