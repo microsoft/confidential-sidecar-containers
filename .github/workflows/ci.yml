@@ -23,9 +23,15 @@ on:
     branches: [ "main" ]
   schedule:
     - cron: '0 0 * * *'
+  workflow_call:
+    inputs:
+      location:
+        description: The region to deploy ACIs to
+        type: string
 
 env:
   BASE_ID: ${{ github.run_id }}-${{ github.run_number }}
+  LOCATION: ${{ inputs.location || 'westeurope' }}
 
 jobs:
   analyze:
@@ -139,6 +145,7 @@ jobs:
           ATTESTATION_ENDPOINT: ${{ vars.ATTESTATION_ENDPOINT }}
         run: |
           source cacitesting.env
+          export LOCATION=${{ env.LOCATION }}
           python -m unittest discover -s tests/attestation
 
   test-skr:
@@ -170,6 +177,7 @@ jobs:
           TAG: ${{ env.BASE_ID }}
         run: |
           source cacitesting.env
+          export LOCATION=${{ env.LOCATION }}
           python -m c_aci_testing.target_run tests/skr \
             --name $ID \
             --no-follow \
@@ -190,6 +198,7 @@ jobs:
           HSM_ENDPOINT: ${{ vars.HSM_ENDPOINT }}
         run: |
           source cacitesting.env
+          export LOCATION=${{ env.LOCATION }}
           python -m unittest discover -s tests/skr
 
   test-encfs:
