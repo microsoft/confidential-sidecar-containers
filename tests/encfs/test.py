@@ -167,7 +167,7 @@ class EncFSTest(unittest.TestCase):
             f"http://{self.encfs_ip}:8000/write_file?path={file_path}",
             test_content,
         )
-        assert response.status_code == 400, response.content.decode()
+        assert response.status_code == 500, response.content.decode()
         assert response.content == b"Read-only file system", response.content.decode()
 
 

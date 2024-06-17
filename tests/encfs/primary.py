@@ -24,7 +24,7 @@ def write_file():
             f.write(request.data.decode())
         return f'{request.args.get("path")} written to', 200
     except OSError as e:
-        return e.strerror, 400
+        return e.strerror, 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)
