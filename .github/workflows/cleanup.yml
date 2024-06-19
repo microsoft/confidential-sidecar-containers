@@ -10,48 +10,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  cleanup-registry:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Log in to Azure Container Registry
-        run: |
-          az acr login \
-            --name ${{ secrets.REGISTRY_NAME }} \
-            --username ${{ secrets.REGISTRY_NAME }} \
-            --password ${{ secrets.REGISTRY_PASSWORD }}
-
-      - name: Cleanup Registry
-        env:
-          REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-        run: |
-          repos=("skr" "skr_debug" "encfs" "attestation")
-          branches=$(git ls-remote --heads origin | sed 's/[^a-zA-Z0-9]/-/g')
-
-          # Delete any tags which don't have a corresponding branch
-          for repo in "${repos[@]}"; do
-            tags=$(az acr repository show-tags --name $REGISTRY_NAME -u $REGISTRY_NAME -p $REGISTRY_PASSWORD --repository $repo | jq -r '.[]')
-            for tag in $tags; do
-              echo "Checking $repo:$tag"
-              if [[ $branches =~ $tag ]]; then
-                echo "Branch $tag still exists"
-              else
-                echo "Branch $tag no longer exists, deleting tag"
-                az acr repository delete --name $REGISTRY_NAME -u $REGISTRY_NAME -p $REGISTRY_PASSWORD --image $repo:$tag --yes
-              fi
-            done
-          done
-
   cleanup-aci:
     name: Cleanup ACI
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Log into Azure
         uses: azure/login@v2
         with:
@@ -67,3 +29,66 @@ jobs:
               echo "Deleting container group: ${container}"
               az resource delete --ids ${container}
           done
+
+  cleanup-hsm:
+    name: Cleanup HSM Keys
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION }}
+
+      - name: Delete HSM Keys
+        run: |
+          az keyvault key list --hsm-name ${{ vars.HSM_NAME }} \
+            --query "[].kid" -o tsv | \
+            xargs -I{} az keyvault key delete --id {}
+
+  cleanup_registry:
+    name: Cleanup Container Registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION }}
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name ${{ secrets.REGISTRY_NAME }}
+
+      - name: Cleanup Registry
+        run: |
+          # The filter looks for at least one digit as a proxy for auto
+          # generated tags
+          az acr run \
+            --cmd "acr purge --filter '.*:.*\d+.*' --ago 1d" \
+            --registry ${{ secrets.REGISTRY_NAME }} \
+            /dev/null
+
+  cleanup-storage-account:
+    name: Cleanup Storage Account Blobs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION }}
+
+      - name: Delete Blobs
+        run: |
+          az storage blob list \
+            --auth-mode login \
+            --account-name ${{ vars.STORAGE_ACCOUNT_NAME }} \
+            --container-name ${{ vars.STORAGE_CONTAINER_NAME }} \
+            --query "[].name" -o tsv | \
+            xargs -I{} az storage blob delete \
+              --auth-mode login \
+              --account-name ${{ vars.STORAGE_ACCOUNT_NAME }} \
+              --container-name ${{ vars.STORAGE_CONTAINER_NAME }} --name {}

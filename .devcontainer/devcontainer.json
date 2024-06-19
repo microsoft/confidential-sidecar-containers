@@ -1,6 +1,6 @@
 {
 	"name": "Ubuntu",
-	"image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+	"image": "mcr.microsoft.com/devcontainers/universal:linux",
 	"features": {
 		"ghcr.io/devcontainers/features/azure-cli:1": {},
 		"ghcr.io/devcontainers/features/common-utils:2": {},
@@ -12,7 +12,7 @@
 		"ghcr.io/devcontainers/features/github-cli:1": {},
 		"ghcr.io/devcontainers/features/python:1": {}
 	},
-	"postCreateCommand": "./scripts/install_c_aci_testing && pip install -r requirements.txt",
+	"postCreateCommand": "./scripts/setup.sh",
 	"customizations": {
 		"vscode": {
 			"extensions": [
