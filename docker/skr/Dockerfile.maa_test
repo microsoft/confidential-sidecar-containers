@@ -1,0 +1,7 @@
+FROM mcr.microsoft.com/azureml/minimal-ubuntu20.04-py38-cpu-inference:20231102.v2
+USER root
+RUN apt update && apt upgrade -y && apt install -y jose curl
+# create a key for attaching to our request
+RUN jose jwk gen -i '{"alg":"RS256"}' -o rsa.jwk
+# send request to get token from MAA via SKR container
+CMD sh -c 'until curl --fail --silent http://localhost:8080/status; do sleep 5; done; curl --fail-with-body -XPOST http://localhost:8080/attest/maa -d "{\"runtime_data\":\"$(cat rsa.jwk | base64 -w 0)\", \"maa_endpoint\": \"sharedeus2.eus2.test.attest.azure.net\"}"'
