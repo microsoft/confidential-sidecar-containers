@@ -14,7 +14,7 @@ Each sidecar is tested under `./tests/<sidecar_name>`. Each directory is tested 
 - A `bicep` deployment template which describes the ACI deployment.
 - A `test.py` file which uses `unittest` and orchestrates, building, pushing and testing the containers. This target is what is called in our nightly testing.
 
-There are also supplimentary files which aid the deployment:
+There are also supplementary files which aid the deployment:
 - `deployments/` contains bicep templates and for long lived resources used by the tests, they are run once.
 - `cacitesting.env` This file describes the deployment conditions such as which subscription and resource group to deploy to. All required properties are populated, any unset values are optional/have default values.
 
