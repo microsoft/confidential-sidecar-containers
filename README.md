@@ -4,13 +4,19 @@ This repository contains the code needed to build the sidecar containers used fo
 
 The code in this repository should be located at ``$GOPATH/src/microsoft/confidential-sidecar-containers``.
 
-## Build Pipelines
+## Testing
 
-These build pipelines run nightly based off of images created from the main branch of this repo. They are used to test the latest changes to the sidecar containers.
+[![CI](https://github.com/microsoft/confidential-sidecar-containers/actions/workflows/ci.yml/badge.svg?branch=main&event=schedule)](https://github.com/microsoft/confidential-sidecar-containers/actions/workflows/ci.yml)
 
-- [![Test Key Release (Latest)](https://github.com/microsoft/confidential-aci-examples/actions/workflows/test_key_release_latest.yml/badge.svg)](https://github.com/microsoft/confidential-aci-examples/actions/workflows/test_key_release_latest.yml)
-- [![Test Encrypted Filesystem (Latest)](https://github.com/microsoft/confidential-aci-examples/actions/workflows/test_encrypted_filesystem_latest.yml/badge.svg)](https://github.com/microsoft/confidential-aci-examples/actions/workflows/test_encrypted_filesystem_latest.yml)
-- [![Test Attestation](https://github.com/microsoft/confidential-aci-examples/actions/workflows/test_attestation.yml/badge.svg)](https://github.com/microsoft/confidential-aci-examples/actions/workflows/test_attestation.yml)
+Each sidecar is tested under `./tests/<sidecar_name>`. Each directory is tested with [confidential-aci-testing](https://github.com/microsoft/confidential-aci-testing), and therefore contains:
+
+- A `docker-compose` file which describes the images to build. These typically include a primary container image which uses the sidecar.
+- A `bicep` deployment template which describes the ACI deployment.
+- A `test.py` file which uses `unittest` and orchestrates, building, pushing and testing the containers. This target is what is called in our nightly testing.
+
+There are also supplementary files which aid the deployment:
+- `deployments/` contains bicep templates and for long lived resources used by the tests, they are run once.
+- `cacitesting.env` This file describes the deployment conditions such as which subscription and resource group to deploy to. All required properties are populated, any unset values are optional/have default values.
 
 ## Secure key release (SKR) sidecar
 
