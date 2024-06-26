@@ -1,6 +1,6 @@
-FROM alpine:3.18.6
+FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
 
-RUN apk update && apk upgrade --no-cache && apk --no-cache add wget curl jq
+RUN tdnf update -y && tdnf upgrade -y && tdnf install wget curl jq tar ca-certificates -y && tdnf clean all
 
 COPY ./examples/skr/aks/unwrap.sh /bin/
 COPY ./examples/skr/aks/wrapped /
