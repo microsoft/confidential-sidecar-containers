@@ -38,7 +38,7 @@ class EncFSTest(unittest.TestCase):
 
         attestation_endpoint = os.environ["ATTESTATION_ENDPOINT"]
         hsm_endpoint = os.environ["HSM_ENDPOINT"]
-        storage_account_name = os.environ["STORAGE_ACCOUNT_NAME"]
+        cls.storage_account_name = os.environ["cls.STORAGE_ACCOUNT_NAME"]
         storage_container_name = os.environ["STORAGE_CONTAINER_NAME"]
         key_id = f"{id}-key"
         cls.test_file_content = "Hello, World!"
@@ -69,7 +69,7 @@ class EncFSTest(unittest.TestCase):
                     "azure_filesystems": [
                         {
                             "mount_point": f"{mount_point}/{blob_id}",
-                            "azure_url": f"https://{storage_account_name}.blob.core.windows.net/{storage_container_name}/{blob_id}",
+                            "azure_url": f"https://{cls.storage_account_name}.blob.core.windows.net/{storage_container_name}/{blob_id}",
                             "azure_url_private": True,
                             "read_write": True if blob_type == "page" else False,
                             "key": {
@@ -107,19 +107,28 @@ class EncFSTest(unittest.TestCase):
                         blob_name=blob_id,
                         blob_type=blob_type,
                         key=binascii.unhexlify(key_data),
-                        storage_account_name=storage_account_name,
+                        storage_account_name=cls.storage_account_name,
                         container_name=storage_container_name,
                     ) as filesystem:
                         subprocess.run([
                             "sudo", "cp", test_file.name, os.path.join(filesystem, "file.txt")
                         ], check=True)
 
+        subprocess.run([
+            "az", "storage", "account",
+            "network-rule", "add",
+            "--resource-group", os.environ["RESOURCE_GROUP"],
+            "--account-name", cls.storage_account_name,
+            "--ip-address", requests.get("https://ifconfig.me").text],
+            check=True,
+        )
+
         cls.aci_context = target_run_ctx(
             target=target_dir,
             name=id,
             tag=tag,
             follow=False,
-            cleanup=False,
+            cleanup=True,
             prefer_pull=True, # Images are built earlier, so don't rebuild
             gen_policies=False, # Policy generated to deploy key
         )
@@ -131,6 +140,15 @@ class EncFSTest(unittest.TestCase):
     def tearDownClass(cls):
         # Cleans up the ACI instance
         cls.aci_context.__exit__(None, None, None)
+
+        subprocess.run([
+            "az", "storage", "account",
+            "network-rule", "remove",
+            "--resource-group", os.environ["RESOURCE_GROUP"],
+            "--account-name", cls.storage_account_name,
+            "--ip-address", requests.get("https://ifconfig.me").text],
+            check=True,
+        )
 
     def test_read_rw_encfs(self):
 
