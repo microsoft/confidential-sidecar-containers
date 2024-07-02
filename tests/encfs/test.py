@@ -38,7 +38,7 @@ class EncFSTest(unittest.TestCase):
 
         attestation_endpoint = os.environ["ATTESTATION_ENDPOINT"]
         hsm_endpoint = os.environ["HSM_ENDPOINT"]
-        cls.storage_account_name = os.environ["cls.STORAGE_ACCOUNT_NAME"]
+        cls.storage_account_name = os.environ["STORAGE_ACCOUNT_NAME"]
         storage_container_name = os.environ["STORAGE_CONTAINER_NAME"]
         key_id = f"{id}-key"
         cls.test_file_content = "Hello, World!"
