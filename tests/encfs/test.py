@@ -119,7 +119,7 @@ class EncFSTest(unittest.TestCase):
             "network-rule", "add",
             "--resource-group", os.environ["RESOURCE_GROUP"],
             "--account-name", cls.storage_account_name,
-            "--ip-address", "0.0.0.0/0",
+            "--ip-address", "0.0.0.0/0"],
             check=True,
         )
 
@@ -146,7 +146,7 @@ class EncFSTest(unittest.TestCase):
             "network-rule", "remove",
             "--resource-group", os.environ["RESOURCE_GROUP"],
             "--account-name", cls.storage_account_name,
-            "--ip-address", "0.0.0.0/0",
+            "--ip-address", "0.0.0.0/0"],
             check=True,
         )
 
