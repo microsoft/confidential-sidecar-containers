@@ -66,7 +66,7 @@ class EncFSTest(unittest.TestCase):
             "network-rule", "add",
             "--resource-group", os.environ["RESOURCE_GROUP"],
             "--account-name", cls.storage_account_name,
-            "--ip-address", requests.get("https://ifconfig.me").text,
+            "--ip-address", "0.0.0.0/0",
         ], check=True)
 
         if not aci_is_live(**azure_args, name=id):
@@ -146,7 +146,7 @@ class EncFSTest(unittest.TestCase):
             "network-rule", "remove",
             "--resource-group", os.environ["RESOURCE_GROUP"],
             "--account-name", cls.storage_account_name,
-            "--ip-address", requests.get("https://ifconfig.me").text,
+            "--ip-address", "0.0.0.0/0",
         ], check=True)
 
     def test_read_rw_encfs(self):
