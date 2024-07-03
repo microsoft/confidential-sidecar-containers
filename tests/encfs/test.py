@@ -6,6 +6,7 @@ import binascii
 import json
 import subprocess
 import tempfile
+import time
 import requests
 import uuid
 import os
@@ -119,9 +120,8 @@ class EncFSTest(unittest.TestCase):
             "network-rule", "add",
             "--resource-group", os.environ["RESOURCE_GROUP"],
             "--account-name", cls.storage_account_name,
-            "--ip-address", "0.0.0.0/0"],
-            check=True,
-        )
+            "--ip-address", requests.get("https://ifconfig.me").text,
+        ], check=True)
 
         cls.aci_context = target_run_ctx(
             target=target_dir,
@@ -136,6 +136,24 @@ class EncFSTest(unittest.TestCase):
         cls.encfs_id, = cls.aci_context.__enter__()
         cls.encfs_ip = aci_get_ips(ids=cls.encfs_id)
 
+        subprocess.run([
+            "az", "storage", "account",
+            "network-rule", "add",
+            "--resource-group", os.environ["RESOURCE_GROUP"],
+            "--account-name", cls.storage_account_name,
+            "--ip-address", cls.encfs_ip
+        ], check=True)
+
+        time.sleep(10)
+
+        subprocess.run([
+            "az", "container", "restart",
+            "--resource-group", os.environ["RESOURCE_GROUP"],
+            "--name", id,
+        ], check=True)
+
+
+
     @classmethod
     def tearDownClass(cls):
         # Cleans up the ACI instance
@@ -146,9 +164,8 @@ class EncFSTest(unittest.TestCase):
             "network-rule", "remove",
             "--resource-group", os.environ["RESOURCE_GROUP"],
             "--account-name", cls.storage_account_name,
-            "--ip-address", "0.0.0.0/0"],
-            check=True,
-        )
+            "--ip-address", requests.get("https://ifconfig.me").text,
+        ], check=True)
 
     def test_read_rw_encfs(self):
 
