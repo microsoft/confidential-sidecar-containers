@@ -61,6 +61,14 @@ class EncFSTest(unittest.TestCase):
             "tag": tag,
         }
 
+        subprocess.run([
+            "az", "storage", "account",
+            "network-rule", "add",
+            "--resource-group", os.environ["RESOURCE_GROUP"],
+            "--account-name", cls.storage_account_name,
+            "--ip-address", requests.get("https://ifconfig.me").text,
+        ], check=True)
+
         if not aci_is_live(**azure_args, name=id):
 
             aci_param_set(
@@ -115,14 +123,6 @@ class EncFSTest(unittest.TestCase):
                             "sudo", "cp", test_file.name, os.path.join(filesystem, "file.txt")
                         ], check=True)
 
-        subprocess.run([
-            "az", "storage", "account",
-            "network-rule", "add",
-            "--resource-group", os.environ["RESOURCE_GROUP"],
-            "--account-name", cls.storage_account_name,
-            "--ip-address", requests.get("https://ifconfig.me").text,
-        ], check=True)
-
         cls.aci_context = target_run_ctx(
             target=target_dir,
             name=id,
@@ -135,24 +135,6 @@ class EncFSTest(unittest.TestCase):
 
         cls.encfs_id, = cls.aci_context.__enter__()
         cls.encfs_ip = aci_get_ips(ids=cls.encfs_id)
-
-        subprocess.run([
-            "az", "storage", "account",
-            "network-rule", "add",
-            "--resource-group", os.environ["RESOURCE_GROUP"],
-            "--account-name", cls.storage_account_name,
-            "--ip-address", cls.encfs_ip
-        ], check=True)
-
-        time.sleep(10)
-
-        subprocess.run([
-            "az", "container", "restart",
-            "--resource-group", os.environ["RESOURCE_GROUP"],
-            "--name", id,
-        ], check=True)
-
-
 
     @classmethod
     def tearDownClass(cls):
