@@ -56,7 +56,7 @@ class AttestationTest(unittest.TestCase):
                 deployment_name=id,
                 subscription=args.subscription,
                 resource_group=args.resource_group,
-            )
+            )[0]
 
             input_report_data = "EXAMPLE"
 

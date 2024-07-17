@@ -97,7 +97,7 @@ class SkrTest(unittest.TestCase):
             deployment_name=cls.id,
             subscription=args.subscription,
             resource_group=args.resource_group,
-        )
+        )[0]
 
     @classmethod
     def tearDownClass(cls):
