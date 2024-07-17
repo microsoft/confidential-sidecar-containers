@@ -189,9 +189,8 @@ jobs:
         run: |
           source cacitesting.env
           export LOCATION=${{ env.LOCATION }}
-          python -m c_aci_testing.target_run tests/skr \
-            --name $ID \
-            --no-follow \
+          c-aci-testing target run tests/skr \
+            --deployment-name $ID \
             --no-cleanup
 
       - name: Re-Log into Azure
