@@ -95,7 +95,12 @@ class EncFSTest(unittest.TestCase):
 
             images_build(**image_args)
             images_push(**image_args)
-            policies_gen(**image_args, **azure_args, deployment_name=id)
+            policies_gen(
+                deployment_name=id,
+                policy_type="generated",
+                **image_args,
+                **azure_args,
+            )
 
             with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_encfs.rego")) as f:
                 key_data = generate_key()
