@@ -248,6 +248,7 @@ jobs:
           STORAGE_CONTAINER_NAME: ${{ vars.STORAGE_CONTAINER_NAME }}
         run: |
           source cacitesting.env
+          export LOCATION=${{ env.LOCATION }}
           python -m unittest discover -s tests/encfs
 
 
