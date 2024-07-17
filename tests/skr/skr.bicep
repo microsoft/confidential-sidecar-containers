@@ -40,7 +40,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'proxy'
         properties: {
-          image: '${registry}/skr/proxy:${tag}'
+          image: '${registry}/skr/proxy:${empty(tag) ? 'latest': tag}'
           ports: [
             {
               protocol: 'TCP'
@@ -58,7 +58,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'http-sidecar'
         properties: {
-          image: '${registry}/skr/sidecar:${tag}'
+          image: '${registry}/skr/sidecar:${empty(tag) ? 'latest': tag}'
           ports: [
             {
               protocol: 'TCP'
@@ -76,7 +76,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'grpc-sidecar'
         properties: {
-          image: '${registry}/skr/sidecar:${tag}'
+          image: '${registry}/skr/sidecar:${empty(tag) ? 'latest': tag}'
           environmentVariables: [
             {
               name: 'ServerType'
