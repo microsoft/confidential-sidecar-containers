@@ -22,8 +22,8 @@ try:
 except ImportError:
     from key import generate_key, deploy_key, generate_release_policy
 
-from c_aci_testing.target_run import target_run_ctx
-from c_aci_testing.aci_get_ips import aci_get_ips
+from c_aci_testing.tools.target_run import target_run_ctx
+from c_aci_testing.tools.aci_get_ips import aci_get_ips
 
 def get_grpc_response(raw_response: bytes):
     return json.loads(

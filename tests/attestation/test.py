@@ -13,9 +13,9 @@ try:
 except ImportError:
     from attestation import validate_attestation
 
-from c_aci_testing.aci_get_ips import aci_get_ips
-from c_aci_testing.aci_param_set import aci_param_set
-from c_aci_testing.target_run import target_run_ctx
+from c_aci_testing.tools.aci_get_ips import aci_get_ips
+from c_aci_testing.tools.aci_param_set import aci_param_set
+from c_aci_testing.tools.target_run import target_run_ctx
 
 class AttestationTest(unittest.TestCase):
     def test_attestation(self):

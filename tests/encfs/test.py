@@ -20,13 +20,13 @@ try:
 except ImportError:
     from encfs import deploy_encfs
 
-from c_aci_testing.aci_is_live import aci_is_live
-from c_aci_testing.aci_param_set import aci_param_set
-from c_aci_testing.images_build import images_build
-from c_aci_testing.images_push import images_push
-from c_aci_testing.policies_gen import policies_gen
-from c_aci_testing.target_run import target_run_ctx
-from c_aci_testing.aci_get_ips import aci_get_ips
+from c_aci_testing.tools.aci_is_live import aci_is_live
+from c_aci_testing.tools.aci_param_set import aci_param_set
+from c_aci_testing.tools.images_build import images_build
+from c_aci_testing.tools.images_push import images_push
+from c_aci_testing.tools.policies_gen import policies_gen
+from c_aci_testing.tools.target_run import target_run_ctx
+from c_aci_testing.tools.aci_get_ips import aci_get_ips
 
 class EncFSTest(unittest.TestCase):
 
