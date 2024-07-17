@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
+import argparse
 import base64
 import binascii
 import json
@@ -20,7 +21,14 @@ try:
 except ImportError:
     from encfs import deploy_encfs
 
-from c_aci_testing.tools.aci_is_live import aci_is_live
+from c_aci_testing.args.parameters.location import parse_location
+from c_aci_testing.args.parameters.managed_identity import \
+    parse_managed_identity
+from c_aci_testing.args.parameters.registry import parse_registry
+from c_aci_testing.args.parameters.repository import parse_repository
+from c_aci_testing.args.parameters.resource_group import parse_resource_group
+from c_aci_testing.args.parameters.subscription import parse_subscription
+from c_aci_testing.tools.aci_get_is_live import aci_get_is_live
 from c_aci_testing.tools.aci_param_set import aci_param_set
 from c_aci_testing.tools.images_build import images_build
 from c_aci_testing.tools.images_push import images_push
@@ -60,7 +68,7 @@ class EncFSTest(unittest.TestCase):
             "tag": tag,
         }
 
-        if not aci_is_live(**azure_args, name=id):
+        if not aci_get_is_live(**azure_args, deployment_name=id):
 
             aci_param_set(
                 file_path=os.path.join(target_dir, "encfs.bicepparam"),
@@ -114,14 +122,23 @@ class EncFSTest(unittest.TestCase):
                             "sudo", "cp", test_file.name, os.path.join(filesystem, "file.txt")
                         ], check=True)
 
+        parser = argparse.ArgumentParser()
+        parse_subscription(parser)
+        parse_resource_group(parser)
+        parse_registry(parser)
+        parse_repository(parser)
+        parse_location(parser)
+        parse_managed_identity(parser)
+        args, _ = parser.parse_known_args()
+
         cls.aci_context = target_run_ctx(
-            target=target_dir,
-            name=id,
-            tag=tag,
-            follow=False,
+            target_path=os.path.realpath(os.path.dirname(__file__)),
+            deployment_name=id,
+            tag=id,
             cleanup=False,
             prefer_pull=True, # Images are built earlier, so don't rebuild
-            gen_policies=False, # Policy generated to deploy key
+            policy_type='none', # Policy generated to deploy key
+            **vars(args),
         )
 
         cls.encfs_id, = cls.aci_context.__enter__()

@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
+import argparse
 import binascii
 import hashlib
 import re
@@ -22,6 +23,13 @@ try:
 except ImportError:
     from key import generate_key, deploy_key, generate_release_policy
 
+from c_aci_testing.args.parameters.location import parse_location
+from c_aci_testing.args.parameters.managed_identity import \
+    parse_managed_identity
+from c_aci_testing.args.parameters.registry import parse_registry
+from c_aci_testing.args.parameters.repository import parse_repository
+from c_aci_testing.args.parameters.resource_group import parse_resource_group
+from c_aci_testing.args.parameters.subscription import parse_subscription
 from c_aci_testing.tools.target_run import target_run_ctx
 from c_aci_testing.tools.aci_get_ips import aci_get_ips
 
@@ -67,12 +75,21 @@ class SkrTest(unittest.TestCase):
         cls.attestation_endpoint = os.environ["ATTESTATION_ENDPOINT"]
         cls.hsm_endpoint = os.environ["HSM_ENDPOINT"]
 
+        parser = argparse.ArgumentParser()
+        parse_subscription(parser)
+        parse_resource_group(parser)
+        parse_registry(parser)
+        parse_repository(parser)
+        parse_location(parser)
+        parse_managed_identity(parser)
+        args, _ = parser.parse_known_args()
+
         cls.aci_context = target_run_ctx(
-            target=cls.target_dir,
-            name=cls.id,
+            target_path=cls.target_dir,
+            deployment_name=cls.id,
             tag=cls.tag,
-            follow=False,
             cleanup=True,
+            **vars(args),
         )
 
         cls.skr_id, = cls.aci_context.__enter__()
