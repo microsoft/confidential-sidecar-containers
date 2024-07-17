@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
+import argparse
 import requests
 import uuid
 import os
@@ -13,9 +14,16 @@ try:
 except ImportError:
     from attestation import validate_attestation
 
-from c_aci_testing.aci_get_ips import aci_get_ips
-from c_aci_testing.aci_param_set import aci_param_set
-from c_aci_testing.target_run import target_run_ctx
+from c_aci_testing.args.parameters.location import parse_location
+from c_aci_testing.args.parameters.managed_identity import \
+    parse_managed_identity
+from c_aci_testing.args.parameters.registry import parse_registry
+from c_aci_testing.args.parameters.repository import parse_repository
+from c_aci_testing.args.parameters.resource_group import parse_resource_group
+from c_aci_testing.args.parameters.subscription import parse_subscription
+from c_aci_testing.tools.aci_get_ips import aci_get_ips
+from c_aci_testing.tools.aci_param_set import aci_param_set
+from c_aci_testing.tools.target_run import target_run_ctx
 
 class AttestationTest(unittest.TestCase):
     def test_attestation(self):
@@ -24,19 +32,31 @@ class AttestationTest(unittest.TestCase):
         id = os.getenv("ID", str(uuid.uuid4()))
 
         aci_param_set(
-            file_path=os.path.join(target_dir, "attestation.bicepparam"),
-            key="attestationEndpoint",
-            value=f'\'https://{os.environ["ATTESTATION_ENDPOINT"]}\''
+            target_path=target_dir,
+            parameters=[f'attestationEndpoint=\'https://{os.environ["ATTESTATION_ENDPOINT"]}\''],
         )
 
+        parser = argparse.ArgumentParser()
+        parse_subscription(parser)
+        parse_resource_group(parser)
+        parse_registry(parser)
+        parse_repository(parser)
+        parse_location(parser)
+        parse_managed_identity(parser)
+        args, _ = parser.parse_known_args()
+
         with target_run_ctx(
-            target=target_dir,
-            name=id,
+            target_path=target_dir,
+            deployment_name=id,
             tag=os.getenv("TAG") or id,
-            follow=False,
             cleanup=True,
-        ) as deployment_ids:
-            ip_address = aci_get_ips(ids=deployment_ids[0])
+            **vars(args),
+        ):
+            ip_address = aci_get_ips(
+                deployment_name=id,
+                subscription=args.subscription,
+                resource_group=args.resource_group,
+            )[0]
 
             input_report_data = "EXAMPLE"
 

@@ -47,7 +47,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'attestation-primary'
         properties: {
-          image: '${registry}/attestation/primary:${tag}'
+          image: '${registry}/attestation/primary:${empty(tag) ? 'latest': tag}'
           volumeMounts: [
             {
               name: 'uds'
@@ -71,7 +71,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'attestation-sidecar'
         properties: {
-          image: '${registry}/attestation/sidecar:${tag}'
+          image: '${registry}/attestation/sidecar:${empty(tag) ? 'latest': tag}'
           ports: [
             {
               protocol: 'TCP'

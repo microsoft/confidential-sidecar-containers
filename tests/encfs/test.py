@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
+import argparse
 import base64
 import binascii
 import json
@@ -20,13 +21,20 @@ try:
 except ImportError:
     from encfs import deploy_encfs
 
-from c_aci_testing.aci_is_live import aci_is_live
-from c_aci_testing.aci_param_set import aci_param_set
-from c_aci_testing.images_build import images_build
-from c_aci_testing.images_push import images_push
-from c_aci_testing.policies_gen import policies_gen
-from c_aci_testing.target_run import target_run_ctx
-from c_aci_testing.aci_get_ips import aci_get_ips
+from c_aci_testing.args.parameters.location import parse_location
+from c_aci_testing.args.parameters.managed_identity import \
+    parse_managed_identity
+from c_aci_testing.args.parameters.registry import parse_registry
+from c_aci_testing.args.parameters.repository import parse_repository
+from c_aci_testing.args.parameters.resource_group import parse_resource_group
+from c_aci_testing.args.parameters.subscription import parse_subscription
+from c_aci_testing.tools.aci_get_is_live import aci_get_is_live
+from c_aci_testing.tools.aci_param_set import aci_param_set
+from c_aci_testing.tools.images_build import images_build
+from c_aci_testing.tools.images_push import images_push
+from c_aci_testing.tools.policies_gen import policies_gen
+from c_aci_testing.tools.target_run import target_run_ctx
+from c_aci_testing.tools.aci_get_ips import aci_get_ips
 
 class EncFSTest(unittest.TestCase):
 
@@ -54,18 +62,17 @@ class EncFSTest(unittest.TestCase):
         }
 
         image_args = {
-            "target": target_dir,
+            "target_path": target_dir,
             "registry": os.environ["REGISTRY"],
             "repository": os.getenv("REPOSITORY"),
             "tag": tag,
         }
 
-        if not aci_is_live(**azure_args, name=id):
+        if not aci_get_is_live(**azure_args, deployment_name=id):
 
             aci_param_set(
-                file_path=os.path.join(target_dir, "encfs.bicepparam"),
-                key="sidecarArgsB64",
-                value="'" + base64.urlsafe_b64encode(json.dumps({
+                target_path=target_dir,
+                parameters=["sidecarArgsB64=" + "'" + base64.urlsafe_b64encode(json.dumps({
                     "azure_filesystems": [
                         {
                             "mount_point": f"{mount_point}/{blob_id}",
@@ -83,11 +90,17 @@ class EncFSTest(unittest.TestCase):
                             }
                         } for blob_id, blob_type in cls.blobs
                     ]
-                }).encode()).decode() + "'")
+                }).encode()).decode() + "'"],
+            )
 
             images_build(**image_args)
             images_push(**image_args)
-            policies_gen(**image_args, **azure_args, deployment_name=id)
+            policies_gen(
+                deployment_name=id,
+                policy_type="generated",
+                **image_args,
+                **azure_args,
+            )
 
             with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_encfs.rego")) as f:
                 key_data = generate_key()
@@ -114,18 +127,31 @@ class EncFSTest(unittest.TestCase):
                             "sudo", "cp", test_file.name, os.path.join(filesystem, "file.txt")
                         ], check=True)
 
+        parser = argparse.ArgumentParser()
+        parse_subscription(parser)
+        parse_resource_group(parser)
+        parse_registry(parser)
+        parse_repository(parser)
+        parse_location(parser)
+        parse_managed_identity(parser)
+        args, _ = parser.parse_known_args()
+
         cls.aci_context = target_run_ctx(
-            target=target_dir,
-            name=id,
-            tag=tag,
-            follow=False,
+            target_path=os.path.realpath(os.path.dirname(__file__)),
+            deployment_name=id,
+            tag=id,
             cleanup=False,
             prefer_pull=True, # Images are built earlier, so don't rebuild
-            gen_policies=False, # Policy generated to deploy key
+            policy_type='none', # Policy generated to deploy key
+            **vars(args),
         )
 
         cls.encfs_id, = cls.aci_context.__enter__()
-        cls.encfs_ip = aci_get_ips(ids=cls.encfs_id)
+        cls.encfs_ip = aci_get_ips(
+            deployment_name=id,
+            subscription=args.subscription,
+            resource_group=args.resource_group,
+        )[0]
 
     @classmethod
     def tearDownClass(cls):

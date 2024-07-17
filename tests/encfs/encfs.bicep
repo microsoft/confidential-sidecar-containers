@@ -50,7 +50,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'primary'
         properties: {
-          image: '${registry}/encfs/primary:${tag}'
+          image: '${registry}/encfs/primary:${empty(tag) ? 'latest': tag}'
           ports: [
             {
               protocol: 'TCP'
@@ -75,7 +75,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'sidecar'
         properties: {
-          image: '${registry}/encfs/sidecar:${tag}'
+          image: '${registry}/encfs/sidecar:${empty(tag) ? 'latest': tag}'
           securityContext: {
             privileged: true
           }
