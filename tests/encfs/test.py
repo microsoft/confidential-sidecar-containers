@@ -62,7 +62,7 @@ class EncFSTest(unittest.TestCase):
         }
 
         image_args = {
-            "target": target_dir,
+            "target_path": target_dir,
             "registry": os.environ["REGISTRY"],
             "repository": os.getenv("REPOSITORY"),
             "tag": tag,
