@@ -33,7 +33,7 @@ class AttestationTest(unittest.TestCase):
 
         aci_param_set(
             target_path=target_dir,
-            parameters=f"attestationEndpoint=\'https://{os.environ["ATTESTATION_ENDPOINT"]}\'",
+            parameters=f'attestationEndpoint=\'https://{os.environ["ATTESTATION_ENDPOINT"]}\'',
         )
 
         parser = argparse.ArgumentParser()
