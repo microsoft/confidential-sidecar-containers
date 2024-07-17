@@ -72,7 +72,7 @@ class EncFSTest(unittest.TestCase):
 
             aci_param_set(
                 target_path=target_dir,
-                parameters="sidecarArgsB64=" + "'" + base64.urlsafe_b64encode(json.dumps({
+                parameters=["sidecarArgsB64=" + "'" + base64.urlsafe_b64encode(json.dumps({
                     "azure_filesystems": [
                         {
                             "mount_point": f"{mount_point}/{blob_id}",
@@ -90,7 +90,7 @@ class EncFSTest(unittest.TestCase):
                             }
                         } for blob_id, blob_type in cls.blobs
                     ]
-                }).encode()).decode() + "'",
+                }).encode()).decode() + "'"],
             )
 
             images_build(**image_args)
