@@ -32,9 +32,8 @@ class AttestationTest(unittest.TestCase):
         id = os.getenv("ID", str(uuid.uuid4()))
 
         aci_param_set(
-            file_path=os.path.join(target_dir, "attestation.bicepparam"),
-            key="attestationEndpoint",
-            value=f'\'https://{os.environ["ATTESTATION_ENDPOINT"]}\''
+            target_path=target_dir,
+            parameters=f"attestationEndpoint=\'https://{os.environ["ATTESTATION_ENDPOINT"]}\'",
         )
 
         parser = argparse.ArgumentParser()

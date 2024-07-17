@@ -71,9 +71,8 @@ class EncFSTest(unittest.TestCase):
         if not aci_get_is_live(**azure_args, deployment_name=id):
 
             aci_param_set(
-                file_path=os.path.join(target_dir, "encfs.bicepparam"),
-                key="sidecarArgsB64",
-                value="'" + base64.urlsafe_b64encode(json.dumps({
+                target_path=target_dir,
+                parameters=f"sidecarArgsB64=" + "'" + base64.urlsafe_b64encode(json.dumps({
                     "azure_filesystems": [
                         {
                             "mount_point": f"{mount_point}/{blob_id}",
@@ -91,7 +90,8 @@ class EncFSTest(unittest.TestCase):
                             }
                         } for blob_id, blob_type in cls.blobs
                     ]
-                }).encode()).decode() + "'")
+                }).encode()).decode() + "'",
+                )
 
             images_build(**image_args)
             images_push(**image_args)
