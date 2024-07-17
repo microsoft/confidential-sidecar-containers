@@ -147,7 +147,11 @@ class EncFSTest(unittest.TestCase):
         )
 
         cls.encfs_id, = cls.aci_context.__enter__()
-        cls.encfs_ip = aci_get_ips(ids=cls.encfs_id)
+        cls.encfs_ip = aci_get_ips(
+            deployment_name=id,
+            subscription=args.subscription,
+            resource_group=args.resource_group,
+        )
 
     @classmethod
     def tearDownClass(cls):

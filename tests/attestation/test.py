@@ -51,8 +51,12 @@ class AttestationTest(unittest.TestCase):
             tag=os.getenv("TAG") or id,
             cleanup=True,
             **vars(args),
-        ) as deployment_ids:
-            ip_address = aci_get_ips(ids=deployment_ids[0])
+        ):
+            ip_address = aci_get_ips(
+                deployment_name=id,
+                subscription=args.subscription,
+                resource_group=args.resource_group,
+            )
 
             input_report_data = "EXAMPLE"
 

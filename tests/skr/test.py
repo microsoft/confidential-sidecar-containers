@@ -93,7 +93,11 @@ class SkrTest(unittest.TestCase):
         )
 
         cls.skr_id, = cls.aci_context.__enter__()
-        cls.skr_ip = aci_get_ips(ids=cls.skr_id)
+        cls.skr_ip = aci_get_ips(
+            deployment_name=cls.id,
+            subscription=args.subscription,
+            resource_group=args.resource_group,
+        )
 
     @classmethod
     def tearDownClass(cls):
