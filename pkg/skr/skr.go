@@ -5,9 +5,11 @@ package skr
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"fmt"
 	"strings"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
@@ -138,7 +140,22 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 			return nil, errors.Wrapf(err, "could not encode RSA key as JWK")
 		}
 		return jwKey, nil
+	} else if kty == "EC-HSM" || kty == "EC" {
+		key, err := x509.ParsePKCS8PrivateKey(keyBytes)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not parse ECDSA key")
+		}
+
+		var privateEcdsaKey *ecdsa.PrivateKey = key.(*ecdsa.PrivateKey)
+
+		jwKey := jwk.NewECDSAPrivateKey()
+		err = jwKey.FromRaw(privateEcdsaKey)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not encode ECDSA key as JWK")
+		}
+		return jwKey, nil
 	} else {
-		return nil, errors.Wrapf(err, "released key type not supported")
+		err = fmt.Errorf("released key type %v not supported", kty)
+		return nil, err
 	}
 }
