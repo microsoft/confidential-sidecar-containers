@@ -59,6 +59,12 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
         name: 'http-sidecar'
         properties: {
           image: '${registry}/skr/sidecar:${empty(tag) ? 'latest': tag}'
+          environmentVariables: [
+            {
+              name: 'LogLevel'
+              value: 'debug'
+            }
+          ]
           ports: [
             {
               protocol: 'TCP'
@@ -85,6 +91,10 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
             {
               name: 'Port'
               value: '50000'
+            }
+            {
+              name: 'LogLevel'
+              value: 'debug'
             }
           ]
           ports: [
