@@ -1,0 +1,17 @@
+FROM mcr.microsoft.com/devcontainers/go:dev-1.22-bookworm AS build
+ENV PROJECT_DIR=/go/src/github.com/microsoft
+WORKDIR ${PROJECT_DIR}/confidential-sidecar-containers
+COPY . ./
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o / ./cmd/overlayfs
+
+FROM alpine:3.18.6
+
+RUN apk update && apk upgrade --no-cache && apk add --no-cache curl bash jq
+
+COPY --from=build /overlayfs ./bin/
+
+ENV BUILD_DIR=/go/src/github.com/microsoft/confidential-sidecar-containers
+COPY --from=build ${BUILD_DIR}/docker/ofs/ofs.sh /
+
+RUN chmod +x /*.sh; date > /made-date
