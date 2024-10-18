@@ -41,6 +41,7 @@ class CryptSetupFileSystem:
 
     def __enter__(self):
         try:
+            print("Creating encrypted filesystem")
             # Format
             self._run_command(
                 "luksFormat",
@@ -54,7 +55,7 @@ class CryptSetupFileSystem:
                 "--pbkdf pbkdf2",
                 "--pbkdf-force-iterations 1000",
             )
-
+            print("decrypting")
             # Open
             self._run_command(
                 "luksOpen",
@@ -67,7 +68,7 @@ class CryptSetupFileSystem:
                 "--persistent",
             )
             self.is_open = True
-
+            print("Formatting")
             # Mount
             subprocess.check_call(f"sudo mkfs.ext4 {self.DEVICE_NAME_PATH}", shell=True)
             self._dir = tempfile.TemporaryDirectory()
@@ -75,6 +76,7 @@ class CryptSetupFileSystem:
                 f"sudo mount -t ext4 {self.DEVICE_NAME_PATH} {self._dir.name} -o loop",
                 shell=True,
             )
+            print("mounted successfully")
             return self._dir.name
 
         except Exception:
