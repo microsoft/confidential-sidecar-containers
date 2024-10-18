@@ -16,14 +16,14 @@ on:
 
 jobs:
   test-sidecars-eastus2euap:
-    name: Test Sidecars
+    name: East US 2 EUAP
     uses: ./.github/workflows/ci.yml
     secrets: inherit
     with:
       location: 'eastus2euap'
 
   test-sidecars-uaenorth:
-    name: Test Sidecars
+    name: UAE North
     uses: ./.github/workflows/ci.yml
     secrets: inherit
     with:
