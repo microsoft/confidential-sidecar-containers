@@ -24,15 +24,26 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+    inputs:
+      location:
+        description: The region to deploy ACIs to
+        type: string
+      policy_type:
+        description: The policy type to use
+        type: string
   workflow_call:
     inputs:
       location:
         description: The region to deploy ACIs to
         type: string
+      policy_type:
+        description: The policy type to use
+        type: string
 
 env:
-  BASE_ID: ${{ github.run_id }}-${{ github.run_number }}
+  BASE_ID: ${{ github.run_id }}-${{ github.run_number }}-${{ inputs.location }}-${{ inputs.policy_type }}
   LOCATION: ${{ inputs.location || 'westeurope' }}
+  POLICY_TYPE: ${{ inputs.policy_type || 'generated' }}
 
 jobs:
   analyze:
