@@ -138,14 +138,16 @@ class EncFSTest(unittest.TestCase):
                             "sudo", "cp", test_file.name, os.path.join(filesystem, "file.txt")
                         ], check=True)
 
+        args_dict = vars(args)
+        args_dict['policy_type'] = 'none' # Policy generated to deploy key
+
         cls.aci_context = target_run_ctx(
             target_path=os.path.realpath(os.path.dirname(__file__)),
             deployment_name=id,
             tag=id,
             cleanup=False,
             prefer_pull=True, # Images are built earlier, so don't rebuild
-            policy_type='none', # Policy generated to deploy key
-            **vars(args),
+            **args_dict,
         )
 
         cls.encfs_id, = cls.aci_context.__enter__()
