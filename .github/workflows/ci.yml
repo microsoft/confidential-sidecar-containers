@@ -24,6 +24,10 @@ on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
+    inputs:
+      location:
+        description: The region to deploy ACIs to
+        type: string
   workflow_call:
     inputs:
       location:

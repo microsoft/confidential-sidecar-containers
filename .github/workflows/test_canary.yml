@@ -12,9 +12,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-sidecars:
+  test-sidecars-eastus2euap:
     name: Test Sidecars
     uses: ./.github/workflows/ci.yml
     secrets: inherit
     with:
       location: 'eastus2euap'
+
+  test-sidecars-uaenorth:
+    name: Test Sidecars
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+    with:
+      location: 'uaenorth'
