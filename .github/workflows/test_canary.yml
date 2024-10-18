@@ -30,7 +30,7 @@ jobs:
       location: 'uaenorth'
 
   test-sidecars-uaenorth-allow-all:
-    name: UAE North
+    name: UAE North (Allow All)
     uses: ./.github/workflows/ci.yml
     secrets: inherit
     with:

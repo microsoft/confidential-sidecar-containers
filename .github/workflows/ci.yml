@@ -41,7 +41,7 @@ on:
         type: string
 
 env:
-  BASE_ID: ${{ github.run_id }}-${{ github.run_number }}
+  BASE_ID: ${{ github.run_id }}-${{ github.run_number }}-${{ inputs.location }}-${{ inputs.policy_type }}
   LOCATION: ${{ inputs.location || 'westeurope' }}
   POLICY_TYPE: ${{ inputs.location || 'generated' }}
 
