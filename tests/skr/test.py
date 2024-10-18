@@ -30,6 +30,7 @@ from c_aci_testing.args.parameters.registry import parse_registry
 from c_aci_testing.args.parameters.repository import parse_repository
 from c_aci_testing.args.parameters.resource_group import parse_resource_group
 from c_aci_testing.args.parameters.subscription import parse_subscription
+from c_aci_testing.args.parameters.policy_type import parse_policy_type
 from c_aci_testing.tools.target_run import target_run_ctx
 from c_aci_testing.tools.aci_get_ips import aci_get_ips
 
@@ -82,6 +83,7 @@ class SkrTest(unittest.TestCase):
         parse_repository(parser)
         parse_location(parser)
         parse_managed_identity(parser)
+        parse_policy_type(parser)
         args, _ = parser.parse_known_args()
 
         cls.aci_context = target_run_ctx(

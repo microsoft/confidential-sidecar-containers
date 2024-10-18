@@ -28,6 +28,7 @@ from c_aci_testing.args.parameters.registry import parse_registry
 from c_aci_testing.args.parameters.repository import parse_repository
 from c_aci_testing.args.parameters.resource_group import parse_resource_group
 from c_aci_testing.args.parameters.subscription import parse_subscription
+from c_aci_testing.args.parameters.policy_type import parse_policy_type
 from c_aci_testing.tools.aci_get_is_live import aci_get_is_live
 from c_aci_testing.tools.aci_param_set import aci_param_set
 from c_aci_testing.tools.images_build import images_build
@@ -55,6 +56,16 @@ class EncFSTest(unittest.TestCase):
             (f"{id}-blob1", "page"),
             (f"{id}-blob2", "block"),
         ]
+
+        parser = argparse.ArgumentParser()
+        parse_subscription(parser)
+        parse_resource_group(parser)
+        parse_registry(parser)
+        parse_repository(parser)
+        parse_location(parser)
+        parse_managed_identity(parser)
+        parse_policy_type(parser)
+        args, _ = parser.parse_known_args()
 
         azure_args = {
             "subscription": os.getenv("SUBSCRIPTION"),
@@ -97,7 +108,7 @@ class EncFSTest(unittest.TestCase):
             images_push(**image_args)
             policies_gen(
                 deployment_name=id,
-                policy_type="generated",
+                policy_type=args.policy_type,
                 **image_args,
                 **azure_args,
             )
@@ -126,15 +137,6 @@ class EncFSTest(unittest.TestCase):
                         subprocess.run([
                             "sudo", "cp", test_file.name, os.path.join(filesystem, "file.txt")
                         ], check=True)
-
-        parser = argparse.ArgumentParser()
-        parse_subscription(parser)
-        parse_resource_group(parser)
-        parse_registry(parser)
-        parse_repository(parser)
-        parse_location(parser)
-        parse_managed_identity(parser)
-        args, _ = parser.parse_known_args()
 
         cls.aci_context = target_run_ctx(
             target_path=os.path.realpath(os.path.dirname(__file__)),
