@@ -43,7 +43,7 @@ on:
 env:
   BASE_ID: ${{ github.run_id }}-${{ github.run_number }}-${{ inputs.location }}-${{ inputs.policy_type }}
   LOCATION: ${{ inputs.location || 'westeurope' }}
-  POLICY_TYPE: ${{ inputs.location || 'generated' }}
+  POLICY_TYPE: ${{ inputs.policy_type || 'generated' }}
 
 jobs:
   analyze:
