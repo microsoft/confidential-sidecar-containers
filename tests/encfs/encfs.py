@@ -52,7 +52,7 @@ class CryptSetupFileSystem:
                 "--batch-mode",
                 "--sector-size 4096",
                 "--cipher aes-xts-plain64",
-                "--keyfile-size 256"
+                "--keyfile-size 256",
                 "--pbkdf pbkdf2",
                 "--pbkdf-force-iterations 1000",
             )
