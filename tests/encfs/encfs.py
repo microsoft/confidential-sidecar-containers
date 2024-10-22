@@ -77,6 +77,20 @@ class CryptSetupFileSystem:
                 shell=True,
             )
             print("mounted successfully")
+
+            print("For debug only:")
+            print(f"cryptsetup luksDump {self.image_path}:")
+            self._run_command(f"cryptsetup luksDump {self.image_path}")
+            print(f"hexdump -Cs 6 -n 2 {self.image_path}:")
+            self._run_command(f"hexdump -Cs 6 -n 2 {self.image_path}")
+            print(f"hexdump -Cs 8 -n 8 {self.image_path}:")
+            self._run_command(f"hexdump -Cs 8 -n 8 {self.image_path}")
+            print(f"hexdump -Cs 4006 -n 2 {self.image_path}:")
+            self._run_command(f"hexdump -Cs 4006 -n 2 {self.image_path}")
+            print(f"hexdump -Cs 4008 -n 8 {self.image_path}:")
+            self._run_command(f"hexdump -Cs 4008 -n 8 {self.image_path}")
+            print(f"hexdump -C -n 300 {self.image_path}:")
+            self._run_command(f"hexdump -C -n 300 {self.image_path}")
             return self._dir.name
 
         except Exception:
