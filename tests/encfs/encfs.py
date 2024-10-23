@@ -33,7 +33,7 @@ class CryptSetupFileSystem:
         print("For debug only:")
         try:
             result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
-            print(f"cryptsetup luksDump {self.image_path}: {result.stdout.stdout}")
+            print(f"cryptsetup luksDump {self.image_path}: {result.stdout}")
         except Exception as e:
             print(f"error: {e}")
             print(f"cryptsetup luksDump failed: {result}")
@@ -88,7 +88,7 @@ class CryptSetupFileSystem:
             print("For debug only:")
             try:
                 result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
-                print(f"cryptsetup luksDump {self.image_path}: {result.stdout.stdout}")
+                print(f"cryptsetup luksDump {self.image_path}: {result.stdout}")
             except Exception as e:
                 print(f"error: {e}")
                 print(f"cryptsetup luksDump failed: {result}")
