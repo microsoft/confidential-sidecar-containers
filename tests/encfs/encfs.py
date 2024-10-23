@@ -35,6 +35,7 @@ class CryptSetupFileSystem:
             result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
             print(f"cryptsetup luksDump {self.image_path}: {result.stdout.stdout}")
         except Exception as e:
+            print(f"error: {e}")
             print(f"cryptsetup luksDump failed: {result}")
 
     def __init__(self, key_path, image_path):
@@ -89,6 +90,7 @@ class CryptSetupFileSystem:
                 result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
                 print(f"cryptsetup luksDump {self.image_path}: {result.stdout.stdout}")
             except Exception as e:
+                print(f"error: {e}")
                 print(f"cryptsetup luksDump failed: {result}")
             return self._dir.name
 
