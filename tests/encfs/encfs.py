@@ -95,7 +95,7 @@ class CryptSetupFileSystem:
                 print(f"hexdump -Cs 4006 -n 2 {self.image_path}: {result}")
             except Exception as e:
                 print(f"hexdump -Cs 8 -n 8 failed: {result.stderr}")
-            try
+            try:
                 result = subprocess.run(f"hexdump -Cs 4006 -n 2 {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
                 print(f"hexdump -Cs 4008 -n 8 {self.image_path}: {result}")
             except Exception as e:
