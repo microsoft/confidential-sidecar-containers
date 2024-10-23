@@ -86,10 +86,15 @@ class CryptSetupFileSystem:
                 print(f"error: {e}")
                 print(f"cryptsetup luksDump failed: {result}")
             try:
-                result = subprocess.run(f"hexdump -n 300 {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
-                print(f"hexdump -n 300 {self.image_path}: {result.stdout}")
+                result = subprocess.run(f"hexdump -n 16M {self.image_path} | sha256sum", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -n 16M {self.image_path} | sha256sum: {result.stdout}")
             except Exception as e:
-                print(f"hexdump -n 300 failed: {result.stderr}")
+                print(f"hexdump -n 16M {self.image_path} | sha256sum failed: {result.stderr}")
+            try:
+                result = subprocess.run(f"cat {self.image_path} | sha256sum", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"cat {self.image_path} | sha256sum: {result.stdout}")
+            except Exception as e:
+                print(f"cat {self.image_path} | sha256sum failed: {result.stderr}")
             return self._dir.name
 
         except Exception:
