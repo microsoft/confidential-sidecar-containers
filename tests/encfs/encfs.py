@@ -79,7 +79,11 @@ class CryptSetupFileSystem:
             print("mounted successfully")
 
             print("For debug only:")
-            print(f"cryptsetup luksDump {self.image_path}:")
+            try:
+                result = subprocess.run(f"cryptsetup --version", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"cryptsetup --version: {result.stdout}")
+            except Exception as e:
+                print(f"cryptsetup --version: {result.stderr}")
             try:
                 result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
                 print(f"cryptsetup luksDump {self.image_path}: {result.stdout.stdout}")
