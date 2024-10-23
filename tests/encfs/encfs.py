@@ -80,17 +80,35 @@ class CryptSetupFileSystem:
 
             print("For debug only:")
             print(f"cryptsetup luksDump {self.image_path}:")
-            result = subprocess.run(f"cryptsetup luksDump {self.image_path}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, input="", shell=True)
-            print(f"hexdump -Cs 6 -n 2 {self.image_path}: {result}")
-            result = subprocess.run(f"hexdump -Cs 6 -n 2 {self.image_path}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, input="", shell=True)
-            print(f"hexdump -Cs 8 -n 8 {self.image_path}: {result}")
-            result = subprocess.run(f"hexdump -Cs 8 -n 8 {self.image_path}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, input="", shell=True)
-            print(f"hexdump -Cs 4006 -n 2 {self.image_path}: {result}")
-            result = subprocess.run(f"hexdump -Cs 4006 -n 2 {self.image_path}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, input="", shell=True)
-            print(f"hexdump -Cs 4008 -n 8 {self.image_path}: {result}")
-            result = subprocess.run(f"hexdump -Cs 4008 -n 8 {self.image_path}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, input="", shell=True)
-            print(f"hexdump -C -n 300 {self.image_path}: {result}")
-            result = subprocess.run(f"hexdump -C -n 300 {self.image_path}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, input="", shell=True)
+            try:
+                result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -Cs 6 -n 2 {self.image_path}: {result.stdout}")
+            except Exception as e:
+                print(f"cryptsetup luksDump failed: {result.stderr}")
+            try:
+                result = subprocess.run(f"hexdump -Cs 6 -n 2 {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -Cs 8 -n 8 {self.image_path}: {result}")
+            except Exception as e:
+                print(f"hexdump -Cs 6 -n 2 failed: {result.stderr}")
+            try:
+                result = subprocess.run(f"hexdump -Cs 8 -n 8 {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -Cs 4006 -n 2 {self.image_path}: {result}")
+            except Exception as e:
+                print(f"hexdump -Cs 8 -n 8 failed: {result.stderr}")
+            try
+                result = subprocess.run(f"hexdump -Cs 4006 -n 2 {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -Cs 4008 -n 8 {self.image_path}: {result}")
+            except Exception as e:
+                print(f"hexdump -Cs 4006 -n 2 failed: {result.stderr}")
+            try:
+                result = subprocess.run(f"hexdump -Cs 4008 -n 8 {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -C -n 300 {self.image_path}: {result}")
+            except Exception as e:
+                print(f"hexdump -Cs 4008 -n 8 failed: {result.stderr}")
+            try:
+                result = subprocess.run(f"hexdump -C -n 300 {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
+            except Exception as e:
+                print(f"hexdump -C -n 300 failed: {result.stderr}")
             return self._dir.name
 
         except Exception:
