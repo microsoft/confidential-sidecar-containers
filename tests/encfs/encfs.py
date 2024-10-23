@@ -83,12 +83,12 @@ class CryptSetupFileSystem:
                 result = subprocess.run(f"cryptsetup --version", capture_output=True, universal_newlines=True, input="", shell=True)
                 print(f"cryptsetup --version: {result.stdout}")
             except Exception as e:
-                print(f"cryptsetup --version: {result.stderr}")
+                print(f"cryptsetup --version failed: {result.stderr}")
             try:
                 result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
                 print(f"cryptsetup luksDump {self.image_path}: {result.stdout.stdout}")
             except Exception as e:
-                print(f"cryptsetup luksDump failed: {result.stderr}")
+                print(f"cryptsetup luksDump failed: {result}")
             try:
                 result = subprocess.run(f"hexdump -Cs 6 -n 2 {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
                 print(f"hexdump -Cs 6 -n 2 {self.image_path}: {result.stdout}")
