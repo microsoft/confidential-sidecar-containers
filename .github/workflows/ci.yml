@@ -226,6 +226,11 @@ jobs:
     name: Test EncFS
     runs-on: ubuntu-latest
     steps:
+      - name: Update dependencies
+        run: |
+          sudo apt update
+          sudo apt upgrade -y
+          
       - name: Checkout
         uses: actions/checkout@v4
 
