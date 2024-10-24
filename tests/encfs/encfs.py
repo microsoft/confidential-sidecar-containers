@@ -80,11 +80,17 @@ class CryptSetupFileSystem:
 
             print("For debug only:")
             try:
+                result = subprocess.run(f"fusermount -V", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"fusermount -V: {result.stdout}")
+            except Exception as e:
+                print(f"error: {e}")
+                print(f"fusermount -V: {result.stderr}")
+            try:
                 result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
                 print(f"cryptsetup luksDump {self.image_path}: {result.stdout}")
             except Exception as e:
                 print(f"error: {e}")
-                print(f"cryptsetup luksDump failed: {result}")
+                print(f"cryptsetup luksDump failed: {result.stderr}")
             try:
                 result = subprocess.run(f"hexdump -n 16M {self.image_path} | sha256sum", capture_output=True, universal_newlines=True, input="", shell=True)
                 print(f"hexdump -n 16M {self.image_path} | sha256sum: {result.stdout}")
