@@ -229,8 +229,8 @@ jobs:
       - name: Update dependencies
         run: |
           sudo apt update
-          sudo apt upgrade -y
-          
+          sudo apt upgrade -y fusermount3
+
       - name: Checkout
         uses: actions/checkout@v4
 

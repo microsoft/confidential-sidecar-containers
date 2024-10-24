@@ -84,7 +84,7 @@ class CryptSetupFileSystem:
                 print(f"fusermount -V: {result.stdout}")
             except Exception as e:
                 print(f"error: {e}")
-                print(f"fusermount -V: {result.stderr}")
+                print(f"fusermount3 -V: {result.stderr}")
             try:
                 result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
                 print(f"cryptsetup luksDump {self.image_path}: {result.stdout}")
