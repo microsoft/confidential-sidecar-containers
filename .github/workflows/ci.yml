@@ -226,11 +226,6 @@ jobs:
     name: Test EncFS
     runs-on: ubuntu-24.04
     steps:
-      - name: Update dependencies
-        run: |
-          sudo apt update
-          sudo apt upgrade -y fuse3=3.16.2
-
       - name: Checkout
         uses: actions/checkout@v4
 
