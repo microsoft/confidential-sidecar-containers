@@ -133,6 +133,7 @@ def deploy_encfs(
                     "--container-name", container_name,
                     "--name", blob_name,
                     "--file", downloaded_blob.name,
+                    "--auth-mode", "login"
                 ])
 
                 # Calculate checksum of downloaded blob
