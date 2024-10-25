@@ -1,9 +1,7 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
-
 from contextlib import contextmanager
 import subprocess
 import tempfile
+import hashlib
 
 
 class CryptSetupFileSystem:
@@ -63,7 +61,6 @@ class CryptSetupFileSystem:
                 self.DEVICE_NAME,
                 "--key-file",
                 self.key_path,
-                # Don't use a journal to increase performance
                 "--integrity-no-journal",
                 "--persistent",
             )
@@ -77,30 +74,6 @@ class CryptSetupFileSystem:
                 shell=True,
             )
             print("mounted successfully")
-
-            print("For debug only:")
-            try:
-                result = subprocess.run(f"fusermount -V", capture_output=True, universal_newlines=True, input="", shell=True)
-                print(f"fusermount -V: {result.stdout}")
-            except Exception as e:
-                print(f"error: {e}")
-                print(f"fusermount3 -V: {result.stderr}")
-            try:
-                result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
-                print(f"cryptsetup luksDump {self.image_path}: {result.stdout}")
-            except Exception as e:
-                print(f"error: {e}")
-                print(f"cryptsetup luksDump failed: {result.stderr}")
-            try:
-                result = subprocess.run(f"hexdump -n 16M {self.image_path} | sha256sum", capture_output=True, universal_newlines=True, input="", shell=True)
-                print(f"hexdump -n 16M {self.image_path} | sha256sum: {result.stdout}")
-            except Exception as e:
-                print(f"hexdump -n 16M {self.image_path} | sha256sum failed: {result.stderr}")
-            try:
-                result = subprocess.run(f"cat {self.image_path} | sha256sum", capture_output=True, universal_newlines=True, input="", shell=True)
-                print(f"cat {self.image_path} | sha256sum: {result.stdout}")
-            except Exception as e:
-                print(f"cat {self.image_path} | sha256sum failed: {result.stderr}")
             return self._dir.name
 
         except Exception:
@@ -118,6 +91,13 @@ def deploy_encfs(
     storage_account_name: str,
     container_name: str,
 ):
+    def calculate_sha256(file_path):
+        sha256 = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                sha256.update(chunk)
+        return sha256.hexdigest()
+
     with tempfile.TemporaryDirectory() as workspace:
         with tempfile.NamedTemporaryFile(dir=workspace, prefix="key_") as key_file, \
              tempfile.NamedTemporaryFile(dir=workspace, prefix="blob_") as blob_file:
@@ -128,6 +108,11 @@ def deploy_encfs(
             with CryptSetupFileSystem(key_file.name, blob_file.name) as filesystem:
                 yield filesystem
 
+            # Calculate checksum before uploading
+            local_checksum = calculate_sha256(blob_file.name)
+            print(f"Local checksum (before upload): {local_checksum}")
+
+            # Upload the blob
             subprocess.check_call([
                 "az", "storage", "blob", "upload",
                 "--account-name", storage_account_name,
@@ -138,7 +123,24 @@ def deploy_encfs(
                 "--auth-mode", "login",
                 "--overwrite",
             ])
+            print(f"Deployed blob {blob_name} into the storage container")
 
-    print(f"Deployed blob {blob_name} into the storage container")
+            # Download blob to temporary file for verification
+            with tempfile.NamedTemporaryFile(dir=workspace, prefix="downloaded_blob_") as downloaded_blob:
+                subprocess.check_call([
+                    "az", "storage", "blob", "download",
+                    "--account-name", storage_account_name,
+                    "--container-name", container_name,
+                    "--name", blob_name,
+                    "--file", downloaded_blob.name,
+                ])
 
+                # Calculate checksum of downloaded blob
+                downloaded_checksum = calculate_sha256(downloaded_blob.name)
+                print(f"Downloaded blob checksum (after upload): {downloaded_checksum}")
 
+                # Verify that the uploaded and downloaded checksums match
+                if local_checksum != downloaded_checksum:
+                    raise ValueError("Checksum mismatch: the uploaded blob does not match the local file.")
+                else:
+                    print("Checksum verification passed: the uploaded blob matches the local file.")
