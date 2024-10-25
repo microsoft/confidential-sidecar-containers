@@ -34,7 +34,7 @@ class CryptSetupFileSystem:
         self.image_path = image_path
         self.is_open = False
         with open(image_path, "wb") as f:
-            f.seek(64 * 1024 * 1024 - 1)
+            f.seek(128 * 1024 * 1024 - 1)
             f.write(b"\0")
 
     def __enter__(self):
