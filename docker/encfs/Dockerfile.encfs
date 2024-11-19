@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/go:dev-1.22-bookworm AS build
+FROM mcr.microsoft.com/devcontainers/go:dev-1.23-bookworm AS build
 ENV PROJECT_DIR=/go/src/github.com/microsoft
 WORKDIR ${PROJECT_DIR}/confidential-sidecar-containers
 COPY . ./
