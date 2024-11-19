@@ -1,4 +1,4 @@
-cryptography==42.0.4
+cryptography==43.0.1
 requests
 grpcio
 flask
