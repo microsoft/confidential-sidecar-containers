@@ -1,8 +1,8 @@
 FROM mcr.microsoft.com/cbl-mariner/base/python:3.9
 USER root
-RUN tdnf update -y && tdnf upgrade -y && tdnf install curl && tdnf clean all
+RUN tdnf update -y && tdnf upgrade -y && tdnf install curl coreutils && tdnf clean all
 RUN pip install jwcrypto
 # create a key for attaching to our request
 RUN python3 -c "from jwcrypto import jwk; print(jwk.JWK.generate(kty='RSA', size=2048, alg='RSA256').export_private())" > rsa.jwk
 # send request to get token from MAA via SKR container
-CMD sh -c 'until curl --fail --silent http://localhost:8080/status; do sleep 5; done; curl --fail-with-body -XPOST http://localhost:8080/attest/maa -d "{\"runtime_data\":\"$(cat rsa.jwk | base64 -w 0)\", \"maa_endpoint\": \"sharedeus2.eus2.test.attest.azure.net\"}"'
+CMD sh -c 'until curl --fail --silent http://localhost:8080/status; do sleep 5; done; curl --fail-with-body -XPOST http://localhost:8080/attest/maa -d "{\"runtime_data\":\"$(cat rsa.jwk | basenc --base64url -w 0)\", \"maa_endpoint\": \"sharedeus2.eus2.test.attest.azure.net\"}"'
