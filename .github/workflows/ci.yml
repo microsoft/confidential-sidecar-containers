@@ -43,7 +43,7 @@ on:
 env:
   BASE_ID: ${{ github.run_id }}-${{ github.run_number }}-${{ inputs.location }}-${{ inputs.policy_type }}
   LOCATION: ${{ inputs.location || 'westeurope' }}
-  POLICY_TYPE: ${{ inputs.policy_type || 'generated' }}
+  POLICY_TYPE: 'debug' # ${{ inputs.policy_type || 'generated' }}
 
 jobs:
   analyze:
@@ -224,7 +224,7 @@ jobs:
 
   test-encfs:
     name: Test EncFS
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4

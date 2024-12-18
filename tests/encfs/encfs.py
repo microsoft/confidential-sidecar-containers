@@ -41,6 +41,7 @@ class CryptSetupFileSystem:
 
     def __enter__(self):
         try:
+            print("Creating encrypted filesystem")
             # Format
             self._run_command(
                 "luksFormat",
@@ -54,7 +55,7 @@ class CryptSetupFileSystem:
                 "--pbkdf pbkdf2",
                 "--pbkdf-force-iterations 1000",
             )
-
+            print("decrypting")
             # Open
             self._run_command(
                 "luksOpen",
@@ -67,7 +68,7 @@ class CryptSetupFileSystem:
                 "--persistent",
             )
             self.is_open = True
-
+            print("Formatting")
             # Mount
             subprocess.check_call(f"sudo mkfs.ext4 {self.DEVICE_NAME_PATH}", shell=True)
             self._dir = tempfile.TemporaryDirectory()
@@ -75,6 +76,59 @@ class CryptSetupFileSystem:
                 f"sudo mount -t ext4 {self.DEVICE_NAME_PATH} {self._dir.name} -o loop",
                 shell=True,
             )
+            print("mounted successfully")
+
+            print("For debug only:")
+            try:
+                result = subprocess.run(f"cryptsetup --version", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"cryptsetup --version: {result.stdout}")
+            except Exception as e:
+                print(f"error: {e}")
+                print(f"cryptsetup --version: {result.stderr}")
+            try:
+                result = subprocess.run(f"fusermount -V", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"fusermount -V: {result.stdout}")
+            except Exception as e:
+                print(f"error: {e}")
+                print(f"fusermount3 -V: {result.stderr}")
+            try:
+                result = subprocess.run(f"cryptsetup luksDump {self.image_path}", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"cryptsetup luksDump {self.image_path}: {result.stdout}")
+            except Exception as e:
+                print(f"error: {e}")
+                print(f"cryptsetup luksDump failed: {result.stderr}")
+            try:
+                result = subprocess.run(f"hexdump -n 16M {self.image_path} | sha256sum", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -n 16M {self.image_path} | sha256sum: {result.stdout}")
+            except Exception as e:
+                print(f"hexdump -n 16M {self.image_path} | sha256sum failed: {result.stderr}")
+            try:
+                result = subprocess.run(f"hexdump -C -n 4096 {self.image_path} | sha256sum", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -C -n 4096 {self.image_path} | sha256sum: {result.stdout}")
+            except Exception as e:
+                print(f"hexdump -C -n 4096 {self.image_path} | sha256sum failed: {result.stderr}")
+            try:
+                result = subprocess.run(f"hexdump -Cs 16384 -n 4096 {self.image_path} | sha256sum", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -Cs 16384 -n 4096 {self.image_path} | sha256sum: {result.stdout}")
+            except Exception as e:
+                print(f"hexdump -Cs 16384 -n 4096 {self.image_path} | sha256sum failed: {result.stderr}")
+
+            try:
+                result = subprocess.run(f"hexdump -e '16/1 \"%02x \" \"\n\"' -n 4096 {self.image_path} > header1.txt", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -e '16/1 \"%02x \" \"\n\"' -n 4096 {self.image_path} > header1.txt: {result.stdout}")
+            except Exception as e:
+                print(f"hexdump -e '16/1 \"%02x \" \"\n\"' -n 4096 {self.image_path} > header1.txt failed: {result.stderr}")
+            try:
+                result = subprocess.run(f"hexdump -e '16/1 \"%02x \" \"\n\"'  -s 16384 -n 4096 {self.image_path} > header2.txt", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"hexdump -e '16/1 \"%02x \" \"\n\"'  -s 16384 -n 4096 {self.image_path} > header2.txt: {result.stdout}")
+            except Exception as e:
+                print(f"hexdump -e '16/1 \"%02x \" \"\n\"'  -s 16384 -n 4096 {self.image_path} > header2.txt failed: {result.stderr}")
+
+            try:
+                result = subprocess.run(f"diff header1.txt header2.txt", capture_output=True, universal_newlines=True, input="", shell=True)
+                print(f"diff header1.txt header2.txt: {result.stdout}")
+            except Exception as e:
+                print(f"diff header1.txt header2.txt failed: {result.stderr}")
             return self._dir.name
 
         except Exception:
