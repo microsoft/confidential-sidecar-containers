@@ -12,6 +12,9 @@ on:
       - tools/importkey/**
       - pkg/common/akv.go
       - pkg/common/keyblob.go
+
+permissions:
+  contents: write # needed to create release
       
 env:
   GO_VERSION: "1.23.x"
@@ -44,7 +47,7 @@ jobs:
           GOARCH: amd64
   
       - name: Upload Executables
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: binaries
           path: |
@@ -59,12 +62,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: binaries
           
       - name: Publish release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           files: |
