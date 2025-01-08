@@ -372,7 +372,7 @@ func (val Node) ParseF64(ctx *Context) (float64, bool) {
 }
 
 func (val Node) ParseString(ctx *Context) (string, bool) {
-	// shoud not use AsStrRef
+	// should not use AsStrRef
 	s, ok := val.AsStr(ctx)
 	if !ok {
 		return "", false
@@ -391,7 +391,7 @@ func (val Node) ParseString(ctx *Context) (string, bool) {
 
 
 func (val Node) ParseNumber(ctx *Context) (json.Number, bool) {
-	// shoud not use AsStrRef
+	// should not use AsStrRef
 	s, ok := val.AsStr(ctx)
 	if !ok {
 		return json.Number(""), false
@@ -401,9 +401,9 @@ func (val Node) ParseNumber(ctx *Context) (json.Number, bool) {
 		return json.Number(""), true
 	}
 
-	end, err := SkipNumberFast(s, 0)
+	end, ok := SkipNumberFast(s, 0)
 	// has error or trailing chars
-	if err != nil || end != len(s) {
+	if !ok || end != len(s) {
 		return json.Number(""),  false
 	}
 	return json.Number(s), true
@@ -531,8 +531,8 @@ func (val Node) NonstrAsNumber(ctx *Context) (json.Number, bool) {
 	}
 
 	start := val.Position()
-	end, err := SkipNumberFast(ctx.Parser.Json, start)
-	if err != nil {
+	end, ok := SkipNumberFast(ctx.Parser.Json, start)
+	if !ok {
 		return "", false
 	}
 	return json.Number(ctx.Parser.Json[start:end]), true
