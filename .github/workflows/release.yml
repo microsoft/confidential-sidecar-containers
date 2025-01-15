@@ -103,7 +103,7 @@ jobs:
       - name: Generate SKR artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
-          subject-name: ${{ env.REGISTRY }}/skr:${{ github.ref_name }}
+          subject-name: ${{ env.REGISTRY }}/skr
           subject-digest: '${{steps.build-skr.outputs.digest}}'
           push-to-registry: true
 
@@ -119,7 +119,7 @@ jobs:
       - name: Generate ENCFS artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
-          subject-name: ${{ env.REGISTRY }}/encfs:${{ github.ref_name }}
+          subject-name: ${{ env.REGISTRY }}/encfs
           subject-digest: '${{steps.build-encfs.outputs.digest}}'
           push-to-registry: true
           
