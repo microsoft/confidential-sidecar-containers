@@ -4,14 +4,8 @@ on:
   push:
     branches:
       - main
-    tags:        
-      - '!main'
-    paths:
-      - .github/workflows/release.yml
-      - tools/get-snp-report/**
-      - tools/importkey/**
-      - pkg/common/akv.go
-      - pkg/common/keyblob.go
+    tags:
+      - "v*"
 
 permissions:
   id-token: write
