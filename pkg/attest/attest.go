@@ -6,7 +6,9 @@ package attest
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	"github.com/pkg/errors"
@@ -125,6 +127,18 @@ func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmI
 		return "", errors.Wrapf(err, "Failed to deserialize attestation report")
 	}
 
+	// Hack for debugging
+	(func() {
+		reportJSON, err := json.MarshalIndent(SNPReport, "", "  ")
+		if err != nil {
+			logrus.Errorf("Failed to marshal SNPReport to JSON: %v", err)
+		} else {
+			if err := os.WriteFile("/tmp/skr-report", reportJSON, 0644); err != nil {
+				logrus.Errorf("Failed to write SNPReport to /tmp/skr-report: %v", err)
+			}
+		}
+	})()
+
 	logrus.Debugf("SNP Report Reported TCB: %d\nCert Chain TCBM Value: %d\n", SNPReport.ReportedTCB, certState.Tcbm)
 
 	// At this point check that the TCB of the cert chain matches that reported so we fail early or
@@ -183,6 +197,13 @@ func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmI
 	if err != nil || maaToken == "" {
 		return "", errors.Wrapf(err, "Retrieving MAA token from MAA endpoint failed")
 	}
+
+	// Hack for debugging
+	(func() {
+		if err := os.WriteFile("/tmp/skr-maa", []byte(maaToken), 0644); err != nil {
+			logrus.Errorf("Failed to write MAA token to /tmp/skr-maatoken: %v", err)
+		}
+	})()
 
 	return maaToken, nil
 }
