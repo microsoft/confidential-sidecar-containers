@@ -7,7 +7,7 @@
 
 ### Policy generation
 
-Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group. To generate security policies, install the Azure `confcom` CLI extension by following the instructions [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples).  
+Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group. To generate security policies, install the Azure `confcom` CLI extension by following the instructions [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples).
 
 The ARM template can be used directly to generate a security policy. The following command generates a security policy and automatically injects it into the template. Make sure `--debug-mode` option is included so that the generated policy allows shelling into container to see the released key in this example. Note this should only be used for debugging and not recommended for production systems. We are going to include this option since this is an example.
 
@@ -124,10 +124,10 @@ Starting with release 2.6, we provide the importkey tool executables to remove t
 To import the key into AKV/mHSM, use the following command:
 
 ```bash
-# using wsl 
+# using wsl
 ./importkey -c importkeyconfig.json -out=true
 
-# using windows 
+# using windows
 importkey.exe -c importkeyconfig.json -out=true
 ```
 
@@ -137,7 +137,7 @@ Upon successful import completion, you should see something similar to the follo
 ```text
 [34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
 https://<mhsm-name>.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
-{"version":"0.2","anyOf":[{"authority":"<authority-url-name>","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
+{"version":"0.2","anyOf":[{"authority":"<authority-url-name>","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"},{"claim":"x-ms-sevsnpvm-vmpl","equals":"0"}]}]}
 ```
 
 In this case, use the following commands to verify the key has been successfully imported:
@@ -212,7 +212,7 @@ Once the deployment completes, the user can shell into the applicaiton container
 # ls /mnt/remote/share/
 lost+found  test.txt
 
-/ # cat /mnt/remote/share/test.txt 
+/ # cat /mnt/remote/share/test.txt
 This is a file inside the filesystem.
 ```
 

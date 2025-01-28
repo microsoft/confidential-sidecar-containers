@@ -43,6 +43,10 @@ def generate_release_policy(attestation_endpoint, host_data):
                             "claim": "x-ms-sevsnpvm-is-debuggable",
                             "equals": "false",
                         },
+                        {
+                            "claim": "x-ms-sevsnpvm-vmpl",
+                            "equals": "0"
+                        },
                     ],
                 }
             ],
