@@ -39,6 +39,10 @@ When importing a key to the key vault, a release policy is coupled with the key.
             {
                 "claim": "x-ms-sevsnpvm-is-debuggable",
                 "equals": "false"
+            },
+            {
+                "claim": "x-ms-sevsnpvm-vmpl",
+                "equals": "0"
             }
         ]
     ]
