@@ -1,4 +1,8 @@
-# Microsoft Secure Key Release (SKR) AKS Example
+# NOTE This example is for te Kata based AKS preview
+#      Today the supported GA solution for Kubernetes is to use virtual nodes.
+
+
+# Microsoft Secure Key Release (SKR) AKS Confidential Pods (ie based on Kata) Example
 
 - [Introduction](#introduction)
 - [Export Environment Variables](#export-environment-variables)

@@ -40,7 +40,7 @@ If you don't already have a valid attestation endpoint, create a [Microsoft Azur
 az attestation show --name "<ATTESTATION PROVIDER NAME>" --resource-group "<RESOURCE GROUP>"
 ```
 
-Copy the AttestURI endpoint value (sans https://) to the [Attestation Authority endpoint](importkeyconfig.json#L6) in `importkeyconfig.json` and to [SkrClientMAAEndpoint](aci-arm-template.json#L56) and [AttestClientMAAEndpoint](aci-arm-template.json#L106) in `aci-arm-template.json`.
+Copy the AttestURI endpoint value (**WITHOUT** https://) to the [Attestation Authority endpoint](importkeyconfig.json#L6) in `importkeyconfig.json` and to [SkrClientMAAEndpoint](aci-arm-template.json#L56) and [AttestClientMAAEndpoint](aci-arm-template.json#L106) in `aci-arm-template.json`.
 
 #### 2. Generate User Managed Identity
 
