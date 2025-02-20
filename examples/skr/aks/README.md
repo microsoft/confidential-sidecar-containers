@@ -2,7 +2,7 @@
 #      Today the supported GA solution for Kubernetes is to use virtual nodes on Azure Confidential Instances (https://learn.microsoft.com/en-us/azure/container-instances/container-instances-virtual-nodes)
 
 
-# Microsoft Secure Key Release (SKR) AKS Confidential Pods (ie based on Kata) Example
+# Microsoft Secure Key Release (SKR) AKS Confidential Pods (i.e. based on Kata) Example
 
 - [Introduction](#introduction)
 - [Export Environment Variables](#export-environment-variables)
