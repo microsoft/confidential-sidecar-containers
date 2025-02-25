@@ -15,7 +15,7 @@ The ARM template can be used directly to generate a security policy. The followi
 az confcom acipolicygen -a aci-skr-arm-template.json --debug-mode
 ```
 
-The ARM template file includes two entries: (i) encrypted filesystem sidecar container which whitelists the `/encfs.sh` as entry point command and the environment variable *EncfsSideCarArgs* used by the script, and (ii) an application container which whitelists a while loop command as entry point command.
+The ARM template file includes two entries: (i) encrypted filesystem sidecar container which enables the `/encfs.sh` as entry point command and the environment variable *EncfsSideCarArgs* used by the script, and (ii) an application container which enables a while loop command as entry point command.
 
 ### Step by Step Example
 
@@ -216,7 +216,7 @@ lost+found  test.txt
 This is a file inside the filesystem.
 ```
 
-Alternatively, the whitelisted command in test-encfs-container outputs the following log, which users are able to see under the Logs tab.
+Alternatively, the enabled command in test-encfs-container outputs the following log, which users are able to see under the Logs tab.
 
 ```text
 This is a file inside the filesystem.
