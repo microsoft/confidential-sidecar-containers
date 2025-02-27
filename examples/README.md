@@ -1,6 +1,6 @@
 # Azure product naming and what example to use:
 
-Today (February 2025) the production, (ie GA or "general availability") Confidential Containers solution in Azure is Confidential ACI (Azure Container Instances). It is available with two sorts of orchestration, direct ACI (create container groups one at a time and manage them youself) and with AKS using "virtual nodes on Azure Container Instances".
+Today (February 2025) the production, (ie GA or "general availability") Confidential Containers solution in Azure is Confidential ACI (Azure Container Instances). It is available with two sorts of orchestration, direct ACI (create container groups one at a time and manage them yourself) and with AKS using "virtual nodes on Azure Container Instances".
 
 There is a preview of AKS Confidential Pods which is based on the Kata scheme.
 
