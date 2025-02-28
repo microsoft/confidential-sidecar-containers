@@ -7,7 +7,8 @@ RUN cd tools/get-snp-report && make && mv bin/get-snp-report /
 RUN CGO_ENABLED=0 GOOS=linux go build -o / ./cmd/azmount
 RUN CGO_ENABLED=0 GOOS=linux go build -o / ./cmd/remotefs
 
-FROM mcr.microsoft.com/mirror/docker/library/ubuntu:24.04
+# FROM mcr.microsoft.com/mirror/docker/library/ubuntu:24.04
+FROM mcr.microsoft.com/mirror/docker/library/alpine:3.16
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt upgrade -y && apt install -y cryptsetup fuse3 curl bash jq
