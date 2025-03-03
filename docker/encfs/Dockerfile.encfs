@@ -13,7 +13,7 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 # RUN apk update && apk upgrade --no-cache && apk add --no-cache cryptsetup fuse3 curl bash jq
-RUN apt update && apt upgrade -y && apt install -y cryptsetup fuse3 curl bash jq
+RUN apt update && apt upgrade -y && apt install -y cryptsetup cryptsetup-initramfs fuse3 curl bash jq
 
 COPY --from=build /get-snp-report /azmount /remotefs ./bin/
 

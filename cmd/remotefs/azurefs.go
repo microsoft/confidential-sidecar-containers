@@ -92,7 +92,7 @@ func cryptsetupCommand(args []string) error {
 func cryptsetupOpen(source string, deviceName string, keyFilePath string) error {
 	openArgs := []string{
 		// Open device with the key passed to luksFormat
-		"open", "--type", "luks2", source, deviceName, "--key-file", keyFilePath,
+		"luksOpen", source, deviceName, "--key-file", keyFilePath,
 		// Don't use a journal to increase performance
 		"--integrity-no-journal",
 		"--persistent"}
