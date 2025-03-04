@@ -54,6 +54,7 @@ class CryptSetupFileSystem:
                 "--pbkdf pbkdf2",
                 "--pbkdf-force-iterations 1000",
             )
+            
             # Open
             self._run_command(
                 "luksOpen",
@@ -66,6 +67,7 @@ class CryptSetupFileSystem:
                 "--persistent",
             )
             self.is_open = True
+
             # Mount
             subprocess.check_call(f"sudo mkfs.ext4 {self.DEVICE_NAME_PATH}", shell=True)
             self._dir = tempfile.TemporaryDirectory()
