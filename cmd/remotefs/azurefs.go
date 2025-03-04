@@ -93,7 +93,7 @@ func cryptsetupCommand(args []string) error {
 func cryptsetupOpen(source string, deviceName string, keyFilePath string) error {
 	openArgs := []string{
 		// Open device with the key passed to luksFormat
-		"open", "--type", "luks2", source, deviceName, "--key-file", keyFilePath,
+		"open", source, deviceName, "--key-file", keyFilePath,
 		// Don't use a journal to increase performance
 		"--integrity-no-journal",
 		"--persistent"}
@@ -117,9 +117,9 @@ func cryptsetupOpenWithHeaderFile(source string, deviceName string, keyFilePath 
 	logrus.Info("Opening device with LUKS header file luksheader.img")
 	openArgs := []string{
 		// Open device with the key passed to luksFormat
-		"open", "--type", "luks2", source, deviceName, "--key-file", keyFilePath,
+		"open", source, deviceName, "--key-file", keyFilePath,
 		// Use the header file
-		"--header", "luksheader.img",
+		"--header=luksheader.img",
 		// Don't use a journal to increase performance
 		"--integrity-no-journal",
 		"--persistent"}
