@@ -8,12 +8,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o / ./cmd/azmount
 RUN CGO_ENABLED=0 GOOS=linux go build -o / ./cmd/remotefs
 
 # FROM mcr.microsoft.com/mirror/docker/library/ubuntu:24.04
-FROM ubuntu:20.04
+FROM ubuntu:18.04
 # FROM mcr.microsoft.com/mirror/docker/library/alpine:3.16
 
 ENV DEBIAN_FRONTEND=noninteractive
 # RUN apk update && apk upgrade --no-cache && apk add --no-cache cryptsetup fuse3 curl bash jq
-RUN apt update && apt upgrade -y && apt install -y cryptsetup fuse3 curl bash jq
+RUN apt update && apt upgrade -y && apt install -y cryptsetup fuse curl bash jq
 
 COPY --from=build /get-snp-report /azmount /remotefs ./bin/
 
