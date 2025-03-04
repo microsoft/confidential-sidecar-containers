@@ -63,7 +63,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
               mountPath: mount_point
             }
           ]
-          environmentVariables: [{name: 'ENCFS_MOUNT', value: mount_point}, {name: 'LogLevel', value: 'debug'}]
+          environmentVariables: [{name: 'ENCFS_MOUNT', value: mount_point}]
           resources: {
             requests: {
               memoryInGB: 4
