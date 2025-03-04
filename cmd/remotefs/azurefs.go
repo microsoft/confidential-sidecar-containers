@@ -104,6 +104,7 @@ func cryptsetupOpen(source string, deviceName string, keyFilePath string) error 
 // cryptsetupOpenWithHeaderFile runs "cryptsetup open" with the right arguments the LUKS header separated into a different file.
 func cryptsetupOpenWithHeaderFile(source string, deviceName string, keyFilePath string) error {
 	// Create a header file with the first 16MB of the device
+	logrus.Infof("Creating LUKS header file luksheader.img with the first 16MB of %s", source)
 	args := []string{
 		"-c", "16M", source, ">", "luksheader.img"}
 	cmd := exec.Command("head", args...)
@@ -111,7 +112,9 @@ func cryptsetupOpenWithHeaderFile(source string, deviceName string, keyFilePath 
 	if err != nil {
 		return errors.Wrapf(err, "failed to redirect LUKS header into a separate file: %s", string(output))
 	}
+	logrus.Info("LUKS header file created: luksheader.img")
 
+	logrus.Info("Opening device with LUKS header file luksheader.img")
 	openArgs := []string{
 		// Open device with the key passed to luksFormat
 		"open", "--type", "luks2", source, deviceName, "--key-file", keyFilePath,

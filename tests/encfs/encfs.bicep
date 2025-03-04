@@ -95,7 +95,6 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
               name: 'LogLevel'
               value: 'debug'
             }
-            
           ]
           resources: {
             requests: {
