@@ -105,7 +105,7 @@ func cryptsetupOpen(source string, deviceName string, keyFilePath string) error 
 func cryptsetupOpenWithHeaderFile(source string, deviceName string, keyFilePath string) error {
 	// Create a header file with the first 16MB of the device
 	args := []string{
-		"-c", "16M", deviceName, ">", "luksheader.img"}
+		"-c", "16M", source, ">", "luksheader.img"}
 	cmd := exec.Command("head", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

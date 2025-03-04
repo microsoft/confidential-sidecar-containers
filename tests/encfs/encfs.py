@@ -54,7 +54,6 @@ class CryptSetupFileSystem:
                 "--pbkdf pbkdf2",
                 "--pbkdf-force-iterations 1000",
             )
-            
             # Open
             self._run_command(
                 "luksOpen",
