@@ -55,9 +55,9 @@ void printBytes(const char *desc, const uint8_t *data, size_t len, bool swap)
 
     for (size_t pos = 0; pos < len; pos++) {
         fprintf(stdout, "%02x", data[swap ? len - pos - 1 : pos]);
-        if (pos % 32 == 31)
+        if (pos % 32 == 31 && pos != len - 1)
             printf("\n                        ");
-        else if (pos % 16 == 15)
+        else if (pos % 16 == 15 && pos != len - 1)
             putchar(' ');
     }
     fprintf(stdout, "\n");
@@ -74,6 +74,13 @@ void checkAllZeros(const uint8_t *data, size_t len) {
 
 void printReport(const snp_attestation_report *r)
 {
+    /*
+     * PRINT_VAL is intended to interpert the number in little endian and print
+     * the hex representation of it.  This should be used for bitfields as well
+     * as the spec orders the bits from most significant to least significant in
+     * the presented table (and when it says, for example, bits 63:6 are
+     * reserved, it means that val>>6 == 0).
+     */
     PRINT_VAL(r, version);
     PRINT_VAL(r, guest_svn);
     PRINT_VAL(r, policy);
@@ -81,9 +88,9 @@ void printReport(const snp_attestation_report *r)
     PRINT_VAL(r, image_id);
     PRINT_VAL(r, vmpl);
     PRINT_VAL(r, signature_algo);
-    PRINT_BYTES(r, current_tcb);
-    PRINT_BYTES(r, platform_info);
-    PRINT_BYTES(r, author_key_en);
+    PRINT_VAL(r, current_tcb);
+    PRINT_VAL(r, platform_info);
+    PRINT_VAL(r, author_key_en);
     PRINT_RESERVED(r, _reserved2);
     PRINT_BYTES(r, report_data);
     PRINT_BYTES(r, measurement);
@@ -98,7 +105,7 @@ void printReport(const snp_attestation_report *r)
     PRINT_VAL(r, cpuid_step);
     PRINT_RESERVED(r, _reserved3);
     PRINT_BYTES(r, chip_id);
-    PRINT_BYTES(r, committed_tcb);
+    PRINT_VAL(r, committed_tcb);
     PRINT_VAL(r, current_build);
     PRINT_VAL(r, current_minor);
     PRINT_VAL(r, current_major);
@@ -107,7 +114,7 @@ void printReport(const snp_attestation_report *r)
     PRINT_VAL(r, committed_minor);
     PRINT_VAL(r, committed_major);
     PRINT_RESERVED(r, _reserved5);
-    PRINT_BYTES(r, launch_tcb);
+    PRINT_VAL(r, launch_tcb);
     PRINT_RESERVED(r, _reserved6);
     PRINT_BYTES(r, signature);
 }
