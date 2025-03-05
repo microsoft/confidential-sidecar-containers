@@ -91,7 +91,7 @@ void printReport(const snp_attestation_report *r)
     PRINT_VAL(r, current_tcb);
     PRINT_VAL(r, platform_info);
     PRINT_VAL(r, author_key_en);
-    PRINT_RESERVED(r, _reserved2);
+    PRINT_RESERVED(r, reserved1);
     PRINT_BYTES(r, report_data);
     PRINT_BYTES(r, measurement);
     PRINT_BYTES(r, host_data);
@@ -103,18 +103,18 @@ void printReport(const snp_attestation_report *r)
     PRINT_VAL(r, cpuid_fam_id);
     PRINT_VAL(r, cpuid_mod_id);
     PRINT_VAL(r, cpuid_step);
-    PRINT_RESERVED(r, _reserved3);
+    PRINT_RESERVED(r, reserved2);
     PRINT_BYTES(r, chip_id);
     PRINT_VAL(r, committed_tcb);
     PRINT_VAL(r, current_build);
     PRINT_VAL(r, current_minor);
     PRINT_VAL(r, current_major);
-    PRINT_RESERVED(r, _reserved4);
+    PRINT_RESERVED(r, reserved3);
     PRINT_VAL(r, committed_build);
     PRINT_VAL(r, committed_minor);
     PRINT_VAL(r, committed_major);
-    PRINT_RESERVED(r, _reserved5);
+    PRINT_RESERVED(r, reserved4);
     PRINT_VAL(r, launch_tcb);
-    PRINT_RESERVED(r, _reserved6);
+    PRINT_RESERVED(r, reserved5);
     PRINT_BYTES(r, signature);
 }

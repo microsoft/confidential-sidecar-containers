@@ -32,7 +32,7 @@ typedef struct {
     uint64_t    platform_info;          // information about the platform see table 24
     uint32_t    author_key_en;          // The structure starting 48h
                                         // Note: the order of C bitfields can't be relied on.  Hence just leaving this as an uint32_t.
-    uint32_t    _reserved2;             // must be zero
+    uint32_t    reserved1;              // must be zero
     uint8_t     report_data[64];        // Guest provided data.
     uint8_t     measurement[48];        // measurement calculated at launch
     uint8_t     host_data[32];          // data provided by the hypervisor at launch
@@ -44,19 +44,19 @@ typedef struct {
     uint8_t     cpuid_fam_id;           // Family ID (Combined Extended Family ID and Family ID)
     uint8_t     cpuid_mod_id;           // Model (combined Extended Model and Model fields)
     uint8_t     cpuid_step;             // Stepping
-    uint8_t     _reserved3[21];         // reserved
+    uint8_t     reserved2[21];          // reserved
     uint8_t     chip_id[64];            // Identifier unique to the chip
     uint8_t     committed_tcb[8];       // CommittedTcb (was committed_svn)
     uint8_t     current_build;          // The build number of CurrentVersion.
     uint8_t     current_minor;          // The minor number of CurrentVersion.
     uint8_t     current_major;          // The major number of CurrentVersion.
-    uint8_t     _reserved4;             // reserved
+    uint8_t     reserved3;              // reserved
     uint8_t     committed_build;        // The build number of CommittedVersion.
     uint8_t     committed_minor;        // The minor number of CommittedVersion.
     uint8_t     committed_major;        // The major number of CommittedVersion.
-    uint8_t     _reserved5;             // reserved
+    uint8_t     reserved4;              // reserved
     uint8_t     launch_tcb[8];          // The CurrentTcb at the time the guest was launched or imported. (was launch_svn)
-    uint8_t     _reserved6[168];        // reserved
+    uint8_t     reserved5[168];         // reserved
     uint8_t     signature[512];         // Signature of this attestation report. See table 23.
 } snp_attestation_report;
 // clang-format on
