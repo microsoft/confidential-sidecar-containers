@@ -63,15 +63,6 @@ void printBytes(const char *desc, const uint8_t *data, size_t len, bool swap)
     fprintf(stdout, "\n");
 }
 
-void checkAllZeros(const uint8_t *data, size_t len) {
-    for (size_t i = 0; i < len; i++) {
-        if (data[i] != 0) {
-            fprintf(stdout, "%24s! reserved field not zero\n", "");
-            return;
-        }
-    }
-}
-
 void printReport(const snp_attestation_report *r)
 {
     /*
@@ -91,7 +82,7 @@ void printReport(const snp_attestation_report *r)
     PRINT_VAL(r, current_tcb);
     PRINT_VAL(r, platform_info);
     PRINT_VAL(r, author_key_en);
-    PRINT_RESERVED(r, reserved1);
+    PRINT_BYTES(r, reserved1);
     PRINT_BYTES(r, report_data);
     PRINT_BYTES(r, measurement);
     PRINT_BYTES(r, host_data);
@@ -103,18 +94,18 @@ void printReport(const snp_attestation_report *r)
     PRINT_VAL(r, cpuid_fam_id);
     PRINT_VAL(r, cpuid_mod_id);
     PRINT_VAL(r, cpuid_step);
-    PRINT_RESERVED(r, reserved2);
+    PRINT_BYTES(r, reserved2);
     PRINT_BYTES(r, chip_id);
     PRINT_VAL(r, committed_tcb);
     PRINT_VAL(r, current_build);
     PRINT_VAL(r, current_minor);
     PRINT_VAL(r, current_major);
-    PRINT_RESERVED(r, reserved3);
+    PRINT_BYTES(r, reserved3);
     PRINT_VAL(r, committed_build);
     PRINT_VAL(r, committed_minor);
     PRINT_VAL(r, committed_major);
-    PRINT_RESERVED(r, reserved4);
+    PRINT_BYTES(r, reserved4);
     PRINT_VAL(r, launch_tcb);
-    PRINT_RESERVED(r, reserved5);
+    PRINT_BYTES(r, reserved5);
     PRINT_BYTES(r, signature);
 }
