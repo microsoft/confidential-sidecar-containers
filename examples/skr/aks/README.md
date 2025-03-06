@@ -150,8 +150,8 @@ az identity federated-credential create --name ${FEDERATED_CREDENTIAL_IDENTITY_N
 
 In order to use grpcurl to call the exposed grpc APIs to unwrap secrets, users must build the following two images:
 
-1. The `SKR container` image that hosts grpc server. See [Dockerfile.build](../../docker/skr/Dockerfile.skr)
-2. A `example-unwrap` container image that has grpcurl installed and allows users to unwrap secrets. [Dockerfile.example](../../docker/skr/Dockerfile.example)
+1. The `SKR container` image that hosts grpc server. See [Dockerfile.build](../../../docker/skr/Dockerfile.skr)
+2. A `example-unwrap` container image that has grpcurl installed and allows users to unwrap secrets. [Dockerfile.example](../../../docker/skr/Dockerfile.example)
 
 To build the images, make sure you are in the root of confidential-sidecar-containers repo and run the following commands:
 

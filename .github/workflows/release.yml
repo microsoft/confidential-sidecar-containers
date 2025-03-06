@@ -2,16 +2,14 @@ name: Create Release
 
 on:
   push:
-    branches:
-      - main
-    tags-ignore:        
-      - 'main'
-    paths:
-      - .github/workflows/release.yml
-      - tools/get-snp-report/**
-      - tools/importkey/**
-      - pkg/common/akv.go
-      - pkg/common/keyblob.go
+    tags:
+      - "v*"
+
+permissions:
+  id-token: write
+  contents: write # needed to create release
+  attestations: write
+  packages: write
       
 env:
   GO_VERSION: "1.23.x"
@@ -44,7 +42,7 @@ jobs:
           GOARCH: amd64
   
       - name: Upload Executables
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: binaries
           path: |
@@ -58,15 +56,70 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # needed to avoid a bug where imageId and digest output are the same
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: v0.18.0
+
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: binaries
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION }}
+
+      - name: Log in to Azure Container Registry
+        run: | 
+          source cacitesting.env
+          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
+          az acr login --name $REGISTRY
+
+      - name: Publish Secure Key Release Sidecar Image
+        uses: docker/build-push-action@v6
+        id: build-skr
+        with:
+          context: ./
+          file: docker/skr/Dockerfile.skr
+          push: true
+          tags: ${{ env.REGISTRY }}/skr:${{ github.ref_name }}
+
+      - name: Generate SKR artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/skr
+          subject-digest: '${{steps.build-skr.outputs.digest}}'
+          push-to-registry: true
+
+      - name: Publish Encrypted Filesystem Sidecar Image
+        uses: docker/build-push-action@v6
+        id: build-encfs
+        with:
+          context: ./
+          file: docker/encfs/Dockerfile.encfs
+          push: true
+          tags: ${{ env.REGISTRY }}/encfs:${{ github.ref_name }}
+
+      - name: Generate ENCFS artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/encfs
+          subject-digest: '${{steps.build-encfs.outputs.digest}}'
+          push-to-registry: true
           
       - name: Publish release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2.1.0
         with:
           tag_name: ${{ github.ref_name }}
+          prerelease: ${{ contains(github.ref, 'rc') }}
           files: |
             get-snp-report
             verbose-report

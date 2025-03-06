@@ -10,8 +10,8 @@ import (
 )
 
 
-func SkipNumberFast(json string, start int) (int, error) {
-	// find the number ending, we pasred in native, it alway valid
+func SkipNumberFast(json string, start int) (int, bool) {
+	// find the number ending, we parsed in native, it always valid
 	pos := start
 	for pos < len(json) && json[pos] != ']' && json[pos] != '}' && json[pos] != ',' {
 		if json[pos] >= '0' && json[pos] <= '9' || json[pos] == '.' || json[pos] == '-' || json[pos] == '+' || json[pos] == 'e' || json[pos] == 'E' {
@@ -20,7 +20,12 @@ func SkipNumberFast(json string, start int) (int, error) {
 			break
 		}
 	}
-	return pos, nil
+
+	// if not found number, return false
+	if pos == start {
+		return pos, false
+	}
+	return pos, true
 }
 
 
@@ -35,7 +40,7 @@ func ValidNumberFast(raw string) bool {
 		return false
 	}
 
-	// check trainling chars
+	// check trailing chars
 	for ret < len(raw) {
 		return false
 	}
@@ -44,7 +49,7 @@ func ValidNumberFast(raw string) bool {
 }
 
 func SkipOneFast2(json string, pos *int) (int, error) {
-	// find the number ending, we pasred in sonic-cpp, it alway valid
+	// find the number ending, we parsed in sonic-cpp, it always valid
 	start := native.SkipOneFast(&json, pos)
 	if start < 0 {
 		return -1, error_syntax(*pos, json, types.ParsingError(-start).Error())
@@ -53,7 +58,7 @@ func SkipOneFast2(json string, pos *int) (int, error) {
 }
 
 func SkipOneFast(json string, pos int) (string, error) {
-	// find the number ending, we pasred in sonic-cpp, it alway valid
+	// find the number ending, we parsed in sonic-cpp, it always valid
 	start := native.SkipOneFast(&json, &pos)
 	if start < 0 {
 		// TODO: details error code

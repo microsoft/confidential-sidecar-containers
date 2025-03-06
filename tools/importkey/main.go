@@ -79,7 +79,7 @@ func main() {
 		fmt.Println("Error reading Azure services configuration")
 		os.Exit(1)
 	} else if err = json.Unmarshal(configBytes, importKeyCfg); err != nil {
-		fmt.Println("Error unmarshalling import key configuration " + string(configBytes))
+		fmt.Println("Error unmarshalling import key configuration: " + err.Error() + "\n" + string(configBytes))
 		os.Exit(1)
 	}
 
