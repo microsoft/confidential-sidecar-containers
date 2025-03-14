@@ -21,7 +21,7 @@
 // Prints the raw binary format of the report so it can be consumed by the tools under
 // the directory internal/guest/attestation
 int main(int argc, char *argv[])
-{    
+{
     bool success = false;
     uint8_t *snp_report_hex;
     const char *report_data_hexstring = "";
@@ -37,11 +37,12 @@ int main(int argc, char *argv[])
     } else {
         fprintf(stderr, "No supported SNP device found\n");
     }
-   
+
     if (success) {
         for (size_t i = 0; i < sizeof(snp_attestation_report); i++) {
             fprintf(stdout, "%02x", (uint8_t) snp_report_hex[i]);
         }
+        fprintf(stdout, "\n");
 
         return 0;
     }
