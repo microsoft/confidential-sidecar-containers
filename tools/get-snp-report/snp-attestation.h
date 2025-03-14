@@ -10,8 +10,7 @@
 /* essentially this is the interface to the PSP */
 
 /* from SEV-SNP Firmware ABI Specification Table 20 */
-typedef struct
-{
+typedef struct {
     uint8_t report_data[64];
     uint32_t vmpl;
     uint8_t reserved[28]; // needs to be zero
@@ -21,7 +20,7 @@ typedef struct
 
 // clang-format off
 typedef struct {
-    uint32_t    version;                // Version number of this attestation report. Set to 3h for this specification.
+    uint32_t    version;                // Version number of this attestation report. Set to 3 for the current (March 2025) specification.
     uint32_t    guest_svn;              // The guest SVN
     uint64_t    policy;                 // see table 10 - various settings
     __uint128_t family_id;              // The family ID provided at launch.
@@ -31,7 +30,7 @@ typedef struct {
     uint8_t     current_tcb[8];         // CurrentTcb (was platform_version)
     uint64_t    platform_info;          // information about the platform see table 24
     uint32_t    author_key_en;          // The structure starting 48h
-                                        // Note: the order of C bitfields can't be relied on.  Hence just leaving this as an uint32_t.
+                                        // Note: the order of C bitfields can't be relied on.  Hence this structure have to be an uint32_t.
     uint32_t    reserved1;              // must be zero
     uint8_t     report_data[64];        // Guest provided data.
     uint8_t     measurement[48];        // measurement calculated at launch
@@ -64,8 +63,7 @@ typedef struct {
 _Static_assert(sizeof(snp_attestation_report) == 0x4a0, "snp_attestation_report size does not match spec");
 
 /* from SEV-SNP Firmware ABI Specification Table 22 */
-typedef struct
-{
+typedef struct {
     uint32_t status;
     uint32_t report_size;
     uint8_t reserved[24];
