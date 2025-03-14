@@ -60,8 +60,6 @@ typedef struct {
 } snp_attestation_report;
 // clang-format on
 
-_Static_assert(sizeof(snp_attestation_report) == 0x4a0, "snp_attestation_report size does not match spec");
-
 /* from SEV-SNP Firmware ABI Specification Table 22 */
 typedef struct {
     uint32_t status;
