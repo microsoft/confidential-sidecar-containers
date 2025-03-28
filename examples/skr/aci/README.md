@@ -14,7 +14,7 @@ In our confidential container group example, we will deploy the skr sidecar alon
 
 ### Policy generation
 
-Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group. To generate security policies, install the Azure `confcom` CLI extension by following the instructions [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples).  
+Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group. To generate security policies, install the Azure `confcom` CLI extension by following the instructions [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples).
 
 The ARM template can be used directly to generate a security policy. The following command generates a security policy and automatically injects it into the template. Make sure `--debug-mode` option is included so that the generated policy allows shelling into container to see the released key in this example.
 
@@ -22,10 +22,10 @@ The ARM template can be used directly to generate a security policy. The followi
 az confcom acipolicygen -a aci-skr-arm-template.json --debug-mode
 ```
 
-The ARM template file includes three entries: (i) skr sidecar container which whitelists the /skr.sh as entry point command and the environment variable SkrSideCarArgs used by the script, (ii) attest_client container which whitelists the /tests/skr/attest_client.sh as entry point command and a set of environment variables used by the script and whose names begin with AttestClient, and  (iii) skr_client container which whitelists the /tests/skr_client.sh as entry point command and a set of environment variables used by the script and whose names begin with SkrClient.
+The ARM template file includes three entries: (i) skr sidecar container which enables the /skr.sh as entry point command and the environment variable SkrSideCarArgs used by the script, (ii) attest_client container which enables the /tests/skr/attest_client.sh as entry point command and a set of environment variables used by the script and whose names begin with AttestClient, and  (iii) skr_client container which enables the /tests/skr_client.sh as entry point command and a set of environment variables used by the script and whose names begin with SkrClient.
 Please note that:
 
-- The policy includes one entry for both attestation tests, as both tests use the same entry point and a superset of environment variables whitelisted by the AttestClient regular expression.
+- The policy includes one entry for both attestation tests, as both tests use the same entry point and a superset of environment variables enabled by the AttestClient regular expression.
 
 ### Step by Step Example
 
@@ -111,7 +111,7 @@ Upon successful import completion, you should see something similar to the follo
 ```json
 [34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
 https://<mhsm-name>.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
-{"version":"1.0.0","anyOf":[{"authority":"<authority-url-name>","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"}]}]}
+{"version":"1.0.0","anyOf":[{"authority":"<authority-url-name>","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"},{"claim":"x-ms-sevsnpvm-vmpl","equals":"0"}]}]}
 ```
 
 In this case, use the following commands to verify the key has been successfully imported:
