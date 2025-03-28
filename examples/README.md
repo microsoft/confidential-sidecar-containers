@@ -12,3 +12,4 @@ Eventually there will be specific "virtual nodes on Azure Container Instances" e
 
 The documentaion for virtual nodes on Azure Confidential Instances is at https://learn.microsoft.com/en-us/azure/container-instances/container-instances-virtual-nodes and there is a github repo with instructions and Helm charts at https://github.com/microsoft/VirtualNodesOnAzureContainerInstances
 
+How to invoke the confcom tool for virtual nodes on Azure Confidential Instances: https://github.com/Azure/azure-cli-extensions/blob/main/src/confcom/azext_confcom/README.md#aks-virtual-node
