@@ -71,10 +71,6 @@ github.com/bytedance/sonic/loader/internal/abi
 github.com/bytedance/sonic/loader/internal/iasm/expr
 github.com/bytedance/sonic/loader/internal/iasm/x86_64
 github.com/bytedance/sonic/loader/internal/rt
-# github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d
-## explicit; go 1.16
-# github.com/chenzhuoyu/iasm v0.9.1
-## explicit; go 1.16
 # github.com/cloudwego/base64x v0.1.5
 ## explicit; go 1.16
 github.com/cloudwego/base64x
@@ -82,8 +78,6 @@ github.com/cloudwego/base64x/internal/native
 github.com/cloudwego/base64x/internal/native/avx2
 github.com/cloudwego/base64x/internal/native/sse
 github.com/cloudwego/base64x/internal/rt
-# github.com/cloudwego/iasm v0.2.0
-## explicit; go 1.16
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
@@ -127,8 +121,6 @@ github.com/goccy/go-json/internal/encoder/vm_color_indent
 github.com/goccy/go-json/internal/encoder/vm_indent
 github.com/goccy/go-json/internal/errors
 github.com/goccy/go-json/internal/runtime
-# github.com/golang-jwt/jwt/v4 v4.4.2
-## explicit; go 1.16
 # github.com/golang-jwt/jwt/v5 v5.2.2
 ## explicit; go 1.18
 github.com/golang-jwt/jwt/v5
@@ -276,8 +268,6 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de
-## explicit; go 1.19
 # google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463
 ## explicit; go 1.23.0
 google.golang.org/genproto/googleapis/rpc/status
