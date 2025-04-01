@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.23.3-fips-cbl-mariner2.0 
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.24.1-fips-azurelinux3.0 
 WORKDIR /usr/src/app
 # Set environment variables for golang fips build
 # https://github.com/microsoft/go/tree/microsoft/main/eng/doc/fips#usage-build
