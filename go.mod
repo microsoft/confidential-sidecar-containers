@@ -1,8 +1,6 @@
 module github.com/Microsoft/confidential-sidecar-containers
 
-go 1.23.0
-
-toolchain go1.23.2
+go 1.24
 
 require (
 	bazil.org/fuse v0.0.0-20230120002735-62a210ff1fd5
