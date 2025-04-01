@@ -133,7 +133,7 @@ func main() {
 
 	logrus.Info("Initializing cache...")
 	if err := filemanager.InitializeCache(*blockSize*1024, *numBlocks, readWriteBool); err != nil {
-		logrus.Fatalf("Failed to initialize cache: " + err.Error())
+		logrus.Fatal("Failed to initialize cache: " + err.Error())
 	}
 
 	if *pageBlobUrl != "" {
@@ -151,7 +151,7 @@ func main() {
 		}
 
 		if err = filemanager.AzureSetup(*pageBlobUrl, pageBlobPrivateBool, identity); err != nil {
-			logrus.Fatalf("Azure connection setup error: " + err.Error())
+			logrus.Fatal("Azure connection setup error: " + err.Error())
 		}
 		logrus.Info("Azure connection set up")
 	}
@@ -159,7 +159,7 @@ func main() {
 	if *localFilePath != "" {
 		logrus.Info("Setting up local filesystem...")
 		if err = filemanager.LocalSetup(*localFilePath, readWriteBool); err != nil {
-			logrus.Fatalf("Local filesystem setup error: " + err.Error())
+			logrus.Fatal("Local filesystem setup error: " + err.Error())
 		}
 		logrus.Info("Local filesystem set up")
 	}
@@ -167,7 +167,7 @@ func main() {
 	logrus.Info("Setting up FUSE...")
 	err = FuseSetup(*mountPoint, readWriteBool)
 	if err != nil {
-		logrus.Fatalf("FUSE error: " + err.Error())
+		logrus.Fatal("FUSE error: " + err.Error())
 	}
 	logrus.Info("FUSE ended")
 }

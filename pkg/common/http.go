@@ -79,7 +79,7 @@ func HTTPResponseBody(httpResponse *http.Response) ([]byte, error) {
 		httpResponseBodyBytes, _ = io.ReadAll(io.LimitReader(httpResponse.Body, int64(respLen)))
 	}
 	if httpResponse.StatusCode < 200 || httpResponse.StatusCode > 207 {
-		return nil, errors.Wrapf(&HTTPError{httpResponse.Status}, string(httpResponseBodyBytes))
+		return nil, errors.Wrap(&HTTPError{httpResponse.Status}, string(httpResponseBodyBytes))
 	}
 	return httpResponseBodyBytes, nil
 }
