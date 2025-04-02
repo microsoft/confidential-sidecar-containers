@@ -172,7 +172,7 @@ An example `Port` value for gRPC is `50000`.
 You can run an example deployment of a confidential pod with the `SKR` container and a `example-unwrap` container that invokes the secret provisioning APIs of the `SKR` container. Use the [example pod yaml file](skr-example-template.yaml) to deploy the pod. First, create an image pull secret (this example uses an Azure Container Registry) then deploy the pod with kubectl using the following command:
 
 ```bash
-export $ACR_SECRET=<secret-name>
+export ACR_SECRET=<secret-name>
 kubectl create secret docker-registry $ACR_SECRET \
     --namespace <namespace> \
     --docker-server=<REGISTRY_NAME>.azurecr.io \
