@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attestation-container
+spec:
+  containers:
+  - command:
+    - /skr.sh
+    env:
+    - name: SkrSideCarArgs
+      value: ewogICAgImNlcnRjYWNoZSI6IHsKCQkiZW5kcG9pbnRfdHlwZSI6ICJMb2NhbFRISU0iLAoJCSJlbmRwb2ludCI6ICIxNjkuMjU0LjE2OS4yNTQvbWV0YWRhdGEvVEhJTS9hbWQvY2VydGlmaWNhdGlvbiIKCX0gIAp9
+    - name: UVM_SECURITY_CONTEXT_DIR
+      value: /opt/confidential-containers/share/kata-containers
+    - name: LogLevel
+      value: debug
+    image: mcr.microsoft.com/aci/skr:2.9
+    name: skr
+    volumeMounts:
+    - mountPath: /opt/confidential-containers/share/kata-containers/reference-info-base64
+      name: endor-loc
+  # Container runs this command: "until curl --fail --silent http://localhost:8080/status; do sleep 5; done; curl --fail-with-body -XPOST http://localhost:8080/attest/maa -d \"{\"runtime_data\":\"$(cat rsa.jwk | base64 -w 0)\", \"maa_endpoint\": \"sharedeus2.eus2.test.attest.azure.net\"}\""
+  - image: <SKR_MAA_IMAGE>
+    name: maa-token-test
+  imagePullSecrets:
+    - name: $ACR_SECRET
+  runtimeClassName: kata-cc
+  volumes:
+  - hostPath:
+      path: /opt/confidential-containers/share/kata-containers/reference-info-base64
+    name: endor-loc
