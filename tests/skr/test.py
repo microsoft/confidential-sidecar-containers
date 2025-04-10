@@ -131,71 +131,112 @@ class SkrTest(unittest.TestCase):
         )
         print(f"Response from attestation check: {attestation_resp.content}")
         assert attestation_resp.status_code == 200, attestation_resp.content.decode()
-
+        # "report": here is be a hex encoded version of the whole SNP report.
         check_report_data(
             report=json.loads(attestation_resp.content.decode())["report"],
             expected_report_data=input_report_data,
         )
 
-    def test_skr_http_attest_maa(self):
+    def test_skr_http_attest_combined(self):
 
-        test_key = json.dumps(
-            {
-                "keys": [
-                    {
-                        "key_ops": ["encrypt"],
-                        "kid": "test-key",
-                        "kty": "oct-HSM",
-                        "k": "example",
-                    }
-                ]
-            }
-        )
-
-        maa_response = requests.post(
-            url=f"http://{self.skr_ip}:8000/attest/maa",
+        input_report_data = b"EXAMPLE_COMBINED"
+        attestation_resp = requests.post(
+            url=f"http://{self.skr_ip}:8000/attest/combined",
             headers={
                 "Content-Type": "application/json",
             },
             data=json.dumps(
                 {
-                    "maa_endpoint": self.attestation_endpoint,
-                    "runtime_data": base64.urlsafe_b64encode(test_key.encode()).decode(),
+                    "runtime_data": base64.urlsafe_b64encode(
+                        input_report_data
+                    ).decode(),
                 }
             ),
         )
+        print(f"Response from combined check: {attestation_resp.content}")
+        assert attestation_resp.status_code == 200, attestation_resp.content.decode()
 
-        assert maa_response.status_code == 200, maa_response.content.decode()
-        assert json.loads(maa_response.content.decode())["token"] != ""
+        # "evidence": here is be a base64 encoded version of the whole SNP report.
+        # and will need to be made into hex to suit check_report_data
+        
+        responseCombinedJSON = json.loads(attestation_resp.content.decode())
+        print(f"JSON response: {responseCombinedJSON}")
+        reportB64 = responseCombinedJSON["evidence"]
+        print(f"Base64 report: {reportB64}")
+        reportRaw = base64.b64decode(reportB64)
+        reportHex = reportRaw.hex()
+        print(f"Hex report: {reportHex}")
+        check_report_data(
+            report=reportHex,
+            expected_report_data=input_report_data,
+        )
+
+    def test_skr_http_attest_maa(self):
+
+        if (self.attestation_endpoint != ""):
+            test_key = json.dumps(
+                {
+                    "keys": [
+                        {
+                            "key_ops": ["encrypt"],
+                            "kid": "test-key",
+                            "kty": "oct-HSM",
+                            "k": "example",
+                        }
+                    ]
+                }
+            )
+
+            maa_response = requests.post(
+                url=f"http://{self.skr_ip}:8000/attest/maa",
+                headers={
+                    "Content-Type": "application/json",
+                },
+                data=json.dumps(
+                    {
+                        "maa_endpoint": self.attestation_endpoint,
+                        "runtime_data": base64.urlsafe_b64encode(test_key.encode()).decode(),
+                    }
+                ),
+            )
+
+            assert maa_response.status_code == 200, maa_response.content.decode()
+            assert json.loads(maa_response.content.decode())["token"] != ""
+        else:
+            print("\nSkipping MAA test as no endpoint provided.\n")
 
     def test_skr_http_key_release(self):
 
-        # Deploy a Key to the mHSM
-        key_id = f"{self.id}-key"
-        with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_skr.rego")) as f:
-            deploy_key(
-                key_id=key_id,
-                attestation_endpoint=self.attestation_endpoint,
-                hsm_endpoint=self.hsm_endpoint,
-                key_data=generate_key(),
-                security_policy=f.read(),
-            )
+        if (self.attestation_endpoint != "" and self.hsm_endpoint != ""):
+            # Deploy a Key to the mHSM
+            key_id = f"{self.id}-key"
+            with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_skr.rego")) as f:
+                deploy_key(
+                    key_id=key_id,
+                    attestation_endpoint=self.attestation_endpoint,
+                    hsm_endpoint=self.hsm_endpoint,
+                    key_data=generate_key(),
+                    security_policy=f.read(),
+                )
 
-        skr_response = requests.post(
-            url=f"http://{self.skr_ip}:8000/key/release",
-            headers={
-                "Content-Type": "application/json",
-            },
-            data=json.dumps(
-                {
-                    "maa_endpoint": self.attestation_endpoint,
-                    "akv_endpoint": self.hsm_endpoint,
-                    "kid": key_id,
-                }
-            ),
-        )
-        assert skr_response.status_code == 200, skr_response.content.decode()
-        assert json.loads(json.loads(skr_response.content.decode())["key"])["k"] != ""
+            skr_response = requests.post(
+                url=f"http://{self.skr_ip}:8000/key/release",
+                headers={
+                    "Content-Type": "application/json",
+                },
+                data=json.dumps(
+                    {
+                        "maa_endpoint": self.attestation_endpoint,
+                        "akv_endpoint": self.hsm_endpoint,
+                        "kid": key_id,
+                    }
+                ),
+            )
+            assert skr_response.status_code == 200, skr_response.content.decode()
+            assert json.loads(json.loads(skr_response.content.decode())["key"])["k"] != ""
+        else:
+            print("\nSkipping Key Release test as MAA/mHSM endpoints not provided.\n")
+
 
     def test_skr_grpc_say_hello(self):
 

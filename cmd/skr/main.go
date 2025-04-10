@@ -202,6 +202,7 @@ func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo
 	server.Use(httpginendpoints.RegisterGlobalStates(certState, identity, uvmInfo))
 	server.GET("/status", httpginendpoints.GetStatus)
 	server.POST("/attest/raw", httpginendpoints.PostRawAttest)
+	server.POST("/attest/combined", httpginendpoints.PostCombinedAttest) // fetches uvm reference info, certs and attestation report in a form suitable for the Ad Selection API KMS
 	server.POST("/attest/maa", httpginendpoints.PostMAAAttest)
 	server.POST("/key/release", httpginendpoints.PostKeyRelease)
 	httpginendpoints.SetServerReady()

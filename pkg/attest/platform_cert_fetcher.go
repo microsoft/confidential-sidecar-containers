@@ -140,7 +140,7 @@ func DefaultAMDMilanCertFetcherNew() CertFetcher {
 	return CertFetcher{
 		EndpointType: "AMD",
 		Endpoint:     "kdsintf.amd.com/vcek/v1",
-		TEEType:      "Milan",
+		TEEType:      "Milan", // TODO test for Genoa case.
 		APIVersion:   "",
 		ClientID:     "",
 	}
@@ -150,7 +150,7 @@ func DefaultAMDMilanCertFetcherNew() CertFetcher {
 func DefaultAzureCertFetcherNew() CertFetcher {
 	return CertFetcher{
 		EndpointType: "AzCache",
-		Endpoint:     "global.acccache.azure.net",
+		Endpoint:     "global.acccache.azure.net", // TODO use appropriate regional endpoint (until IMDS is available for this it will need to be passed in)
 		TEEType:      "SevSnpVM",
 		APIVersion:   "api-version=2020-10-15-preview",
 		ClientID:     "clientId=ConfidentialACI",

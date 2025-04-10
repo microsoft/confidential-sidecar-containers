@@ -9,7 +9,7 @@ The code in this repository should be located at ``$GOPATH/src/microsoft/confide
 [![CI](https://github.com/microsoft/confidential-sidecar-containers/actions/workflows/ci.yml/badge.svg?branch=main&event=schedule)](https://github.com/microsoft/confidential-sidecar-containers/actions/workflows/ci.yml)
 
 Each sidecar is tested under `./tests/<sidecar_name>`.
-Each directory is tested with [confidential-aci-testing](https://github.com/microsoft/confidential-aci-testing), and therefore contains:
+Each directory is tested with [confidential-aci-testing](https://github.com/microsoft/confidential-aci-testing) currently using version 1.0.6, and therefore contains:
 
 - A `docker-compose` file which describes the images to build.
 These typically include a primary container image which uses the sidecar.
@@ -21,6 +21,9 @@ There are also supplementary files which aid the deployment:
 - `deployments/` contains bicep templates and for long lived resources used by the tests, they are run once.
 - `cacitesting.env` describes the deployment conditions such as which subscription and resource group to deploy to.
 All required properties are populated, any unset values are optional/have default values.
+Source (ie ```. ./cacitesting.env```) this file and then invoke the c-aci-testing cli to run tests.
+This example leaves the deployed C-ACI container group running so it can be manually inspected via the Azure portal:
+```c-aci-testing target run tests/skr --deployment-name combined-monday --no-cleanup --policy-type "allow_all"```
 
 ## Secure key release (SKR) sidecar
 

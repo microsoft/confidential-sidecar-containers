@@ -87,11 +87,43 @@ func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
 //	retrieval and has been reported by the PSP in the attestation report as REPORT DATA
 //
 // Note that it uses fake attestation report if it's not running inside SNP VM
+
 func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) (string, error) {
+
+	SNPReportBytes, vcekCertChain, inittimeDataBytes, uvmReferenceInfoBytes, err := certState.getCollateral(maa, runtimeDataBytes, uvmInformation)
+	if err != nil {
+		return "", err
+	}
+	// Retrieve the MAA token required by the request's MAA endpoint
+	logrus.Info("Retrieving MAA token...")
+	maaToken, err := maa.Attest(SNPReportBytes, vcekCertChain, inittimeDataBytes, runtimeDataBytes, uvmReferenceInfoBytes)
+	if err != nil || maaToken == "" {
+		if err != nil {
+			return "", errors.Wrapf(err, "Retrieving MAA token from MAA endpoint failed")
+		} else {
+			return "", errors.New("Empty MAA token string but err == nil (impossible code path)")
+		}
+	}
+
+	return maaToken, nil
+}
+
+// returns a number of byte arrays:
+//
+//  	SNPReportBytes - 		from the hardware, including the sha256 hash of runtime data provided in REPORT DATA and the hash of the
+// 						 		policy in the immutable HOST DATA
+//		vcekCertChain -        	the certificate chain that endorses the signing key of the attestation report. Note that this may be the
+// 						 		same as the one in the UVM or it may be one fetched from the cert cache service
+// 		inittimeDataBytes - 	the actual rego policy in place at the start of the UVM.
+// 		uvmReferenceInfoBytes - the COSESign1 document containing the reference information that provides evidence that the UVM image is
+// 								genuine. A relying party must check this against the launch measurement in the attestation report.
+
+func (certState *CertState) getCollateral(maa common.MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) ([]byte, []byte, []byte, []byte, error) {
+
 	logrus.Info("Decoding UVM encoded security policy...")
 	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedSecurityPolicy)
 	if err != nil {
-		return "", errors.Wrap(err, "Decoding policy from Base64 format failed")
+		return nil, nil, nil, nil, errors.Wrap(err, "Decoding policy from Base64 format failed")
 	}
 	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
 
@@ -101,7 +133,7 @@ func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmI
 		logrus.Info("Running inside SNP VM, using real attestation report fetcher...")
 		reportFetcher, err = NewAttestationReportFetcher()
 		if err != nil {
-			return "", errors.Wrapf(err, "failed to create attestation report fetcher")
+			return nil, nil, nil, nil, errors.Wrapf(err, "failed to create attestation report fetcher")
 		}
 	} else {
 		logrus.Info("Not running inside SNP VM, using fake attestation report fetcher...")
@@ -114,7 +146,7 @@ func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmI
 	logrus.Info("Fetching Attestation Report...")
 	SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
-		return "", errors.Wrapf(err, "Failed to retrieve attestation report")
+		return nil, nil, nil, nil, errors.Wrapf(err, "Failed to retrieve attestation report")
 	}
 
 	// Retrieve the certificate chain using the chip identifier and platform version
@@ -122,7 +154,7 @@ func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmI
 	var SNPReport SNPAttestationReport
 	logrus.Info("Deserializing Attestation Report...")
 	if err = SNPReport.DeserializeReport(SNPReportBytes); err != nil {
-		return "", errors.Wrapf(err, "Failed to deserialize attestation report")
+		return nil, nil, nil, nil, errors.Wrapf(err, "Failed to deserialize attestation report")
 	}
 
 	logrus.Debugf("SNP Report Reported TCB: %d\nCert Chain TCBM Value: %d\n", SNPReport.ReportedTCB, certState.Tcbm)
@@ -136,7 +168,7 @@ func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmI
 		logrus.Info("TCB values not the same, trying to refresh cert chain...")
 		vcekCertChain, err = certState.RefreshCertChain(SNPReport)
 		if err != nil {
-			return "", err
+			return nil, nil, nil, nil, err
 		}
 
 		if SNPReport.ReportedTCB != certState.Tcbm {
@@ -144,23 +176,23 @@ func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmI
 			logrus.Info("TCB values still don't match, trying to retrieve new attestation report...")
 			SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 			if err != nil {
-				return "", errors.Wrapf(err, "Failed to retrieve new attestation report")
+				return nil, nil, nil, nil, errors.Wrapf(err, "Failed to retrieve new attestation report")
 			}
 
 			if err = SNPReport.DeserializeReport(SNPReportBytes); err != nil {
-				return "", errors.Wrapf(err, "Failed to deserialize new attestation report")
+				return nil, nil, nil, nil, errors.Wrapf(err, "Failed to deserialize new attestation report")
 			}
 
 			// refresh certs again
 			logrus.Info("Refreshing cert chain again...")
 			vcekCertChain, err = certState.RefreshCertChain(SNPReport)
 			if err != nil {
-				return "", err
+				return nil, nil, nil, nil, err
 			}
 
 			// if no match after refreshing certs and attestation report, fail
 			if SNPReport.ReportedTCB != certState.Tcbm {
-				return "", errors.New(fmt.Sprintf("SNP reported TCB value: %d doesn't match Certificate TCB value: %d", SNPReport.ReportedTCB, certState.Tcbm))
+				return nil, nil, nil, nil, errors.New(fmt.Sprintf("SNP reported TCB value: %d doesn't match Certificate TCB value: %d", SNPReport.ReportedTCB, certState.Tcbm))
 			}
 		}
 	} else {
@@ -174,15 +206,8 @@ func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmI
 		uvmReferenceInfoBytes, err = base64.StdEncoding.DecodeString(uvmInformation.EncodedUvmReferenceInfo)
 	}
 	if err != nil {
-		return "", errors.Wrap(err, "Decoding UVM encoded security policy from Base64 format failed")
+		return nil, nil, nil, nil, errors.Wrap(err, "Decoding UVM encoded security policy from Base64 format failed")
 	}
 
-	// Retrieve the MAA token required by the request's MAA endpoint
-	logrus.Info("Retrieving MAA token...")
-	maaToken, err := maa.Attest(SNPReportBytes, vcekCertChain, inittimeDataBytes, runtimeDataBytes, uvmReferenceInfoBytes)
-	if err != nil || maaToken == "" {
-		return "", errors.Wrapf(err, "Retrieving MAA token from MAA endpoint failed")
-	}
-
-	return maaToken, nil
+	return SNPReportBytes, vcekCertChain, inittimeDataBytes, uvmReferenceInfoBytes, nil
 }
