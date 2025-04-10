@@ -85,6 +85,7 @@ func PostRawAttest(c *gin.Context) {
 	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInfo.EncodedSecurityPolicy)
 
 	if err != nil {
+		// TODO: review this StatusForbidden - surely should be StatusInternalServerError
 		c.JSON(http.StatusForbidden, gin.H{"error": errors.Wrap(err, "decoding policy from Base64 format failed").Error()})
 		return
 	}
@@ -111,11 +112,113 @@ func PostRawAttest(c *gin.Context) {
 
 	reportData := attest.GenerateMAAReportData(runtimeDataBytes)
 	rawReport, err := attestationReportFetcher.FetchAttestationReportHex(reportData)
+	// TODO: review this StatusForbidden - surely should be StatusInternalServerError
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"report": rawReport})
+}
+
+/*
+	As PostRawAttest but also the various certificates and the UVM reference info so as to suit the Privacy Sandbox.
+
+	see https://github.com/microsoft/azure-privacy-sandbox-kms/blob/main/test/attestation-samples/snp.json
+	{
+	"endorsed_tcb": "0300000000000873",
+	"endorsements": "base64 encoded certificate chain",
+	"evidence": "base64 encoded attestation report",
+	"uvm_endorsements": "base64 encoded uvm reference info COSESign1 document",
+	}
+
+	This is mostly easily obtainable from /security-context-* but this endpoint is provided for convenience.
+	It may also choose to do a better job of fetching the AMD erts, eg othger sources than the local THIM and with
+	better retries.
+*/
+
+type CombinedAttestationData struct {
+	// PSP TCB version
+	endorsed_tcb string `json:"endorsed_tcb"`
+	// AMD certificate chain matching the attestation report
+	endorsements string `json:"endorsements"`
+	// attestation report base64 encoded
+	evidence string `json:"evidence"`
+	// In the absence of managed identity assignment to the container group
+	// an AAD token issued for authentication with AKV resource may be included
+	// in the request to release the key.
+	uvm_endorsements string `json:"uvm_endorsements"`
+}
+
+func PostCombinedAttest(c *gin.Context) {
+	var attestData RawAttestData
+
+	// Call BindJSON to bind the received JSON to AttestData
+	if err := c.ShouldBindJSON(&attestData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format").Error()})
+		return
+	}
+
+	uvmInfo, ok := c.MustGet("uvmInfo").(*common.UvmInformation)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("uvmInfo is not set")})
+		return
+	}
+
+	// base64 decode the incoming encoded security policy
+	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInfo.EncodedSecurityPolicy)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.Wrap(err, "decoding policy from Base64 format failed").Error()})
+		return
+	}
+
+	// standard base64 decode the incoming runtime data
+	runtimeDataBytes, err := base64.StdEncoding.DecodeString(attestData.RuntimeData)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "decoding base64-encoded runtime data of request failed").Error()})
+		return
+	}
+
+	var attestationReportFetcher attest.AttestationReportFetcher
+	if attest.IsSNPVM() {
+
+		attestationReportFetcher, err = attest.NewAttestationReportFetcher()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else {
+		// Use dummy report if SEV device is not available
+		hostData := attest.GenerateMAAHostData(inittimeDataBytes)
+		attestationReportFetcher = attest.UnsafeNewFakeAttestationReportFetcher(hostData)
+	}
+
+	reportData := attest.GenerateMAAReportData(runtimeDataBytes)
+	rawReport, err := attestationReportFetcher.FetchAttestationReportByte(reportData)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	certFetcher := attest.CertFetcher{}
+	certs, err := certFetcher.GetThimCerts("")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	CombinedAttestationData := CombinedAttestationData{
+		endorsed_tcb:     certs.Tcbm,
+		endorsements:     certs.VcekCert + certs.CertificateChain, // TBC - example is three PEM certs.
+		evidence:         base64.StdEncoding.EncodeToString(rawReport),
+		uvm_endorsements: uvmInfo.EncodedUvmReferenceInfo,
+	}
+	// Encode the CombinedAttestationData struct to JSON
+	combinedAttestationDataJSON, err := json.Marshal(CombinedAttestationData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.Wrapf(err, "failed to encode combined attestation data to JSON").Error()})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"combined_report:": combinedAttestationDataJSON})
 }
 
 // PostMAAAttest retrieves an attestation token issued by Microsoft Azure Attestation
