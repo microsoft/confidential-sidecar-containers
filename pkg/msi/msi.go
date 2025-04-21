@@ -36,7 +36,7 @@ func GetAccessTokenFromFederatedToken(ctx context.Context, encodedResourceUrl st
 		return string(token), err
 	})
 
-	confidentialClient, err := confidential.New(fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/token", tenantID), clientID, cred)
+	confidentialClient, err := confidential.New(fmt.Sprintf("https://login.microsoftonline.com/%s", tenantID), clientID, cred)
 	if err != nil {
 		return "", fmt.Errorf("failed to create confidential client: %v", err)
 	}
