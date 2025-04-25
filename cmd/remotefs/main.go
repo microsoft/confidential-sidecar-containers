@@ -15,6 +15,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const ERROR_STRING = "ERROR: Please refer to the documentation for more information on how to use this sidecar.\n" +
+	"ACI: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/encfs/README.md\n" +
+	"Troubleshooting: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/encfs/TROUBLESHOOTING.md\n"
+
 type AzureInfo struct {
 	CertFetcher attest.CertFetcher `json:"certcache,omitempty"`
 	Identity    common.Identity    `json:"identity,omitempty"`
@@ -72,7 +76,7 @@ func main() {
 
 	level, err := logrus.ParseLevel(*logLevel)
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Fatalf("Failed to parse logLevel: %s\n%s", err, ERROR_STRING)
 	}
 	logrus.SetLevel(level)
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: false, DisableQuote: true, DisableTimestamp: true})
@@ -94,13 +98,13 @@ func main() {
 	// Decode information
 	bytes, err := base64.StdEncoding.DecodeString(*base64string)
 	if err != nil {
-		logrus.Fatalf("Failed to decode base64: %s", err.Error())
+		logrus.Fatalf("Failed to decode base64: %s\n%s", err.Error(), ERROR_STRING)
 	}
 
 	info := RemoteFilesystemsInformation{}
 	err = json.Unmarshal(bytes, &info)
 	if err != nil {
-		logrus.Fatalf("Failed to unmarshal base64 string: %s", err.Error())
+		logrus.Fatalf("Failed to unmarshal base64 string: %s\n%s", err.Error(), ERROR_STRING)
 	}
 
 	// populate missing attributes in KeyBlob
@@ -115,7 +119,7 @@ func main() {
 
 	err = MountAzureFilesystems(tempDir, info)
 	if err != nil {
-		logrus.Fatalf("Failed to mount filesystems: %s", err.Error())
+		logrus.Fatalf("Failed to mount filesystems: %s\n%s", err.Error(), ERROR_STRING)
 	}
 
 	os.Exit(0)

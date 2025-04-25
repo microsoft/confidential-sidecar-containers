@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	server "github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/grpcserver"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/keyprovider"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 
@@ -71,7 +71,7 @@ func main() {
 
 	level, err := logrus.ParseLevel(*logLevel)
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Fatalf("Failed to parse logLevel: %s\n%s", err, skr.ERROR_STRING)
 	}
 	logrus.SetLevel(level)
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: false, DisableQuote: true, DisableTimestamp: true})
@@ -89,29 +89,29 @@ func main() {
 	if *infile != "" {
 		bytes, err := os.ReadFile(*infile)
 		if err != nil {
-			log.Fatalf("Can't read input file %v", *infile)
+			logrus.Fatalf("Can't read input file %v\n%s", *infile, skr.ERROR_STRING)
 		}
 		if *key_path == "" {
-			log.Fatalf("The key path is not specified for wrapping")
+			logrus.Fatalf("The key path is not specified for wrapping\n%s", skr.ERROR_STRING)
 		}
 		if *outfile == "" {
-			log.Fatalf("The output file is not specified")
+			logrus.Fatalf("The output file is not specified\n%s", skr.ERROR_STRING)
 		}
 
 		if _, err := os.Stat(*key_path + "-info.json"); err != nil {
-			log.Fatalf("The wrapping key info is not found")
+			logrus.Fatalf("The wrapping key info is not found\n%s", skr.ERROR_STRING)
 		}
 
-		annotationBytes, e := server.DirectWrap(bytes, *key_path)
-		if e != nil {
-			log.Fatalf("%v", e)
+		annotationBytes, err := server.DirectWrap(bytes, *key_path)
+		if err != nil {
+			logrus.Fatalf("%v\n%s", err, skr.ERROR_STRING)
 		}
 
 		outstr := base64.StdEncoding.EncodeToString(annotationBytes)
 		if err := os.WriteFile(*outfile, []byte(outstr), 0644); err != nil {
-			log.Fatalf("Failed to save the wrapped data to %v", *outfile)
+			logrus.Fatalf("Failed to save the wrapped data to %v\n%s", *outfile, skr.ERROR_STRING)
 		}
-		log.Printf("Success! The wrapped data is saved to %v", *outfile)
+		logrus.Printf("Success! The wrapped data is saved to %v", *outfile)
 		return
 	}
 
@@ -122,12 +122,12 @@ func main() {
 	if *azureInfoBase64string != "" {
 		bytes, err := base64.StdEncoding.DecodeString(*azureInfoBase64string)
 		if err != nil {
-			logrus.Fatalf("Failed to decode base64 attestation info: %s", err.Error())
+			logrus.Fatalf("Failed to decode base64 attestation info: %s\n%s", err.Error(), skr.ERROR_STRING)
 		}
 
 		err = json.Unmarshal(bytes, &info)
 		if err != nil {
-			logrus.Fatalf("Failed to unmarshal attestion info json into AzureInformation: %s", err.Error())
+			logrus.Fatalf("Failed to unmarshal attestion info json into AzureInformation: %s\n%s", err.Error(), skr.ERROR_STRING)
 		}
 	}
 
@@ -174,17 +174,17 @@ func main() {
 	if *serverType == "grpc" {
 		lis, err := net.Listen("tcp", url)
 		if err != nil {
-			log.Fatalf("failed to listen on port %v: %v", *port, err)
+			logrus.Fatalf("failed to listen on port %v: %v\n%s", *port, err, skr.ERROR_STRING)
 		}
-		log.Printf("Listening on port %v", *port)
+		logrus.Printf("Listening on port %v", *port)
 		// start grpc server
 		s := grpc.NewServer()
 		server := server.Server{ServerCertState: &certState, EncodedUvmInformation: &EncodedUvmInformation, Azure_info: &info}
 		keyprovider.RegisterKeyProviderServiceServer(s, &server)
 		reflection.Register(s)
-		log.Printf("server listening at %v", lis.Addr())
+		logrus.Printf("server listening at %v", lis.Addr())
 		if err := s.Serve(lis); err != nil {
-			log.Fatalf("failed to start GRPC server: %v", err)
+			logrus.Fatalf("failed to start GRPC server: %v\n%s", err, skr.ERROR_STRING)
 		}
 	} else {
 		logrus.Info("Starting HTTP server...")

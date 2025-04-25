@@ -71,13 +71,13 @@ func PostRawAttest(c *gin.Context) {
 
 	// Call BindJSON to bind the received JSON to AttestData
 	if err := c.ShouldBindJSON(&attestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format").Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format\n%s", skr.ERROR_STRING).Error()})
 		return
 	}
 
 	uvmInfo, ok := c.MustGet("uvmInfo").(*common.UvmInformation)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("uvmInfo is not set")})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("uvmInfo is not set\n" + skr.ERROR_STRING)})
 		return
 	}
 
@@ -85,14 +85,14 @@ func PostRawAttest(c *gin.Context) {
 	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInfo.EncodedSecurityPolicy)
 
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": errors.Wrap(err, "decoding policy from Base64 format failed").Error()})
+		c.JSON(http.StatusForbidden, gin.H{"error": errors.Wrapf(err, "decoding policy from Base64 format failed\n%s", skr.ERROR_STRING).Error()})
 		return
 	}
 
 	// standard base64 decode the incoming runtime data
 	runtimeDataBytes, err := base64.StdEncoding.DecodeString(attestData.RuntimeData)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "decoding base64-encoded runtime data of request failed").Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "decoding base64-encoded runtime data of request failed\n%s", skr.ERROR_STRING).Error()})
 		return
 	}
 
@@ -101,7 +101,7 @@ func PostRawAttest(c *gin.Context) {
 
 		attestationReportFetcher, err = attest.NewAttestationReportFetcher()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": errors.Wrapf(err, "failure to create attestationReportFetcher\n%s", skr.ERROR_STRING).Error()})
 		}
 	} else {
 		// Use dummy report if SEV device is not available
@@ -112,7 +112,7 @@ func PostRawAttest(c *gin.Context) {
 	reportData := attest.GenerateMAAReportData(runtimeDataBytes)
 	rawReport, err := attestationReportFetcher.FetchAttestationReportHex(reportData)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		c.JSON(http.StatusForbidden, gin.H{"error": errors.Wrapf(err, "failure to fetch attestation report hex\n%s", skr.ERROR_STRING).Error()})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"report": rawReport})
@@ -129,14 +129,14 @@ func PostMAAAttest(c *gin.Context) {
 
 	// call BindJSON to bind the received JSON to AttestData
 	if err := c.ShouldBindJSON(&attestData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format").Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format\n%s", skr.ERROR_STRING).Error()})
 		return
 	}
 
 	// base64 decode the incoming runtime data
 	runtimeDataBytes, err := base64.StdEncoding.DecodeString(attestData.RuntimeData)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "decoding base64-encoded runtime data of request failed").Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "decoding base64-encoded runtime data of request failed\n%s", skr.ERROR_STRING).Error()})
 		return
 	}
 
@@ -146,25 +146,21 @@ func PostMAAAttest(c *gin.Context) {
 		APIVersion: "api-version=2020-10-01",
 	}
 
-	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-	}
-
 	certState, ok := c.MustGet("certState").(*attest.CertState)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("serverCertState is not set")})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("serverCertState is not set\n" + skr.ERROR_STRING)})
 		return
 	}
 
 	uvmInfo, ok := c.MustGet("uvmInfo").(*common.UvmInformation)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("uvmInfo is not set")})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("uvmInfo is not set\n" + skr.ERROR_STRING)})
 		return
 	}
 
 	maaToken, err := certState.Attest(maa, runtimeDataBytes, *uvmInfo)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		c.JSON(http.StatusForbidden, gin.H{"error": errors.Wrapf(err, "attestation failed\n%s", skr.ERROR_STRING).Error()})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": maaToken})
@@ -183,7 +179,7 @@ func PostKeyRelease(c *gin.Context) {
 
 	// Call BindJSON to bind the received JSON to KeyReleaseData
 	if err := c.ShouldBindJSON(&newKeyReleaseData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format")})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format\n%s", skr.ERROR_STRING)})
 		return
 	}
 
@@ -207,25 +203,25 @@ func PostKeyRelease(c *gin.Context) {
 
 	certState, ok := c.MustGet("certState").(*attest.CertState)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("serverCertState is not set")})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("serverCertState is not set\n" + skr.ERROR_STRING)})
 		return
 	}
 
 	identity, ok := c.MustGet("identity").(*common.Identity)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("workload identity is not set")})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("workload identity is not set\n" + skr.ERROR_STRING)})
 		return
 	}
 
 	uvmInfo, ok := c.MustGet("uvmInfo").(*common.UvmInformation)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("uvmInfo is not set")})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("uvmInfo is not set\n" + skr.ERROR_STRING)})
 		return
 	}
 
 	jwKey, err := skr.SecureKeyRelease(*identity, *certState, skrKeyBlob, *uvmInfo)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		c.JSON(http.StatusForbidden, gin.H{"error": errors.Wrapf(err, "secure key release failed\n%s", skr.ERROR_STRING).Error()})
 		return
 	}
 
@@ -233,7 +229,7 @@ func PostKeyRelease(c *gin.Context) {
 
 	jwkJSONBytes, err := json.Marshal(jwKey)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		c.JSON(http.StatusForbidden, gin.H{"error": errors.Wrapf(err, "json marshalling of JWK failed\n%s", skr.ERROR_STRING).Error()})
 		return
 	}
 

@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -111,7 +110,7 @@ type KeyProviderProtocolOutput struct {
 }
 
 func (s *Server) SayHello(ctx context.Context, in *keyprovider.HelloRequest) (*keyprovider.HelloReply, error) {
-	log.Printf("Received: %v", in.GetName())
+	logrus.Printf("Received: %v", in.GetName())
 	return &keyprovider.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
@@ -124,38 +123,38 @@ func directWrap(optsdata []byte, key_path string) ([]byte, error) {
 
 	var keyInfo RSAKeyInfo
 	path := key_path + "-info.json"
-	keyInfoBytes, e := os.ReadFile(path)
-	if e != nil {
-		return nil, fmt.Errorf("failed to read key info file %v", path)
+	keyInfoBytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read key info file %v\n%s", path, skr.ERROR_STRING)
 	}
 
-	err := json.Unmarshal(keyInfoBytes, &keyInfo)
+	err = json.Unmarshal(keyInfoBytes, &keyInfo)
 	if err != nil {
-		return nil, fmt.Errorf("invalid RSA key info file %v", path)
+		return nil, fmt.Errorf("invalid RSA key info file %v\n%s", path, skr.ERROR_STRING)
 	}
-	log.Printf("%v", keyInfo)
+	logrus.Printf("%v", keyInfo)
 
 	annotation.AttesterEndpoint = keyInfo.AttesterEndpoint
 	annotation.KmsEndpoint = keyInfo.KmsEndpoint
 
 	pubpem, err := os.ReadFile(keyInfo.PublicKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read public key file %v", keyInfo.PublicKeyPath)
+		return nil, fmt.Errorf("failed to read public key file %v\n%s", keyInfo.PublicKeyPath, skr.ERROR_STRING)
 	}
 	block, _ := pem.Decode([]byte(pubpem))
 	key, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("invalid public key in %v, error: %v", path, err)
+		return nil, fmt.Errorf("invalid public key in %v, error: %v\n%s", path, err, skr.ERROR_STRING)
 	}
 
 	var ciphertext []byte
 	if pubkey, ok := key.(*rsa.PublicKey); ok {
 		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, pubkey, optsdata, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt with the public key %v", err)
+			return nil, fmt.Errorf("failed to encrypt with the public key %v\n%s", err, skr.ERROR_STRING)
 		}
 	} else {
-		return nil, fmt.Errorf("invalid public RSA key in %v", path)
+		return nil, fmt.Errorf("invalid public RSA key in %v\n%s", path, skr.ERROR_STRING)
 	}
 
 	annotation.WrappedData = ciphertext
@@ -169,36 +168,36 @@ func (s *Server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKe
 	str := string(grpcInput.KeyProviderKeyWrapProtocolInput)
 	err := json.Unmarshal(grpcInput.KeyProviderKeyWrapProtocolInput, &input)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Ill-formed key provider input: %v. Error: %v", str, err.Error())
+		return nil, status.Errorf(codes.InvalidArgument, "Ill-formed key provider input: %v. Error: %v\n%s", str, err.Error(), skr.ERROR_STRING)
 	}
-	log.Printf("Key provider input: %v", input)
+	logrus.Printf("Key provider input: %v", input)
 
 	var ec = input.KeyWrapParams.Ec
 	if len(ec.Parameters["attestation-agent"]) == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "attestation-agent must be specified in the encryption config parameters: %v", ec)
+		return nil, status.Errorf(codes.InvalidArgument, "attestation-agent must be specified in the encryption config parameters: %v\n%s", ec, skr.ERROR_STRING)
 	}
 	attestationAgentKid, _ := base64.StdEncoding.DecodeString(ec.Parameters["attestation-agent"][0])
 	tokens := strings.Split(string(attestationAgentKid), ":")
 
 	if len(tokens) < 2 {
-		return nil, status.Errorf(codes.InvalidArgument, "Key id is not provided in the request")
+		return nil, status.Errorf(codes.InvalidArgument, "Key id is not provided in the request\n%s", skr.ERROR_STRING)
 	}
 
 	attestation_agent := tokens[0]
 	kid := tokens[1]
 	if !strings.EqualFold(attestation_agent, ATTESTATION_AGENT) {
-		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", attestation_agent)
+		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?\n%s", attestation_agent, skr.ERROR_STRING)
 	}
-	log.Printf("Attestation agent: %v, kid: %v", attestation_agent, kid)
+	logrus.Printf("Attestation agent: %v, kid: %v", attestation_agent, kid)
 
 	optsdata, err := base64.StdEncoding.DecodeString(input.KeyWrapParams.Optsdata)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Optsdata is not base64 encoding: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Optsdata is not base64 encoding: %v\n%s", err, skr.ERROR_STRING)
 	}
 
-	annotationBytes, e := directWrap(optsdata, kid)
-	if e != nil {
-		return nil, status.Errorf(codes.Internal, "%v", e)
+	annotationBytes, err := directWrap(optsdata, kid)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%v\n%s", err, skr.ERROR_STRING)
 	}
 
 	protocolBytes, _ := json.Marshal(KeyProviderProtocolOutput{
@@ -215,34 +214,34 @@ func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	str := string(grpcInput.KeyProviderKeyWrapProtocolInput)
 	err := json.Unmarshal(grpcInput.KeyProviderKeyWrapProtocolInput, &input)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Ill-formed key provider input: %v. Error: %v", str, err.Error())
+		return nil, status.Errorf(codes.InvalidArgument, "Ill-formed key provider input: %v. Error: %v\n%s", str, err.Error(), skr.ERROR_STRING)
 	}
-	log.Printf("Key provider input: %v", input)
+	logrus.Printf("Key provider input: %v", input)
 
 	var dc = input.KeyUnwrapParams.Dc
 	if len(dc.Parameters["attestation-agent"]) == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "attestation-agent must be specified in decryption config parameters: %v", str)
+		return nil, status.Errorf(codes.InvalidArgument, "attestation-agent must be specified in decryption config parameters: %v\n%s", str, skr.ERROR_STRING)
 	}
 	attestation_agent, _ := base64.StdEncoding.DecodeString(dc.Parameters["attestation-agent"][0])
-	log.Printf("Attestation agent name: %v", string(attestation_agent))
+	logrus.Printf("Attestation agent name: %v", string(attestation_agent))
 
 	if !strings.EqualFold(string(attestation_agent), ATTESTATION_AGENT) {
-		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?", string(attestation_agent))
+		return nil, status.Errorf(codes.InvalidArgument, "Unexpected attestation agent %v specified. Perhaps you send the request to a wrong endpoint?\n%s", string(attestation_agent), skr.ERROR_STRING)
 	}
 
 	var annotationBytes []byte
 	annotationBytes, err = base64.StdEncoding.DecodeString(input.KeyUnwrapParams.Annotation)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Annotation is not a base64 encoding: %v. Error: %v", input.KeyUnwrapParams.Annotation, err.Error())
+		return nil, status.Errorf(codes.InvalidArgument, "Annotation is not a base64 encoding: %v. Error: %v\n%s", input.KeyUnwrapParams.Annotation, err.Error(), skr.ERROR_STRING)
 	}
-	log.Printf("Decoded annotation: %v", string(annotationBytes))
+	logrus.Printf("Decoded annotation: %v", string(annotationBytes))
 
 	var annotation AnnotationPacket
 	err = json.Unmarshal(annotationBytes, &annotation)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Ill-formed annotation packet: %v. Error: %v", input.KeyUnwrapParams.Annotation, err.Error())
+		return nil, status.Errorf(codes.InvalidArgument, "Ill-formed annotation packet: %v. Error: %v\n%s", input.KeyUnwrapParams.Annotation, err.Error(), skr.ERROR_STRING)
 	}
-	log.Printf("Annotation packet: %v", annotation)
+	logrus.Printf("Annotation packet: %v", annotation)
 
 	mhsm := common.AKV{
 		Endpoint:   annotation.KmsEndpoint,
@@ -266,19 +265,19 @@ func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 	// introduce larger MAA tokens that MHSM would accept
 	keyBytes, err := skr.SecureKeyRelease((*(s.Azure_info)).Identity, *(s.ServerCertState), skrKeyBlob, *(s.EncodedUvmInformation))
 	if err != nil {
-		return nil, errors.Wrapf(err, "SKR failed")
+		return nil, errors.Wrapf(err, "SKR failed\n%s", skr.ERROR_STRING)
 	}
 	logrus.Debugf("Key released of type %s", keyBytes.KeyType())
 
 	rsaPrivatekey, err := common.RSAPrivateKeyFromJWK(&keyBytes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Released key is not a RSA private key")
+		return nil, errors.Wrapf(err, "Released key is not a RSA private key\n%s", skr.ERROR_STRING)
 	}
 
 	var plaintext []byte
 	plaintext, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, rsaPrivatekey, annotation.WrappedData, nil)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Unwrapping failed")
+		return nil, errors.Wrapf(err, "Unwrapping failed\n%s", skr.ERROR_STRING)
 	}
 
 	var protocolBytes []byte
@@ -286,7 +285,7 @@ func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 		KeyUnwrapResults: KeyUnwrapResults{OptsData: plaintext},
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "Unwrapping failed")
+		return nil, errors.Wrapf(err, "Unwrapping failed\n%s", skr.ERROR_STRING)
 	}
 
 	return &keyprovider.KeyProviderKeyWrapProtocolOutput{
@@ -296,23 +295,23 @@ func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 
 func (s *Server) GetReport(c context.Context, in *keyprovider.KeyProviderGetReportInput) (*keyprovider.KeyProviderGetReportOutput, error) {
 	reportDataStr := in.GetReportDataHexString()
-	log.Printf("Received report data: %v", reportDataStr)
+	logrus.Printf("Received report data: %v", reportDataStr)
 
 	// Fetch the attestation report
 
 	var reportFetcher attest.AttestationReportFetcher
 	if !attest.IsSNPVM() {
-		return nil, status.Error(codes.FailedPrecondition, "SEV guest driver is missing.")
+		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing.\n%s", skr.ERROR_STRING)
 	}
 	reportFetcher, err := attest.NewAttestationReportFetcher()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report, %s", err)
+		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report, %s\n%s", err, skr.ERROR_STRING)
 	}
 
 	reportData := attest.GenerateMAAReportData([]byte(reportDataStr))
 	SNPReportHex, err := reportFetcher.FetchAttestationReportHex(reportData)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report, %s", err)
+		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report, %s\n%s", err, skr.ERROR_STRING)
 	}
 
 	return &keyprovider.KeyProviderGetReportOutput{
@@ -329,38 +328,38 @@ func DirectWrap(optsdata []byte, key_path string) ([]byte, error) {
 
 	var keyInfo RSAKeyInfo
 	path := key_path + "-info.json"
-	keyInfoBytes, e := os.ReadFile(path)
-	if e != nil {
-		return nil, fmt.Errorf("failed to read key info file %v", path)
+	keyInfoBytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read key info file %v\n%s", path, skr.ERROR_STRING)
 	}
 
-	err := json.Unmarshal(keyInfoBytes, &keyInfo)
+	err = json.Unmarshal(keyInfoBytes, &keyInfo)
 	if err != nil {
-		return nil, fmt.Errorf("invalid RSA key info file %v", path)
+		return nil, fmt.Errorf("invalid RSA key info file %v\n%s", path, skr.ERROR_STRING)
 	}
-	log.Printf("%v", keyInfo)
+	logrus.Printf("%v", keyInfo)
 
 	annotation.AttesterEndpoint = keyInfo.AttesterEndpoint
 	annotation.KmsEndpoint = keyInfo.KmsEndpoint
 
 	pubpem, err := os.ReadFile(keyInfo.PublicKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read public key file %v", keyInfo.PublicKeyPath)
+		return nil, fmt.Errorf("failed to read public key file %v\n%s", keyInfo.PublicKeyPath, skr.ERROR_STRING)
 	}
 	block, _ := pem.Decode([]byte(pubpem))
 	key, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("invalid public key in %v, error: %v", path, err)
+		return nil, fmt.Errorf("invalid public key in %v, error: %v\n%s", path, err, skr.ERROR_STRING)
 	}
 
 	var ciphertext []byte
 	if pubkey, ok := key.(*rsa.PublicKey); ok {
 		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, pubkey, optsdata, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt with the public key %v", err)
+			return nil, fmt.Errorf("failed to encrypt with the public key %v\n%s", err, skr.ERROR_STRING)
 		}
 	} else {
-		return nil, fmt.Errorf("invalid public RSA key in %v", path)
+		return nil, fmt.Errorf("invalid public RSA key in %v\n%s", path, skr.ERROR_STRING)
 	}
 
 	annotation.WrappedData = ciphertext
