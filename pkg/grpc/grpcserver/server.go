@@ -320,50 +320,10 @@ func (s *Server) GetReport(c context.Context, in *keyprovider.KeyProviderGetRepo
 }
 
 func DirectWrap(optsdata []byte, key_path string) ([]byte, error) {
-	_, kid := path.Split(key_path)
-	var annotation AnnotationPacket
-	annotation.Kid = kid
-	annotation.Iv = []byte("")
-	annotation.WrapType = "rsa_3072"
-
-	var keyInfo RSAKeyInfo
-	path := key_path + "-info.json"
-	keyInfoBytes, err := os.ReadFile(path)
+	annotationBytes, err := directWrap(optsdata, key_path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read key info file %v\n%s", path, skr.ERROR_STRING)
+		return nil, fmt.Errorf("failed to wrap the data: %v\n%s", err, skr.ERROR_STRING)
 	}
-
-	err = json.Unmarshal(keyInfoBytes, &keyInfo)
-	if err != nil {
-		return nil, fmt.Errorf("invalid RSA key info file %v\n%s", path, skr.ERROR_STRING)
-	}
-	logrus.Printf("%v", keyInfo)
-
-	annotation.AttesterEndpoint = keyInfo.AttesterEndpoint
-	annotation.KmsEndpoint = keyInfo.KmsEndpoint
-
-	pubpem, err := os.ReadFile(keyInfo.PublicKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read public key file %v\n%s", keyInfo.PublicKeyPath, skr.ERROR_STRING)
-	}
-	block, _ := pem.Decode([]byte(pubpem))
-	key, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("invalid public key in %v, error: %v\n%s", path, err, skr.ERROR_STRING)
-	}
-
-	var ciphertext []byte
-	if pubkey, ok := key.(*rsa.PublicKey); ok {
-		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, pubkey, optsdata, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to encrypt with the public key %v\n%s", err, skr.ERROR_STRING)
-		}
-	} else {
-		return nil, fmt.Errorf("invalid public RSA key in %v\n%s", path, skr.ERROR_STRING)
-	}
-
-	annotation.WrappedData = ciphertext
-	annotationBytes, _ := json.Marshal(annotation)
 
 	return annotationBytes, nil
 }
