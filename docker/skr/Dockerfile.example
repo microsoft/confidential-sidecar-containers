@@ -2,8 +2,8 @@ FROM mcr.microsoft.com/cbl-mariner/base/core:2.0
 
 RUN tdnf update -y && tdnf upgrade -y && tdnf install wget curl jq tar ca-certificates -y && tdnf clean all
 
-COPY ./examples/skr/aks/unwrap.sh /bin/
-COPY ./examples/skr/aks/wrapped /
+COPY ./examples/skr/aks-kata-cc/unwrap.sh /bin/
+COPY ./examples/skr/aks-kata-cc/wrapped /
 RUN wget -q https://github.com/fullstorydev/grpcurl/releases/download/v1.8.7/grpcurl_1.8.7_linux_x86_64.tar.gz &&\
         tar xfz grpcurl_1.8.7_linux_x86_64.tar.gz &&\
         chmod +x grpcurl &&\
