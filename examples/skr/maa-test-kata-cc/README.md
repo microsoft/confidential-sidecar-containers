@@ -1,5 +1,5 @@
 # NOTE This example is for the Kata-based AKS preview
-#      Today the supported GA solution for Kubernetes is to use virtual nodes on Azure Confidential Instances (https://learn.microsoft.com/en-us/azure/container-instances/container-instances-virtual-nodes)
+# Today the supported GA solution for Kubernetes is to use virtual nodes on Azure Confidential Instances (https://learn.microsoft.com/en-us/azure/container-instances/container-instances-virtual-nodes)
 
 
 # Microsoft Secure Key Release (SKR) MAA Token Test on AKS Confidential Pods (i.e. based on Kata)
@@ -16,7 +16,8 @@
 
 This guide provides instructions on how to use the Secure Key Release (SKR) sidecar to get an attestation token from a MAA endpoint.
 
-This requires the default HTTP endpoints in SKR. Therefore, do NOT specify a port or any special environment variables, like in the [GRPC based example](../aks/skr-example-template.yaml).
+This requires the default HTTP endpoints in SKR.
+Therefore, do NOT specify a port or any special environment variables, like in the [GRPC based example](../aks/skr-example-template.yaml).
 
 ## Prerequisites
 
@@ -70,7 +71,8 @@ Replace the image value <SKR_MAA_IMAGE> in the [SKR MAA Comms YAML](skr-maa-comm
 
 ### 2. Update the YAML file
 
-If you updated the attestation endpoint in [Dockerfile.maa_test](../../../docker/skr/Dockerfile.maa_test), update the SkrSideCarArgs value to reflect that. Base64 decode the current value, update, and base64 encode with padding before replacing the value in the YAML file.
+If you updated the attestation endpoint in [Dockerfile.maa_test](../../../docker/skr/Dockerfile.maa_test), update the SkrSideCarArgs value to reflect that.
+Base64 decode the current value, update, and base64 encode with padding before replacing the value in the YAML file.
 
 Create an image pull secret (this example uses an Azure Container Registry) so that kubectl can access the images and update the YAML with the secret:
 
@@ -87,7 +89,8 @@ envsubst < skr-maa-comms-test.yaml > skr-maa-comms-test.yaml
 
 ### 3. Generate a Security Policy
 
-The YAML file can be used directly to generate a security policy. The following command generates a security policy and automatically injects it into the YAML file. 
+The YAML file can be used directly to generate a security policy.
+The following command generates a security policy and automatically injects it into the YAML file. 
 
 ```shell
 az confcom katapolicygen -y skr-maa-comms.yaml
@@ -104,13 +107,17 @@ default ReadStreamRequest := false
 
 Set these values to true.
 
-Also, find the list of allowed commands and add `/bin/sh` or `/bin/bash` to the list. See this [issue resolution](https://github.com/Azure/azure-cli-extensions/issues/8432#issuecomment-2610440277) for more information.
+Also, find the list of allowed commands and add `/bin/sh` or `/bin/bash` to the list.
+See this [issue resolution](https://github.com/Azure/azure-cli-extensions/issues/8432#issuecomment-2610440277) for more information.
 
-Then, base64 encode with padding the updated security policy. Replace the previous value in the YAML file with the updated policy.
+Then, base64 encode with padding the updated security policy.
+Replace the previous value in the YAML file with the updated policy.
 
 ### 4. Deploy
 
-You can run an example deployment of a confidential pod with the `SKR` container and a `skr-maa-comms` container that invokes the MAA endpoint of the `SKR` container. Use the [SKR MAA Comms YAML](skr-maa-comms-test.yaml) to deploy the pod. Deploy the pod with kubectl using the following command:
+You can run an example deployment of a confidential pod with the `SKR` container and a `skr-maa-comms` container that invokes the MAA endpoint of the `SKR` container.
+Use the [SKR MAA Comms YAML](skr-maa-comms-test.yaml) to deploy the pod.
+Deploy the pod with kubectl using the following command:
 
 ```bash
 kubectl apply -f skr-maa-comms-test.yaml

@@ -14,7 +14,8 @@ Generate a new bearer token and copy it into the importkeyconfig.json.
 az account get-access-token --resource https://managedhsm.azure.net
 ```
 
-If the http response status is still 401 Unauthorized, check whether the identity you logged in has access to the AKV/mHSM you tried to import keys into. Refer [here](https://github.com/microsoft/confidential-sidecar-containers/tree/main/examples/skr/aci#2-generate-user-managed-identity) on how to setup the right role access for AKV/mHSM on the managed identity. 
+If the http response status is still 401 Unauthorized, check whether the identity you logged in has access to the AKV/mHSM you tried to import keys into.
+Refer [here](https://github.com/microsoft/confidential-sidecar-containers/tree/main/examples/skr/aci#2-generate-user-managed-identity) on how to setup the right role access for AKV/mHSM on the managed identity. 
 
 ## 400 Bad Request Error 
 
@@ -31,7 +32,8 @@ This might indicate that you tried to import an rsa key as an oct key or that th
 Key not supported
 ```
 
-This means the `kty` on `importkeyconfig.json` is wrong. Currently the import key tool only supports two types of keys: `RSA-HSM` and `oct-HSM`. 
+This means the `kty` on `importkeyconfig.json` is wrong.
+Currently the import key tool only supports two types of keys: `RSA-HSM` and `oct-HSM`. 
 
 ## 403 Forbidden Error
 
@@ -88,7 +90,9 @@ Ensure that:
 
 ## "CreateContainerRequest is blocked by policy" error (Confidential Containers in AKS Only)
 
-If you are running the SKR container on Confidential Containers in AKS and the container pod does not run. Occasionally this could be caused by incorrect workload identity setup that results in empty environment variables that the container depends on. To debug, issue the following command:
+If you are running the SKR container on Confidential Containers in AKS and the container pod does not run.
+Occasionally this could be caused by incorrect workload identity setup that results in empty environment variables that the container depends on.
+To debug, issue the following command:
 
 ```bash
 # This command describes the current status of the container pod
@@ -112,7 +116,8 @@ export USER_ASSIGNED_CLIENT_ID="$(az identity show --resource-group "${RESOURCE_
 kubectl get sa <service-account-name> -n <skr-container-pod-namespace> -o yaml 
 ```
 
-Check the service account `azure.workload.identity/client-id` annotation value matches the obtained `USER_ASSIGNED_CLIENT_ID` value. If they match, check the following:
+Check the service account `azure.workload.identity/client-id` annotation value matches the obtained `USER_ASSIGNED_CLIENT_ID` value.
+If they match, check the following:
 
 ```bash
 # Obtain the AKS_OIDC_ISSUER. Replace CLUSTER_NAME and RESOURCE_GROUP with the name of the cluster skr is run and the resource group the cluster resides 
@@ -139,4 +144,5 @@ Once you have the federated identity detail, it should look something like this:
 }
 ```
 
-Make sure the issuer matches the `AKS_OIDC_ISSUER` value obtained, the subject matches the service account (especially the namespace and service account name part), and the resourceGroup matches the one where the managed identity resides. If any one of the above items does not match, please follow the guide to re-enable workload identity.
+Make sure the issuer matches the `AKS_OIDC_ISSUER` value obtained, the subject matches the service account (especially the namespace and service account name part), and the resourceGroup matches the one where the managed identity resides.
+If any one of the above items does not match, please follow the guide to re-enable workload identity.

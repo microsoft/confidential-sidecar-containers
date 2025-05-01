@@ -14,7 +14,8 @@ Generate a new bearer token and copy it into the importkeyconfig.json.
 az account get-access-token --resource https://managedhsm.azure.net
 ```
 
-If the http response status is still 401 Unauthorized, check whether the identity you logged in has access to the AKV/mHSM you tried to import keys into. Refer [here](https://github.com/microsoft/confidential-sidecar-containers/tree/main/examples/encfs#2-setup-azure-key-vault-and-generate-user-managed-identity) on how to setup the right role access for AKV/mHSM on the managed identity. 
+If the http response status is still 401 Unauthorized, check whether the identity you logged in has access to the AKV/mHSM you tried to import keys into.
+Refer [here](https://github.com/microsoft/confidential-sidecar-containers/tree/main/examples/encfs#2-setup-azure-key-vault-and-generate-user-managed-identity) on how to setup the right role access for AKV/mHSM on the managed identity. 
 
 ## 400 Bad Request Error 
 
@@ -31,7 +32,8 @@ This might indicate that you tried to import an rsa key as an oct key or that th
 Key not supported
 ```
 
-This means the `kty` on `importkeyconfig.json` is wrong. Currently the import key tool only supports two types of keys: `RSA-HSM` and `oct-HSM`. 
+This means the `kty` on `importkeyconfig.json` is wrong.
+Currently the import key tool only supports two types of keys: `RSA-HSM` and `oct-HSM`. 
 
 ## 403 Forbidden Error
 
@@ -60,7 +62,7 @@ err: pulling AKV response body failed: http response status equal to 404 Not Fou
 
 Ensure that:
 
-- the "kid" field in the importkeyconfig.json matches key "kid" field in the encfs-sidecar-args.json file that is base64-encoded in the "EncfsSideCarArgs" environment variable in the ARM template.
+- the "kid" field in the importkeyconfig.json matches key "kid" field in the encfs-sidecar-args.json file that is base64-encoded in the "EncfsSideCarArgs" environment variable in the ARM template
 - if the "kid" fields match, ensure such a key with the "kid" exists in the AKV/mHSM
 
 ## HTTP GET Failed Error
@@ -113,7 +115,8 @@ Ensure that:
 
 ## Cannot luksopen Error
 
-When checking the log output the ENCFS container, you may see the error that says "Cannot luksopen". This happens when the released key cannot be used to decrypt remote file system. One possible cause is that the oct key was imported as an rsa key. 
+When checking the log output the ENCFS container, you may see the error that says "Cannot luksopen". This happens when the released key cannot be used to decrypt remote file system.
+One possible cause is that the oct key was imported as an rsa key. 
 
 Ensure that: 
 

@@ -10,13 +10,17 @@ In our confidential container group example, we will deploy the skr sidecar alon
 - **skr sidecar.** The sidecar’s entry point is /skr.sh which uses the SkrSideCarArgs environment variable to pass the certificate cache endpoint information.
 - **attest/raw test.** The sidecar’s entry point is /tests/skr/attest_client.sh which uses the AttestClientRuntimeData environment variable to pass a blob whose sha-256 digest will be encoded in the raw attestation report as report_data.
 - **attest/maa test.** The sidecar’s entry point is /tests/skr/attest_client.sh which uses two environment variables: (i) AttestClientMAAEndpoint passes the Microsoft Azure Attestation endpoint which will author the attestation token, (ii) AttestClientRuntimeData passes a blob whose sha-256 digest will be encoded in the attestation token as runtime claim.
-- **key/release test.** The sidecar’s entry point is /tests/skr/skr_client.sh which uses the three environment variables: (i) SkrClientKID passes the key identifier of the key to be released from the key vault, (ii) SkrClientAKVEndpoint passes the key vault endpoint from which the key will be released, and (iii) SkrClientMAAEndpoint passes the Microsoft Azure Attestation endpoint shall author the attestation token required for releasing the secret. The MAA endpoint shall be the same as the one specified in the SKR policy during the key import to the key vault.
+- **key/release test.** The sidecar’s entry point is /tests/skr/skr_client.sh which uses the three environment variables: (i) SkrClientKID passes the key identifier of the key to be released from the key vault, (ii) SkrClientAKVEndpoint passes the key vault endpoint from which the key will be released, and (iii) SkrClientMAAEndpoint passes the Microsoft Azure Attestation endpoint shall author the attestation token required for releasing the secret.
+The MAA endpoint shall be the same as the one specified in the SKR policy during the key import to the key vault.
 
 ### Policy generation
 
-Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group. To generate security policies, install the Azure `confcom` CLI extension by following the instructions [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples).
+Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group.
+To generate security policies, install the Azure `confcom` CLI extension by following the instructions [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples).
 
-The ARM template can be used directly to generate a security policy. The following command generates a security policy and automatically injects it into the template. Make sure `--debug-mode` option is included so that the generated policy allows shelling into container to see the released key in this example.
+The ARM template can be used directly to generate a security policy.
+The following command generates a security policy and automatically injects it into the template.
+Make sure `--debug-mode` option is included so that the generated policy allows shelling into container to see the released key in this example.
 
 ```shell
 az confcom acipolicygen -a aci-skr-arm-template.json --debug-mode
@@ -29,8 +33,10 @@ Please note that:
 
 ### Step by Step Example
 
-Here is an example of running skr sidecar on confidential ACI. The MAA endpoint is the value of env var [`SkrClientMAAEndpoint`](aci-arm-template.json?plain=1#L55).
-The managed HSM instance endpoint corresponds to [`SkrClientAKVEndpoint`](aci-arm-template.json?plain=1#L59). We will also import a key into managed HSM under the name [`doc-sample-key-release`](aci-arm-template.json?plain=1#L64)
+Here is an example of running skr sidecar on confidential ACI.
+The MAA endpoint is the value of env var [`SkrClientMAAEndpoint`](aci-arm-template.json?plain=1#L55).
+The managed HSM instance endpoint corresponds to [`SkrClientAKVEndpoint`](aci-arm-template.json?plain=1#L59).
+We will also import a key into managed HSM under the name [`doc-sample-key-release`](aci-arm-template.json?plain=1#L64)
 
 #### 1. Obtain an Attestation Endpoint
 
@@ -46,7 +52,9 @@ Copy the AttestURI endpoint value (**WITHOUT** https://) to the [Attestation Aut
 
 The user needs to instantiate an Azure Key Vault resource that supports storing keys in an HSM: a [Premium vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview) or an [MHSM resource](https://docs.microsoft.com/en-us/azure/key-vault/managed-hsm/overview).
 
-After setting up an Azure Key Vault resource, generate a user-assigned managed identity that will be attached to the container group so that the containers have the correct access permissions to Azure services and resources. The managed identity needs *Key Vault Crypto Service Release User* role (previously  *Key Vault Crypto Officer* and *Key Vault Crypto User*) if using AKV key vault or *Managed HSM Crypto Service Release User* role (previously *Managed HSM Crypto Officer* and *Managed HSM Crypto User*) for keys if using AKV managed HSM. More information about creating identities can be found [here.](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)
+After setting up an Azure Key Vault resource, generate a user-assigned managed identity that will be attached to the container group so that the containers have the correct access permissions to Azure services and resources.
+The managed identity needs *Key Vault Crypto Service Release User* role (previously *Key Vault Crypto Officer* and *Key Vault Crypto User*) if using AKV key vault or *Managed HSM Crypto Service Release User* role (previously *Managed HSM Crypto Officer* and *Managed HSM Crypto User*) for keys if using AKV managed HSM.
+More information about creating identities can be found [here.](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/)
 
 If you already have a user-assigned managed identity with the appropriate access permissions, run the following command to list the managed identities for a resource group:
 
@@ -64,7 +72,9 @@ Replace [managed-identity-with-right-permissions-to-key-vault](aci-arm-template.
 
 #### 3. Populate Image Registry Credentials
 
-Update the [image registry credentials](aci-arm-template.json?plain=1#L123) on the ARM template in order to access a private container registry. The credential could be either a managed identity or username/password. This section is not needed for public images.
+Update the [image registry credentials](aci-arm-template.json?plain=1#L123) on the ARM template in order to access a private container registry.
+The credential could be either a managed identity or username/password.
+This section is not needed for public images.
 
 #### 4. Obtain the AAD token
 
@@ -86,7 +96,8 @@ Copy the key name into [SkrClientKID](aci-arm-template.json#L64) in the `aci-arm
 
 #### 6. Generate Security Policy
 
-At this point, the `aci-arm-template.json` file should be filled out except for the `ccepolicy` field. After installing the [Azure `confcom` CLI extension](#policy-generation), run the following command to generate the security policy and include the `--debug-mode` option so that the policy allows users to shell into the container.
+At this point, the `aci-arm-template.json` file should be filled out except for the `ccepolicy` field.
+After installing the [Azure `confcom` CLI extension](#policy-generation), run the following command to generate the security policy and include the `--debug-mode` option so that the policy allows users to shell into the container.
 
 ```shell
 az confcom acipolicygen -a aci-arm-template.json --debug-mode
@@ -94,13 +105,15 @@ az confcom acipolicygen -a aci-arm-template.json --debug-mode
 
 This should prompt you to automatically populate the [cce policy](aci-arm-template.json#L142) field of `aci-arm-template.json.`
 
-This should output the sha256 digest of the security policy. Copy it and replace the [hash-digest-of-the-security-policy](importkeyconfig.json#L22) string of the `importkeyconfig.json` file.
+This should output the sha256 digest of the security policy.
+Copy it and replace the [hash-digest-of-the-security-policy](importkeyconfig.json#L22) string of the `importkeyconfig.json` file.
 
 #### 7. Import Keys into mHSM/AKV
 
 Once the key vault resource is ready and the `importkeyconfig.json` file is completely filled out, the user can import `RSA-HSM` or `oct-HSM` keys into it using the `importkey` tool placed under `<parent_repo_dir>/tools/importkey` as discussed in the tools' [readme file](https://github.com/microsoft/confidential-sidecar-containers/tree/main/tools/importkey).
 
-A fake encryption key is used in the command below to see the key get released. To import the key into AKV/mHSM, use the following command:
+A fake encryption key is used in the command below to see the key get released.
+To import the key into AKV/mHSM, use the following command:
 
 ```go
 go run /tools/importkey/main.go -c importkeyconfig.json -kh /path/to/encryptionKeyFile
@@ -123,7 +136,10 @@ az keyvault key list --hsm-name <MHSM NAME> -o table
 
 #### 8. Deployment
 
-Go to Azure portal and click on `deploy a custom template`, then click `Build your own template in the editor`. By this time, the `aci-arm-template.json` file should be completely filled out. Copy and paste the ARM template into the field start a deployment. Once deployment is done, to verify the key has been successful released, shell into the `skr-sidecar-container` container and see the log.txt and you should see the following log message:
+Go to Azure portal and click on `deploy a custom template`, then click `Build your own template in the editor`.
+By this time, the `aci-arm-template.json` file should be completely filled out.
+Copy and paste the ARM template into the field start a deployment.
+Once deployment is done, to verify the key has been successful released, shell into the `skr-sidecar-container` container and see the log.txt and you should see the following log message:
 
 ```text
 level=debug msg=Releasing key blob: {doc-sample-key-release}

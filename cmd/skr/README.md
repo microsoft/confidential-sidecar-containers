@@ -2,13 +2,17 @@
 
 The ```skr``` tool instantiates a web server ( <http://localhost>:<port>) which exposes a REST API so that other containers can retrieve raw attestation via the `attest/raw` POST method and MAA token via the `attest/maa` POST method as well as release secrets from Azure Key Vault service via the `key/release` POST method.
 
-The tool can be executed using the script [skr.sh](https://github.com/Microsoft/confidential-sidecar-containers/blob/main//docker/skr/skr.sh). If the port number is not specified, the port will default to 8080. This script take the environment variables `SkrSideCarArgs`, `Port`, `LogFile`, and `LogLevel` and passes them into `/bin/skr` with their corresponding flags.
+The tool can be executed using the script [skr.sh](https://github.com/Microsoft/confidential-sidecar-containers/blob/main//docker/skr/skr.sh).
+If the port number is not specified, the port will default to 8080.
+This script take the environment variables `SkrSideCarArgs`, `Port`, `LogFile`, and `LogLevel` and passes them into `/bin/skr` with their corresponding flags.
 
-To use the GRPC server instead of the HTTP server, the tool can be executed using the same script [skr.sh](https://github.com/Microsoft/confidential-sidecar-containers/blob/main//docker/skr/skr.sh). But instead expecting the environment variables `Port`, `ServerType`, `LogFile`, and `LogLevel` and passes them into `/bin/skr` with their corresponding flags.
+To use the GRPC server instead of the HTTP server, the tool can be executed using the same script [skr.sh](https://github.com/Microsoft/confidential-sidecar-containers/blob/main//docker/skr/skr.sh).
+But instead expecting the environment variables `Port`, `ServerType`, `LogFile`, and `LogLevel` and passes them into `/bin/skr` with their corresponding flags.
 
 ## HTTP API
 
-The `status` GET method returns the status of the server. The response carries a `StatusOK` header and a payload of the following format:
+The `status` GET method returns the status of the server.
+The response carries a `StatusOK` header and a payload of the following format:
 
 ```json
 {
@@ -28,7 +32,9 @@ The `attest/raw` POST method expects a JSON of the following format:
 }
 ```
 
-`runtime_data` is to guarantee the freshness of the attestation report. We put the `runtime_data` in the attestation report request and then we can check the whole signed report contains the same data we just put in. This field is for preventing replay attack.
+`runtime_data` is to guarantee the freshness of the attestation report.
+We put the `runtime_data` in the attestation report request and then we can check the whole signed report contains the same data we just put in.
+This field is for preventing replay attack.
 
 Upon success, the `attest/raw` POST method response carries a `StatusOK` header and a payload of the following format:
 
@@ -98,7 +104,8 @@ Upon error, the `key/release` POST method response carries a `StatusForbidden` h
 }
 ```
 
-Additionally, the ```skr``` tool instantiates a GRPC server that can be accessed by running grpcurl commands. The GRPC server exposes the following methods:
+Additionally, the ```skr``` tool instantiates a GRPC server that can be accessed by running grpcurl commands.
+The GRPC server exposes the following methods:
 
 ## GRPC API
 
@@ -120,7 +127,8 @@ The `SayHello` method of the KeyProviderService is used to test whether APIs und
 grpcurl -v -plaintext -d '{"name":"This is a GRPC test!"}' 127.0.0.1:50000  keyprovider.KeyProviderService.SayHello
 ```
 
-The `GetReport` method of the KeyProviderService is used to get the SNP report in hex string format. Users can optionally provide `reportDataHexString` and the input will show under report data section of the SNP report.
+The `GetReport` method of the KeyProviderService is used to get the SNP report in hex string format.
+Users can optionally provide `reportDataHexString` and the input will show under report data section of the SNP report.
 
 ```bash
 grpcurl -v -plaintext -d '{"reportDataHexString":""}' 127.0.0.1:50000  keyprovider.KeyProviderService.GetReport

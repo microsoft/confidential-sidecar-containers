@@ -1,5 +1,5 @@
 # NOTE This example is for the Kata based AKS preview
-#      Today the supported GA solution for Kubernetes is to use virtual nodes on Azure Confidential Instances (https://learn.microsoft.com/en-us/azure/container-instances/container-instances-virtual-nodes)
+# Today the supported GA solution for Kubernetes is to use virtual nodes on Azure Confidential Instances (https://learn.microsoft.com/en-us/azure/container-instances/container-instances-virtual-nodes)
 
 
 # Microsoft Secure Key Release (SKR) AKS Confidential Pods (i.e. based on Kata) Example
@@ -44,18 +44,29 @@ export FEDERATED_CREDENTIAL_IDENTITY_NAME=<federated-credential-identity-name>
 Users must have a functioning mHSM to store the private key and its associated release policy.
 The release policy describes the conditions the key release request must meet in order for the mhsm to release the key.
 
-To set up a mHSM instance, follow the instructions [here with Azure CLI](https://learn.microsoft.com/en-us/azure/key-vault/managed-hsm/quick-create-cli),
-or through the [Azure portal](https://ms.portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.KeyVault%2FmanagedHSMs).
+To set up a mHSM instance, follow the instructions [here with Azure CLI](https://learn.microsoft.com/en-us/azure/key-vault/managed-hsm/quick-create-cli), or through the [Azure portal](https://ms.portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.KeyVault%2FmanagedHSMs).
 You can follow the installation instructions for Azure CLI [here](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli).
 
 ### 2. Obtain An Attestation Endpoint
 
-Below are the MAA endpoints for the four regions in which Confidential Containers on AKS is currently available.
+Below are the MAA endpoints (as of April 2025) for the four regions in which Confidential Containers on AKS is currently available.
 
 - East US: sharedeus.eus.attest.azure.net
 - West US: sharedwus.wus.attest.azure.net
 - North Europe: sharedneu.neu.attest.azure.net
 - West Europe: sharedweu.weu.attest.azure.net
+
+You can check the MAA endpoint for a given Azure region by the following command: 
+
+```pwsh
+Get-AzAttestationDefaultProvider -Location "westus" | Format-Table -Property Location, AttestUri
+```
+
+To list the MAA endpoints for every Azure region:
+
+```pwsh
+(Get-AzAttestationDefaultProvider).Value | Sort-Object Location | Format-Table -Property Location, AttestUri
+```
 
 ### 3. Generate a Key Pair
 
@@ -150,8 +161,10 @@ az identity federated-credential create --name ${FEDERATED_CREDENTIAL_IDENTITY_N
 
 In order to use grpcurl to call the exposed grpc APIs to unwrap secrets, users must build the following two images:
 
-1. The `SKR container` image that hosts grpc server. See [Dockerfile.build](../../../docker/skr/Dockerfile.skr)
-2. A `example-unwrap` container image that has grpcurl installed and allows users to unwrap secrets. [Dockerfile.example](../../../docker/skr/Dockerfile.example)
+1. The `SKR container` image that hosts grpc server.
+See [Dockerfile.build](../../../docker/skr/Dockerfile.skr)
+2. A `example-unwrap` container image that has grpcurl installed and allows users to unwrap secrets.
+See [Dockerfile.example](../../../docker/skr/Dockerfile.example)
 
 To build the images, make sure you are in the root of confidential-sidecar-containers repo and run the following commands:
 
@@ -169,7 +182,9 @@ This step ensures that the private key is securely retrieved in the SKR containe
 Note that gRPC is off by default and the environment variable `ServerType` can be set to `grpc` to enable the gRPC server and disable the HTTP server.
 An example `Port` value for gRPC is `50000`.
 
-You can run an example deployment of a confidential pod with the `SKR` container and a `example-unwrap` container that invokes the secret provisioning APIs of the `SKR` container. Use the [example pod yaml file](skr-example-template.yaml) to deploy the pod. First, create an image pull secret (this example uses an Azure Container Registry) then deploy the pod with kubectl using the following command:
+You can run an example deployment of a confidential pod with the `SKR` container and a `example-unwrap` container that invokes the secret provisioning APIs of the `SKR` container.
+Use the [example pod yaml file](skr-example-template.yaml) to deploy the pod.
+First, create an image pull secret (this example uses an Azure Container Registry) then deploy the pod with kubectl using the following command:
 
 ```bash
 export ACR_SECRET=<secret-name>
