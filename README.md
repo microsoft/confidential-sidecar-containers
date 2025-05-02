@@ -25,20 +25,25 @@ All required properties are populated, any unset values are optional/have defaul
 ## Secure key release (SKR) sidecar
 
 The ``docker/skr/build.sh`` script builds all necessary Go tools for secure key release as standalone binaries and creates a Docker image that contains them so that it can be used as a sidecar container.
-The skr sidecar container is executed by calling the script ``skr.sh``.
-More information about the skr API can be found [here](cmd/skr/README.md).
+The SKR sidecar container is executed by calling the script ``skr.sh``.
+More information about the SKR API can be found [here](cmd/skr/README.md).
 
-The skr sidecar can be queried by application containers hosted in the same pod (or container group) for retrieving attestation reports and for releasing secrets from managed HSM key vaults.
+The SKR sidecar can be queried by application containers hosted in the same pod (or container group) for retrieving attestation reports and for releasing secrets from managed HSM key vaults.
 
-The ``examples/skr`` shows an example of how the skr sidecar can be deployed and tested within a confidential container group on ACI.
+The ``examples/skr/aci`` shows an example of how the SKR sidecar can be deployed and tested within a confidential container group on ACI.
+The ``examples/skr/aks-kata-cc`` and ``examples/skr/maa-test-kata-cc`` shows examples of how the SKR sidecar can be deployed and tested in the Kata-based AKS preview.
+Additionally, the [Kafka demo](https://github.com/microsoft/confidential-container-demos/tree/main/kafka) shows an example of how SKR can be used in the Kata-based AKS preview to send encrypted messages between containers in a Kubernetes cluster using Apache Kafka.
 
-### Fetching an attestion report
+### Fetching an attestation report
 
 ``tools/get-snp-report`` provides a tool which will return an SNP attestation report from the AMD PSP via linux IOCTLs.
 It can take a hex encoded report data value on the command line.
 The output is a hex encoded binary object.
 If piped through hex2report it can be read by people.
 There are two implementations inside the one tool to support the different IOCTLs requirements between linux 5.15 and 6.1 and later.
+
+An example of a container that uses this tool in Confidential ACI is located [here](https://github.com/microsoft/confidential-container-demos/blob/main/hello-world/ACI).
+A Kata-based AKS version of this example is located [here](https://github.com/microsoft/confidential-container-demos/tree/main/hello-world/AKS).
 
 ### Third-party code
 
