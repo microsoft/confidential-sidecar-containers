@@ -1,4 +1,3 @@
-version: '3'
 services:
   proxy:
     image: $REGISTRY/skr/proxy:$TAG
