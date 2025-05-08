@@ -132,6 +132,7 @@ type CertFetcher struct {
 	Endpoint     string `json:"endpoint"`
 	TEEType      string `json:"tee_type,omitempty"`
 	APIVersion   string `json:"api_version,omitempty"`
+	ClientID     string `json:"client_id,omitempty"`
 }
 
 // Creates default AMD CertFetcher instance for Milan
@@ -141,6 +142,7 @@ func DefaultAMDMilanCertFetcherNew() CertFetcher {
 		Endpoint:     "kdsintf.amd.com/vcek/v1",
 		TEEType:      "Milan",
 		APIVersion:   "",
+		ClientID:     "",
 	}
 }
 
@@ -151,6 +153,7 @@ func DefaultAzureCertFetcherNew() CertFetcher {
 		Endpoint:     "global.acccache.azure.net",
 		TEEType:      "SevSnpVM",
 		APIVersion:   "api-version=2020-10-15-preview",
+		ClientID:     "clientId=ConfidentialACI",
 	}
 }
 
@@ -282,7 +285,13 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			return common.ConcatenateCerts(thimCerts), thimTcbm, nil
 		case "AzCache":
 			logrus.Debugf("Retrieving Cert Chain from AzCache Endpoint %s...", certFetcher.Endpoint)
-			uri = fmt.Sprintf(AzureCertCacheRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, strconv.FormatUint(reportedTCB, 16), certFetcher.APIVersion)
+			query := certFetcher.APIVersion
+			if len(certFetcher.ClientID) > 0 {
+				query += "&" + certFetcher.ClientID
+			} else {
+				logrus.Warn("No ClientID provided for AzCache cert fetcher")
+			}
+			uri = fmt.Sprintf(AzureCertCacheRequestURITemplate, certFetcher.Endpoint, certFetcher.TEEType, chipID, strconv.FormatUint(reportedTCB, 16), query)
 
 			logrus.Trace("Fetching cert chain from AzCache endpoint...")
 			certChain, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, nil)

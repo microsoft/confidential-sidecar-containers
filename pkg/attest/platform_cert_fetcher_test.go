@@ -25,6 +25,7 @@ func Test_CertFetcher(t *testing.T) {
 	ValidEndpoint := "americas.test.acccache.azure.net"
 	ValidTEEType := "SevSnpVM"
 	ValidAPIVersion := "api-version=2021-07-22-preview"
+	ClientID := "clientId=ConfidentialSidecarContainersTest"
 	ValidChipID := TestSNPReport.ChipID
 	ValidPlatformVersion := TestSNPReport.PlatformVersion
 
@@ -52,6 +53,7 @@ func Test_CertFetcher(t *testing.T) {
 				Endpoint:     ValidEndpoint,
 				TEEType:      ValidTEEType,
 				APIVersion:   ValidAPIVersion,
+				ClientID:     ClientID,
 			},
 			chipID:          ValidChipID,
 			platformVersion: ValidPlatformVersion,
@@ -67,10 +69,11 @@ func Test_CertFetcher(t *testing.T) {
 				Endpoint:     ValidEndpoint,
 				TEEType:      ValidTEEType,
 				APIVersion:   ValidAPIVersion,
+				ClientID:     ClientID,
 			},
 			chipID:          ValidChipID,
 			platformVersion: 0xdeadbeef,
-			expectedError:   errors.Errorf("pulling certchain response from AzCache URL 'https://%s/SevSnpVM/certificates/%s/deadbeef?%s' failed: GET request failed with status code 404: ", ValidEndpoint, ValidChipID, ValidAPIVersion),
+			expectedError:   errors.Errorf("pulling certchain response from AzCache URL 'https://%s/SevSnpVM/certificates/%s/deadbeef?%s&%s' failed: GET request failed with status code 404: ", ValidEndpoint, ValidChipID, ValidAPIVersion, ClientID),
 			expectErr:       true,
 		},
 		// CertFetcher_Invalid_ChipID passes if the uri associated with the requested certificate was not found
@@ -81,10 +84,11 @@ func Test_CertFetcher(t *testing.T) {
 				Endpoint:     ValidEndpoint,
 				TEEType:      ValidTEEType,
 				APIVersion:   ValidAPIVersion,
+				ClientID:     ClientID,
 			},
 			chipID:          "deadbeef",
 			platformVersion: ValidPlatformVersion,
-			expectedError:   errors.Errorf("pulling certchain response from AzCache URL 'https://%s/SevSnpVM/certificates/deadbeef/%s?%s' failed: GET request failed with status code 404: ", ValidEndpoint, strconv.FormatUint(ValidPlatformVersion, 16), ValidAPIVersion),
+			expectedError:   errors.Errorf("pulling certchain response from AzCache URL 'https://%s/SevSnpVM/certificates/deadbeef/%s?%s&%s' failed: GET request failed with status code 404: ", ValidEndpoint, strconv.FormatUint(ValidPlatformVersion, 16), ValidAPIVersion, ClientID),
 			expectErr:       true,
 		},
 		// CertFetcher_Invalid_TEEType passes if the uri associated with the requested tee_type and certificate was not found
@@ -95,10 +99,11 @@ func Test_CertFetcher(t *testing.T) {
 				Endpoint:     ValidEndpoint,
 				TEEType:      "InvalidTEEType",
 				APIVersion:   ValidAPIVersion,
+				ClientID:     ClientID,
 			},
 			chipID:          ValidChipID,
 			platformVersion: ValidPlatformVersion,
-			expectedError:   errors.Errorf("pulling certchain response from AzCache URL 'https://%s/InvalidTEEType/certificates/%s/%s?%s' failed: GET request failed with status code 404: ", ValidEndpoint, ValidChipID, strconv.FormatUint(ValidPlatformVersion, 16), ValidAPIVersion),
+			expectedError:   errors.Errorf("pulling certchain response from AzCache URL 'https://%s/InvalidTEEType/certificates/%s/%s?%s&%s' failed: GET request failed with status code 404: ", ValidEndpoint, ValidChipID, strconv.FormatUint(ValidPlatformVersion, 16), ValidAPIVersion, ClientID),
 			expectErr:       true,
 		},
 		// CertFetcher_Invalid_EndpointType passes if the uri associated with the requested tee_type and certificate was not found
@@ -109,6 +114,7 @@ func Test_CertFetcher(t *testing.T) {
 				Endpoint:     ValidEndpoint,
 				TEEType:      ValidTEEType,
 				APIVersion:   ValidAPIVersion,
+				ClientID:     ClientID,
 			},
 			chipID:          ValidChipID,
 			platformVersion: ValidPlatformVersion,

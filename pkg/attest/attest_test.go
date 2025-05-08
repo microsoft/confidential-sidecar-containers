@@ -92,6 +92,7 @@ func Test_MAA(t *testing.T) {
 		Endpoint:     "americas.test.acccache.azure.net",
 		TEEType:      "SevSnpVM",
 		APIVersion:   "api-version=2020-10-15-preview",
+		ClientID:     "clientId=ConfidentialSidecarContainersTest",
 	}
 
 	ValidCertChain, _, err := certFetcher.GetCertChain(TestSNPReport.ChipID, TestSNPReport.PlatformVersion)
@@ -104,6 +105,7 @@ func Test_MAA(t *testing.T) {
 		Endpoint:     "americas.acccache.azure.net",
 		TEEType:      "SevSnpVM",
 		APIVersion:   "api-version=2020-10-15-preview",
+		ClientID:     "clientId=ConfidentialSidecarContainersTest",
 	}
 
 	ProductionValidCertChain, _, err := ProductionCertCache.GetCertChain(ProductionTestSNPReport.ChipID, ProductionTestSNPReport.PlatformVersion)
