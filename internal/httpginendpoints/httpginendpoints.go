@@ -85,7 +85,6 @@ func PostRawAttest(c *gin.Context) {
 	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInfo.EncodedSecurityPolicy)
 
 	if err != nil {
-		// TODO: review this StatusForbidden - surely should be StatusInternalServerError
 		c.JSON(http.StatusForbidden, gin.H{"error": errors.Wrap(err, "decoding policy from Base64 format failed").Error()})
 		return
 	}
@@ -125,20 +124,26 @@ func PostRawAttest(c *gin.Context) {
 
 	see https://github.com/microsoft/azure-privacy-sandbox-kms/blob/main/test/attestation-samples/snp.json
 	{
-	"endorsed_tcb": "0300000000000873",
-	"endorsements": "base64 encoded certificate chain",
-	"evidence": "base64 encoded attestation report",
-	"uvm_endorsements": "base64 encoded uvm reference info COSESign1 document",
+	    "endorsed_tcb": "0300000000000873",
+	    "endorsements": "base64 encoded certificate chain",
+	    "evidence": "base64 encoded attestation report",
+	    "uvm_endorsements": "base64 encoded uvm reference info COSESign1 document",
 	}
 
 	This is mostly easily obtainable from /security-context-* but this endpoint is provided for convenience.
-	It may also choose to do a better job of fetching the AMD erts, eg othger sources than the local THIM and with
-	better retries.
+	It may also choose to do a better job of fetching the AMD certs, e.g. other sources than the local THIM and
+	with better retries.
+*/
+
+/*
+	Notice that the serialised names in CombinedAttestationData must follow the c++ code in the Privacy Sandbox dataplane shared
+	library. The member names must start with a capital due to the public/private convention in golang or the
+	value will not be emitted in the JSON.
 */
 
 type CombinedAttestationData struct {
 	// PSP TCB version
-	Endorsed_tcb string `json:"endorsed_tcb"`
+	EndorsedTcb string `json:"endorsed_tcb"`
 	// AMD certificate chain matching the attestation report
 	Endorsements string `json:"endorsements"`
 	// attestation report base64 encoded
@@ -146,7 +151,7 @@ type CombinedAttestationData struct {
 	// In the absence of managed identity assignment to the container group
 	// an AAD token issued for authentication with AKV resource may be included
 	// in the request to release the key.
-	Uvm_endorsements string `json:"uvm_endorsements"`
+	UvmEndorsements string `json:"uvm_endorsements"`
 }
 
 func PostCombinedAttest(c *gin.Context) {
@@ -207,10 +212,10 @@ func PostCombinedAttest(c *gin.Context) {
 	certsB64 := base64.StdEncoding.EncodeToString([]byte(certs.VcekCert + certs.CertificateChain))
 
 	combinedAttestationData := CombinedAttestationData{
-		Endorsed_tcb:     certs.Tcbm,
-		Endorsements:     certsB64,
-		Evidence:         base64.StdEncoding.EncodeToString(rawReport),
-		Uvm_endorsements: uvmInfo.EncodedUvmReferenceInfo,
+		EndorsedTcb:		certs.Tcbm,
+		Endorsements:		certsB64,
+		Evidence:			base64.StdEncoding.EncodeToString(rawReport),
+		UvmEndorsements:	uvmInfo.EncodedUvmReferenceInfo,
 	}
 
 	// Encode the CombinedAttestationData struct to JSON

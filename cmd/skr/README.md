@@ -20,7 +20,7 @@ The `status` GET method returns the status of the server. The response carries a
 }
 ```
 
-The `attest/raw` POST method expects a JSON of the following format:
+The `attest/raw` and `attest/combined` POST methods expect JSON of the following format:
 
 ```json
 {
@@ -37,8 +37,18 @@ Upon success, the `attest/raw` POST method response carries a `StatusOK` header 
     "report": "<hex format of raw hardware attestation report>"
 }
 ```
+The `attest/combined` response payload contains all the fields required to support a full key release.
 
-Upon error, the `attest/raw` POST method response carries a `BadRequest` or `StatusForbidden` header and a payload of the following format:
+```json
+{
+	"endorsed_tcb": "64 bit hex encoded TCB field",
+	"endorsements": "base64 encoded certificate chain",
+	"evidence": "base64 encoded attestation report",
+	"uvm_endorsements": "base64 encoded uvm reference info COSESign1 document",
+}
+```
+
+Upon error, the `attest/raw` and `attest/combined` POST methods response carry a `BadRequest` or `StatusForbidden` header and a payload of the following format:
 
 ```json
 {

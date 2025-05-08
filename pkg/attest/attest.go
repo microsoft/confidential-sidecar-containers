@@ -73,7 +73,6 @@ func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
 	return hostData
 }
 
-
 // Attest interacts with maa services to fetch an MAA token
 // MAA expects four attributes:
 // (A) the attestation report signed by the PSP signing key
@@ -92,14 +91,18 @@ func GenerateMAAHostData(inputBytes []byte) [HOST_DATA_SIZE]byte {
 func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) (string, error) {
 
 	SNPReportBytes, vcekCertChain, inittimeDataBytes, uvmReferenceInfoBytes, err := certState.getCollateral(maa, runtimeDataBytes, uvmInformation)
-	if (err != nil) {
+	if err != nil {
 		return "", err
 	}
 	// Retrieve the MAA token required by the request's MAA endpoint
 	logrus.Info("Retrieving MAA token...")
 	maaToken, err := maa.Attest(SNPReportBytes, vcekCertChain, inittimeDataBytes, runtimeDataBytes, uvmReferenceInfoBytes)
 	if err != nil || maaToken == "" {
-		return "", errors.Wrapf(err, "Retrieving MAA token from MAA endpoint failed")
+		if err != nil {
+			return "", errors.Wrapf(err, "Retrieving MAA token from MAA endpoint failed")
+		} else {
+			return "", errors.New("Empty MAA token string but err == nil (impossible code path)")
+		}
 	}
 
 	return maaToken, nil
@@ -107,15 +110,15 @@ func (certState *CertState) Attest(maa common.MAA, runtimeDataBytes []byte, uvmI
 
 // returns a number of byte arrays:
 //
-//  	SNPReportBytes - 		from the hardware, including the shar256 hash of runtime data provided in REPORT DATA and the hash of the
+//  	SNPReportBytes - 		from the hardware, including the sha256 hash of runtime data provided in REPORT DATA and the hash of the
 // 						 		policy in the immutable HOST DATA
-//		vcekCertChain -        	the certificate chain that endorses the signing key of the attestation report. Note that this may be the 
+//		vcekCertChain -        	the certificate chain that endorses the signing key of the attestation report. Note that this may be the
 // 						 		same as the one in the UVM or it may be one fetched from the cert cache service
 // 		inittimeDataBytes - 	the actual rego policy in place at the start of the UVM.
-// 		uvmReferenceInfoBytes - the COSESign1 documenet containing the reference information that provides evidence that the UVM image is 
+// 		uvmReferenceInfoBytes - the COSESign1 document containing the reference information that provides evidence that the UVM image is
 // 								genuine. A relying party must check this against the launch measurement in the attestation report.
 
-func (certState *CertState) getCollateral (maa common.MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) ([]byte, []byte, []byte, []byte, error) {
+func (certState *CertState) getCollateral(maa common.MAA, runtimeDataBytes []byte, uvmInformation common.UvmInformation) ([]byte, []byte, []byte, []byte, error) {
 
 	logrus.Info("Decoding UVM encoded security policy...")
 	inittimeDataBytes, err := base64.StdEncoding.DecodeString(uvmInformation.EncodedSecurityPolicy)
@@ -206,7 +209,5 @@ func (certState *CertState) getCollateral (maa common.MAA, runtimeDataBytes []by
 		return nil, nil, nil, nil, errors.Wrap(err, "Decoding UVM encoded security policy from Base64 format failed")
 	}
 
-
 	return SNPReportBytes, vcekCertChain, inittimeDataBytes, uvmReferenceInfoBytes, nil
 }
-
