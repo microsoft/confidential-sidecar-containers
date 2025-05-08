@@ -254,10 +254,6 @@ func PostMAAAttest(c *gin.Context) {
 		APIVersion: "api-version=2020-10-01",
 	}
 
-	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-	}
-
 	certState, ok := c.MustGet("certState").(*attest.CertState)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("serverCertState is not set")})
