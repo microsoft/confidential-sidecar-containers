@@ -15,9 +15,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const ERROR_STRING = "ERROR: Please refer to the documentation for more information on how to use this sidecar.\n" +
-	"ACI: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/encfs/README.md\n" +
-	"Troubleshooting: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/encfs/TROUBLESHOOTING.md\n"
+const ERROR_STRING = `ERROR: Please refer to the documentation for more information on how to use this sidecar
+ACI: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/encfs/README.md
+Troubleshooting: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/encfs/TROUBLESHOOTING.md`
 
 type AzureInfo struct {
 	CertFetcher attest.CertFetcher `json:"certcache,omitempty"`

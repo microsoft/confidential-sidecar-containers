@@ -22,10 +22,10 @@ import (
 const (
 	ResourceIdManagedHSM = "https%3A%2F%2Fmanagedhsm.azure.net"
 	ResourceIdVault      = "https%3A%2F%2Fvault.azure.net"
-	ERROR_STRING         = "ERROR: Please refer to the documentation for more information on how to use this sidecar.\n" +
-		"ACI: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/skr/aci/README.md\n" +
-		"KATA: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/skr/aks/README.md\n" +
-		"Troubleshooting: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/skr/TROUBLESHOOTING.md\n"
+	ERROR_STRING         = `ERROR: Please refer to the documentation for more information on how to use this sidecar.
+ACI: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/skr/aci/README.md
+KATA: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/skr/aks/README.md
+Troubleshooting: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/skr/TROUBLESHOOTING.md`
 )
 
 // SecureKeyRelease releases a key identified by the KID and AKV in the keyblob.
