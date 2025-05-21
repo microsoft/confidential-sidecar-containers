@@ -17,7 +17,7 @@ import base64
 import json
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from attestation.attestation import SNP_REPORT_STRUCTURE
+from attestation import SNP_REPORT_STRUCTURE
 try:
     from .key import generate_key, deploy_key, generate_release_policy
 except ImportError:

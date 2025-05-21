@@ -1,9 +1,0 @@
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.24.3-fips-azurelinux3.0 
-WORKDIR /usr/src/app
-# Set environment variables for golang fips build
-# https://github.com/microsoft/go/tree/microsoft/main/eng/doc/fips#usage-build
-# using allowcryptofallback to allow use of non-fips crypto since not directly using openssl in code and otherwise causes a seg fault
-ENV GOOS=linux CGO_ENABLED=0 GOEXPERIMENT=systemcrypto,allowcryptofallback
-COPY . .
-RUN go build -v -o /usr/local/bin/app ./cmd/attestation-container/
-CMD ["app"]

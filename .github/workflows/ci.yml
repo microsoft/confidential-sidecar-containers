@@ -130,41 +130,6 @@ jobs:
         # Can't use `go test -v ./...` because some of the tests depend on SEV-SNP or Confidential ACI features
         go test -v ./... -tags skip_e2e,skip_snp_required
 
-  test-attestation:
-    name: Test Attestation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Log into Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
-          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
-          subscription-id: ${{ vars.SUBSCRIPTION }}
-
-      - name: Install c_aci_testing package
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: ./scripts/install-c-aci-testing.sh
-
-      - name: Install Azure CLI
-        env:
-          AZ_CLI_VERSION: 2.72.0
-        run: ./scripts/install-az-cli.sh
-
-      - name: Setup Docker
-        run: sudo usermod -aG docker $USER
-
-      - name: Test Attestation
-        env:
-          ATTESTATION_ENDPOINT: ${{ vars.ATTESTATION_ENDPOINT }}
-        run: |
-          source cacitesting.env
-          export LOCATION=${{ env.LOCATION }}
-          python -m unittest discover -s tests/attestation
-
   test-skr:
     name: Test SKR
     runs-on: ubuntu-latest
@@ -179,7 +144,7 @@ jobs:
 
       - name: Install Azure CLI
         env:
-          AZ_CLI_VERSION: 2.72.0
+          AZ_CLI_VERSION: 2.74.0
         run: ./scripts/install-az-cli.sh
 
       - name: Setup Docker
@@ -236,7 +201,7 @@ jobs:
 
       - name: Install Azure CLI
         env:
-          AZ_CLI_VERSION: 2.72.0
+          AZ_CLI_VERSION: 2.74.0
         run: ./scripts/install-az-cli.sh
 
       - name: Setup Docker
