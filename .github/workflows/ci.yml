@@ -43,7 +43,7 @@ on:
 env:
   BASE_ID: ${{ github.run_id }}-${{ github.run_number }}-${{ inputs.location }}-${{ inputs.policy_type }}
   LOCATION: ${{ inputs.location || 'westeurope' }}
-  POLICY_TYPE: ${{ inputs.policy_type || 'generated' }}
+  POLICY_TYPE: 'debug' #${{ inputs.policy_type || 'generated' }}
 
 jobs:
   analyze:
@@ -151,7 +151,7 @@ jobs:
 
       - name: Install Azure CLI
         env:
-          AZ_CLI_VERSION: 2.72.0
+          AZ_CLI_VERSION: 2.74.0
         run: ./scripts/install-az-cli.sh
 
       - name: Setup Docker
@@ -179,7 +179,7 @@ jobs:
 
       - name: Install Azure CLI
         env:
-          AZ_CLI_VERSION: 2.72.0
+          AZ_CLI_VERSION: 2.74.0
         run: ./scripts/install-az-cli.sh
 
       - name: Setup Docker
@@ -236,7 +236,7 @@ jobs:
 
       - name: Install Azure CLI
         env:
-          AZ_CLI_VERSION: 2.72.0
+          AZ_CLI_VERSION: 2.74.0
         run: ./scripts/install-az-cli.sh
 
       - name: Setup Docker
