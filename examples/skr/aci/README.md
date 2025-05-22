@@ -3,6 +3,8 @@
 ## Table of Contents
 
 - [Policy generation](#policy-generation)
+  - [Option 1 - ARM Template](#option-1---arm-template)
+  - [Option 2 - Image-attached fragments](#option-2---image-attached-fragments)
 - [Step by Step Example](#step-by-step-example)
 
 In our confidential container group example, we will deploy the skr sidecar along with a set of test containers that exercise and test the REST API.
@@ -16,15 +18,115 @@ The MAA endpoint shall be the same as the one specified in the SKR policy during
 ### Policy generation
 
 Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group.
-To generate security policies, install the Azure `confcom` CLI extension by following the instructions [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples).
+To generate security policies, install the Azure `confcom` CLI extension by following the instructions [here under extension examples](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples).
 
-The ARM template can be used directly to generate a security policy.
+There are two options for generating security policies:
+
+1. The ARM template can be used directly to generate a security policy.
+2. A config file can be used to generate a policy fragment for a particular image (this is called "image-attached fragments" and is useful in cases where stable key release policies are required).
+
+#### Option 1 - ARM Template
+
 The following command generates a security policy and automatically injects it into the template.
-Make sure `--debug-mode` option is included so that the generated policy allows shelling into container to see the released key in this example.
+Include the `--debug-mode` option so the generated policy allows shelling into container to see the released key in this example. Note that `--debug-mode` is only used as an example and not recommended for production.
 
 ```shell
-az confcom acipolicygen -a aci-skr-arm-template.json --debug-mode
+az confcom acipolicygen -a template.json --debug-mode
 ```
+
+#### Option 2 - Image-attached fragments
+
+The following command generates a security policy and attaches it to the container in an OCI-compliant registry like Azure Container Registry (ACR). To do this, a copy of the SKR container must be made and pushed to an ACR instance with write access. This can be done with:
+
+```bash
+az acr login -n <my-registry>
+docker pull mcr.microsoft.com/aci/skr:2.9
+docker tag mcr.microsoft.com/aci/skr:2.9 <my-registry>.azurecr.io/skr:2.9
+docker push <my-registry>.azurecr.io/skr:2.9
+```
+
+Create a configuration file with the container details as illustrated below:
+
+```json
+{
+    "containers": [
+          {
+            "name": "skr-sidecar-container",
+            "properties": {
+              "command": [
+                "/skr.sh"
+              ],
+              "environmentVariables": [
+                {
+                  "name": "LogFile",
+                  "value": "<optional-logfile-path>"
+                },
+                {
+                  "name": "LogLevel",
+                  "value": "<optional-loglevel-trace-debug-info-warning-error-fatal-panic>"
+                }
+              ],
+              "image": "<my-registry>/skr:2.9"
+            }
+        }
+    ]
+}
+```
+
+Save this file to the current directory as `fragment_config.json`.
+To verify that a policy fragment is coming from a valid source, it must be COSE signed via a key and certificate chain.
+Instructions and guidelines on how to do that for a development deployment are given [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/samples/certs/README.md) but other methods to generate a cert chain and key may be used.
+The flag `--namespace` is used to name the policy fragment, guidelines on what is a valid namespace are found [here](https://www.openpolicyagent.org/docs/policy-language#packages).
+Then run the command to generate a policy fragment and upload it to the image registry:
+
+```bash
+az confcom acifragmentgen -i fragment_config.json \
+      --debug-mode \
+      --upload-fragment \
+      --image-target <my-registry>/skr:2.9 \
+      --key <path-to-my-key> \
+      --chain <path-to-my-cert-chain> \
+      --svn 1 \
+      --namespace <my-namespace>
+```
+
+After this policy fragment is generated and uploaded, there are two more steps to allow the ARM template to reference this uploaded file.
+The first is to create an import statement for the policy fragment with the following command:
+
+```bash
+az confcom acifragmentgen --generate-import --image <my-registry>/skr:2.9 --fragments-json fragments.json --minimum-svn 1
+```
+
+Which will output the fragment's import statement in json format to the file `fragments.json`.
+In this command `--minimum-svn` defines the minimum allowable security version number (a monotonically increasing integer).
+This SVN is chosen when creating a policy fragment, and should be increased anytime a security vulnerability is patched.
+
+Example output:
+
+```json
+{
+    "fragments": [
+        {
+        "feed": "<my-registry>/skr",
+        "includes": [
+            "containers",
+            "fragments"
+        ],
+        "issuer": "did:x509:0:sha256:0NWnhcxjUwmwLCd7A-PubQRq08ig3icQxpW5d2f4Rbc::subject:CN:Contoso",
+        "minimum_svn": "1"
+        }
+    ]
+}
+```
+
+To generate the security policy for the ARM template, run the following command:
+
+```bash
+az confcom acipolicygen -a template.json --include-fragments --fragments-json fragments.json
+```
+
+This will insert the container policy into the ARM template and include the mentioned fragments in the `fragments.json` file.
+The last step can also be performed with YAML files for VN2 scenarios using `--virtual-node-yaml`, or another json config file using `-i` in place of `-a`.
 
 The ARM template file includes three entries: (i) skr sidecar container which enables the /skr.sh as entry point command and the environment variable SkrSideCarArgs used by the script, (ii) attest_client container which enables the /tests/skr/attest_client.sh as entry point command and a set of environment variables used by the script and whose names begin with AttestClient, and  (iii) skr_client container which enables the /tests/skr_client.sh as entry point command and a set of environment variables used by the script and whose names begin with SkrClient.
 Please note that:
