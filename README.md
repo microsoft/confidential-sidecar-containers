@@ -9,7 +9,7 @@ The code in this repository should be located at ``$GOPATH/src/microsoft/confide
 [![CI](https://github.com/microsoft/confidential-sidecar-containers/actions/workflows/ci.yml/badge.svg?branch=main&event=schedule)](https://github.com/microsoft/confidential-sidecar-containers/actions/workflows/ci.yml)
 
 Each sidecar is tested under `./tests/<sidecar_name>`.
-Each directory is tested with [confidential-aci-testing](https://github.com/microsoft/confidential-aci-testing) currently using version 1.0.6, and therefore contains:
+Each directory is tested with [confidential-aci-testing](https://github.com/microsoft/confidential-aci-testing) currently using version 1.2.2, and therefore contains:
 
 - A `docker-compose` file which describes the images to build.
 These typically include a primary container image which uses the sidecar.
