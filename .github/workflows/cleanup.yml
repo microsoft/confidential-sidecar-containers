@@ -41,11 +41,17 @@ jobs:
           tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
           subscription-id: ${{ vars.SUBSCRIPTION }}
 
-      - name: Delete HSM Keys
+      - name: Delete HSM keys
         run: |
           az keyvault key list --hsm-name ${{ vars.HSM_NAME }} \
             --query "[].kid" -o tsv | \
             xargs -I{} az keyvault key delete --id {}
+
+      - name: Purge deleted keys
+        run: |
+          az keyvault key list-deleted --hsm-name ${{ vars.HSM_NAME }} \
+            --query "[].kid" -o tsv | \
+            xargs -I{} az keyvault key purge --id {}
 
   cleanup_registry:
     name: Cleanup Container Registry
