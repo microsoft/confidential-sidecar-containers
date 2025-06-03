@@ -208,12 +208,18 @@ func (r *SNPAttestationReport) SerializeReport() (report []uint8, err error) {
 		report[index+416] = b
 	}
 
+	// Do not use, only intended for testing
+	// cannot be expected to always work in the face of new hardware from AMD
+	binary.LittleEndian.PutUint64(report[480:488], r.CommittedSvn)
+	binary.LittleEndian.PutUint64(report[488:496], r.CommittedVersion)
+	binary.LittleEndian.PutUint64(report[496:504], r.LaunchSvn)
+
 	reserved3ByteArray, err := hex.DecodeString(r.Reserved3)
 	if err != nil {
 		return nil, errors.Wrapf(err, "decoding r.Reserved3 failed")
 	}
 	for index, b := range reserved3ByteArray {
-		report[index+480] = b
+		report[index+504] = b
 	}
 
 	signatureByteArray, err := hex.DecodeString(r.Signature)
