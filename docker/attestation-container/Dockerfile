@@ -8,7 +8,7 @@
 ARG variant=run
 
 # Build
-FROM mcr.microsoft.com/oss/go/microsoft/golang:1.24.1-fips-azurelinux3.0 AS builder-app
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.24.3-fips-azurelinux3.0 AS builder-app
 WORKDIR /usr/src/app
 
 # Set environment variables for golang fips build
