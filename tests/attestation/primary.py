@@ -28,16 +28,21 @@ def get_attestation():
         mimetype="application/octet-stream"
     )
 
-@app.route('/get_cert_chain', methods=['GET'])
+@app.route("/get_cert_chain", methods=["GET"])
 def get_cert_chain():
-    with open(
-        f"/{os.environ['UVM_SECURITY_CONTEXT_DIR']}/host-amd-cert-base64", "rb"
-    ) as f:
-        return Response(
-            f.read(),
-            status=200,
-            mimetype="application/octet-stream"
-        )
+    """
+    **NEW** implementation – grab the platform certs from the attestation
+    container instead of reading the baked-in file.
+    """
+    # An empty report-data is fine; we only need the certs.
+    req = attestation_container.FetchAttestationRequest()
+    with grpc.insecure_channel("unix:/mnt/uds/sock") as ch:
+        att = attestation_container_grpc.AttestationContainerStub(ch).FetchAttestation(req)
+
+    # platform_certificates is already a base-64-encoded JSON blob
+    # exactly what the test harness expects.
+    return Response(att.platform_certificates, 200,
+                    mimetype="application/octet-stream")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)
