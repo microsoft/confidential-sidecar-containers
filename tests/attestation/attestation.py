@@ -10,10 +10,12 @@ from typing import Tuple
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.hashes import SHA384
 from cryptography.hazmat.primitives.asymmetric.ec import ECDSA
 from cryptography.hazmat.primitives.asymmetric.padding import PSS, MGF1
 from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
+from OpenSSL import crypto
 
 # Data structures are based on SEV-SNP Firmware ABI Specification
 # https://www.amd.com/en/support/tech-docs/sev-secure-nested-paging-firmware-abi-specification
@@ -89,23 +91,85 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 """.encode(),
 )
 
+_TRAILER = b"\xA3\x03\x02\x01\x01"          # [3] IMPLICIT INTEGER 1
+
+def _fix_trailer_fields(der: bytes) -> bytes:
+    """
+    Remove *all* trailerField TLVs and fix the two surrounding SEQUENCE
+    length bytes for each occurrence.
+    """
+    buf = bytearray(der)
+    verbose = True
+    cursor = 0
+
+    while True:
+        idx = buf.find(_TRAILER, cursor)
+        if idx == -1:
+            break
+
+        # Walk backwards to find the inner and outer SEQUENCE tags.
+        inner = buf.rfind(b"\x30", 0, idx)        # params SEQUENCE
+        outer = buf.rfind(b"\x30", 0, inner)      # AlgorithmIdentifier SEQUENCE
+        if inner == -1 or outer == -1:
+            raise ValueError("Could not locate enclosing SEQUENCEs")
+
+        if verbose:
+            print(f"[attestation] strip trailerField at 0x{idx:X}, "
+                  f"adjust len @inner 0x{inner+1:X} & outer 0x{outer+1:X}")
+
+        buf[inner + 1] -= 5      # inner length
+        buf[outer + 1] -= 5      # outer length
+        del buf[idx : idx + 5]   # remove trailerField
+
+        cursor = idx             # continue search after this position
+
+    return bytes(buf)
+
+
+def _pem_to_der(pem: bytes) -> bytes:
+    body = b"".join(line.strip() for line in pem.splitlines()
+                    if not line.startswith(b"-----"))
+    return base64.b64decode(body)
+
+
+def _load_cert_lenient(pem_bytes: bytes) -> x509.Certificate:
+    """
+    1. Fast path: strict loader (RFC-compliant certs).
+    2. If EncodedDefault, run patcher -> strict DER loader.
+    3. If anything *else* bombs, fall back to OpenSSL.
+    """
+    try:
+        return x509.load_pem_x509_certificate(pem_bytes)          # ①
+    except ValueError as err:
+        if "EncodedDefault" not in str(err):
+            raise
+
+    fixed_der = _fix_trailer_fields(_pem_to_der(pem_bytes))       # ②
+    try:
+        return x509.load_der_x509_certificate(fixed_der)
+    except ValueError:
+        pass                                                     # rare
+
+    # ③ last-chance – OpenSSL parse -> patch -> strict
+    openssl_x509 = crypto.load_certificate(crypto.FILETYPE_PEM, pem_bytes)
+    der = crypto.dump_certificate(crypto.FILETYPE_ASN1, openssl_x509)
+    fixed_der = _fix_trailer_fields(der)
+    return x509.load_der_x509_certificate(fixed_der)
 
 def get_certificate_chain(certificate_chain: bytes) -> Tuple[x509.Certificate, ...]:
-    certificate_chain_json = json.loads(
-        base64.b64decode(certificate_chain).decode())
-    return tuple(
-        [
-            x509.load_pem_x509_certificate(cert.encode())
-            for cert in [
-                certificate_chain_json["vcekCert"],
-                *re.findall(
-                    f"-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----",
-                    certificate_chain_json["certificateChain"],
-                    flags=re.DOTALL,
-                ),
-            ]
-        ]
-    )
+    chain_json = json.loads(base64.b64decode(certificate_chain).decode())
+    print("[attestation] decoded certificate JSON:\n" + json.dumps(chain_json, indent=2, sort_keys=True))
+
+    pem_blobs = [
+        chain_json["vcekCert"],
+        *re.findall(
+            r"-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----",
+            chain_json["certificateChain"],
+            flags=re.DOTALL,
+        ),
+    ]
+
+    return tuple(_load_cert_lenient(pem.encode()) for pem in pem_blobs)
 
 
 def cert_signed_other_cert(
