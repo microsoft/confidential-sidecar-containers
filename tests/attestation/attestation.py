@@ -124,8 +124,20 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 """.encode(),
 )
 
+import subprocess
+import sys
+
+def install_cryptography_45_0_3():
+    """Install cryptography==45.0.3 using pip."""
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "cryptography==45.0.3"])
+        print("Successfully installed cryptography==45.0.3")
+    except subprocess.CalledProcessError as e:
+        print(f"Installation failed: {e}")
+
 
 def get_certificate_chain(certificate_chain: bytes) -> Tuple[x509.Certificate, ...]:
+    install_cryptography_45_0_3()
     print("\n=== imported package versions ===")
     print_import_versions()
     print("=================================\n")
