@@ -144,7 +144,7 @@ def get_certificate_chain(certificate_chain: bytes) -> Tuple[x509.Certificate, .
 
     certificate_chain_json = json.loads(
         base64.b64decode(certificate_chain).decode())
-    print("[attestation] decoded certificate JSON:\n" + json.dumps(certificate_chain_json, indent=2, sort_keys=True))
+    print(base64.b64encode(json.dumps(certificate_chain_json).encode()).decode())
     return tuple(
         [
             x509.load_pem_x509_certificate(cert.encode())
