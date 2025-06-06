@@ -15,6 +15,41 @@ from cryptography.hazmat.primitives.asymmetric.ec import ECDSA
 from cryptography.hazmat.primitives.asymmetric.padding import PSS, MGF1
 from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 
+import sys
+from importlib import metadata
+
+def _pkg_name(mod):
+    """
+    Best-effort attempt to map a loaded module to its distribution name.
+    Works for most third-party libs; stdlib modules return None.
+    """
+    if mod.__name__ in sys.builtin_module_names:
+        return None                        # part of CPython core
+
+    # Most top-level modules equal the PyPI distribution name
+    return mod.__name__.split('.')[0]
+
+def print_import_versions():
+    seen = {}
+    for name, mod in sys.modules.items():
+        if mod is None:
+            continue
+        top = name.split('.')[0]
+        if top in seen:                    # already handled
+            continue
+        seen[top] = mod
+        pkg = _pkg_name(mod)
+        if pkg is None:                    # stdlib
+            version = "stdlib"
+        else:
+            # 1) importlib.metadata (Py ≥3.8)  2) fallback to mod.__version__
+            try:
+                version = metadata.version(pkg)
+            except metadata.PackageNotFoundError:
+                version = getattr(mod, "__version__", "unknown")
+
+        print(f"{top:<20} : {version}")
+
 # Data structures are based on SEV-SNP Firmware ABI Specification
 # https://www.amd.com/en/support/tech-docs/sev-secure-nested-paging-firmware-abi-specification
 
@@ -91,8 +126,13 @@ QPHfbkH0CyPfhl1jWhJFZasCAwEAAQ==
 
 
 def get_certificate_chain(certificate_chain: bytes) -> Tuple[x509.Certificate, ...]:
+    print("\n=== imported package versions ===")
+    print_import_versions()
+    print("=================================\n")
+
     certificate_chain_json = json.loads(
         base64.b64decode(certificate_chain).decode())
+    print("[attestation] decoded certificate JSON:\n" + json.dumps(certificate_chain_json, indent=2, sort_keys=True))
     return tuple(
         [
             x509.load_pem_x509_certificate(cert.encode())
