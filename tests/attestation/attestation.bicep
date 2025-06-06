@@ -78,7 +78,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
               port: 8080
             }
           ]
-          command: ['app', '-socket-address', '/mnt/uds/sock']
+          command: ['app', '-socket-address', '/mnt/uds/sock', '--platform-certificate-server', 'AMD']
           environmentVariables: [
             {
               name: 'AZURE_ATTESTATION_ENDPOINT'

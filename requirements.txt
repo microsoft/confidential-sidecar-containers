@@ -1,4 +1,5 @@
-cryptography==44.0.1
+cryptography==45.0.3
 requests
 grpcio
 flask
+pyopenssl

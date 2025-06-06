@@ -2,6 +2,8 @@
 # Licensed under the MIT License.
 
 import argparse
+import base64
+import json
 import requests
 import uuid
 import os
@@ -34,7 +36,7 @@ class AttestationTest(unittest.TestCase):
 
         aci_param_set(
             target_path=target_dir,
-            parameters=[f'attestationEndpoint=\'https://{os.environ["ATTESTATION_ENDPOINT"]}\''],
+            parameters={"attestationEndpoint": f"https://{os.environ["ATTESTATION_ENDPOINT"]}"},
         )
 
         parser = argparse.ArgumentParser()
@@ -71,6 +73,12 @@ class AttestationTest(unittest.TestCase):
                 f"http://{ip_address}:8000/get_cert_chain",
             )
             assert cert_chain.status_code == 200
+            print("Bytes received:", len(cert_chain.content))
+            decoded = base64.b64decode(cert_chain.content)
+            print("Decoded bytes :", len(decoded))
+            data = json.loads(decoded)
+            print("vcekCert length           :", len(data["vcekCert"]))
+            print("…ends with END CERT?      :", data["vcekCert"].strip().endswith("END CERTIFICATE-----"))
 
             validate_attestation(
                 attestation_bytes=attestation.content,

@@ -60,10 +60,10 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           volumeMounts: [
             {
               name: 'encfs'
-              mountPath: mount_point
+              mountPath: '/mnt/remote'
             }
           ]
-          environmentVariables: [{name: 'ENCFS_MOUNT', value: mount_point}]
+          environmentVariables: [{name: 'ENCFS_MOUNT', value: '/mnt/remote'}]
           resources: {
             requests: {
               memoryInGB: 4
@@ -82,7 +82,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           volumeMounts: [
             {
               name: 'encfs'
-              mountPath: mount_point
+              mountPath: '/mnt/remote'
             }
           ]
           command: ['/encfs.sh']
