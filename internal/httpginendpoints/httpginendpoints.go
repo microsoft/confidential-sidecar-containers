@@ -337,7 +337,7 @@ func PostKeyRelease(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"key": string(jwkJSONBytes)})
+	c.JSON(http.StatusOK, gin.H{"key": string(jwkJSONBytes), "key_ops": jwKey.KeyOps()})
 }
 
 func RegisterGlobalStates(certState *attest.CertState, identity *common.Identity, uvmInfo *common.UvmInformation) gin.HandlerFunc {
