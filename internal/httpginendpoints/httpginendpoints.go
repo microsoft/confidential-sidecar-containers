@@ -3,6 +3,7 @@ package httpginendpoints
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
@@ -337,7 +338,7 @@ func PostKeyRelease(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"key": string(jwkJSONBytes), "key_ops": jwKey.KeyOps()})
+	c.JSON(http.StatusOK, gin.H{"key": string(jwkJSONBytes), "key_ops": jwKey.KeyOps(), "key_response": fmt.Sprintf("%+v", jwKey)})
 }
 
 func RegisterGlobalStates(certState *attest.CertState, identity *common.Identity, uvmInfo *common.UvmInformation) gin.HandlerFunc {
