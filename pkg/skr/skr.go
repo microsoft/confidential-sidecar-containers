@@ -111,7 +111,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 	// operation requires the private wrapping key to unwrap the encrypted key material released from
 	// the AKV.
 	logrus.Infof("Releasing key %s...", SKRKeyBlob.KID)
-	keyBytes, kty, err := SKRKeyBlob.AKV.ReleaseKey(maaToken, SKRKeyBlob.KID, privateWrappingKey)
+	keyBytes, kty, keyOps, err := SKRKeyBlob.AKV.ReleaseKey(maaToken, SKRKeyBlob.KID, privateWrappingKey)
 	if err != nil {
 		logrus.Debugf("releasing the key %s failed. err: %s", SKRKeyBlob.KID, err.Error())
 		return nil, errors.Wrapf(err, "releasing the key %s failed", SKRKeyBlob.KID)
@@ -122,9 +122,13 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 	if kty == "oct" || kty == "oct-HSM" {
 		logrus.Trace("Encoding OCT key as JWK...")
 		jwKey := jwk.NewSymmetricKey()
-		err := jwKey.FromRaw(keyBytes)
-		if err != nil {
+		if err := jwKey.FromRaw(keyBytes); err != nil {
 			return nil, errors.Wrapf(err, "could not encode OCT key as JWK")
+		}
+		if len(keyOps) > 0 {
+			if err := jwKey.Set(jwk.KeyOpsKey, keyOps); err != nil {
+				return nil, errors.Wrapf(err, "setting key_ops on JWK failed")
+			}
 		}
 		return jwKey, nil
 	} else if kty == "RSA-HSM" || kty == "RSA" {
@@ -152,9 +156,13 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 		var privateEcdsaKey *ecdsa.PrivateKey = key.(*ecdsa.PrivateKey)
 
 		jwKey := jwk.NewECDSAPrivateKey()
-		err = jwKey.FromRaw(privateEcdsaKey)
-		if err != nil {
+		if err := jwKey.FromRaw(privateEcdsaKey); err != nil {
 			return nil, errors.Wrapf(err, "could not encode ECDSA key as JWK")
+		}
+		if len(keyOps) > 0 {
+			if err := jwKey.Set(jwk.KeyOpsKey, keyOps); err != nil {
+				return nil, errors.Wrapf(err, "setting key_ops on JWK failed")
+			}
 		}
 		return jwKey, nil
 	} else {

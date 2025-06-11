@@ -234,6 +234,8 @@ class SkrTest(unittest.TestCase):
             )
             assert skr_response.status_code == 200, skr_response.content.decode()
             assert json.loads(json.loads(skr_response.content.decode())["key"])["k"] != ""
+            expected_key_ops = {"encrypt", "decrypt", "wrapKey", "unwrapKey"}
+            assert set(json.loads(json.loads(skr_response.content.decode())["key"])["key_ops"]) == expected_key_ops
         else:
             print("\nSkipping Key Release test as MAA/mHSM endpoints not provided.\n")
 
