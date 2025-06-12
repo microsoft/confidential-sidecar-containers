@@ -4,6 +4,7 @@
 package common
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/rand"
 	"crypto/rsa"
@@ -15,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash"
+	"log"
 	"runtime"
 	"strings"
 
@@ -422,6 +424,12 @@ func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (ke
 
 	// (7) Unwrap the wrapped key from the signed payload
 	var payloadJSON releaseKeyResponseJWSPayload
+	var pretty bytes.Buffer
+	if err := json.Indent(&pretty, payloadBytes, "", "  "); err != nil {
+		log.Printf("indent error: %v", err)
+	} else {
+		fmt.Printf("<<< pretty JWS payload >>>\n%s\n\n", pretty.String())
+	}
 	if err := json.Unmarshal(payloadBytes, &payloadJSON); err != nil {
 		return nil, "", errors.Wrapf(err, "unmarshalling jws response payload failed")
 	}
