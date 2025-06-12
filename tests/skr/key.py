@@ -69,6 +69,7 @@ def deploy_key(
                     "kty": "oct-HSM",
                     "k": urlsafe_b64encode(binascii.unhexlify(key_data)).decode(),
                     "key_size": 256,
+                    "key_ops": ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
                 },
                 "hsm": True,
                 "attributes": {

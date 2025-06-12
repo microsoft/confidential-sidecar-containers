@@ -111,7 +111,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 	// operation requires the private wrapping key to unwrap the encrypted key material released from
 	// the AKV.
 	logrus.Infof("Releasing key %s...", SKRKeyBlob.KID)
-	keyBytes, kty, err := SKRKeyBlob.AKV.ReleaseKey(maaToken, SKRKeyBlob.KID, privateWrappingKey)
+	keyBytes, kty, _, err := SKRKeyBlob.AKV.ReleaseKey(maaToken, SKRKeyBlob.KID, privateWrappingKey)
 	if err != nil {
 		logrus.Debugf("releasing the key %s failed. err: %s", SKRKeyBlob.KID, err.Error())
 		return nil, errors.Wrapf(err, "releasing the key %s failed", SKRKeyBlob.KID)

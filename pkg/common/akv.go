@@ -324,7 +324,7 @@ func (akv AKV) ImportPlaintextKey(key interface{}, releasePolicy ReleasePolicy, 
 // the release policy. ReleaseKey uses the private key to locally unwrap the released secrets.
 // The private key is kept within the utility VM and hence is isolated with hardware-based
 // guarantees.
-func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey *rsa.PrivateKey) (_ []byte, _ string, err error) {
+func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey *rsa.PrivateKey) (_ []byte, _ string, _ []string, err error) {
 	// Construct release key request to AKV
 	request := releaseKeyRequest{
 		Target: maaTokenBase64,
@@ -333,25 +333,25 @@ func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey 
 	// bearer token
 	releaseKeyJSONData, err := json.Marshal(request)
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "marshalling release key request failed")
+		return nil, "", nil, errors.Wrapf(err, "marshalling release key request failed")
 	}
 
 	uri := fmt.Sprintf(AKVReleaseKeyRequestURITemplate, akv.Endpoint, kid, akv.APIVersion)
 
 	httpResponse, err := HTTPPRequest("POST", uri, releaseKeyJSONData, akv.BearerToken)
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "AKV post request failed")
+		return nil, "", nil, errors.Wrapf(err, "AKV post request failed")
 	}
 
 	httpResponseBodyBytes, err := HTTPResponseBody(httpResponse)
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "pulling AKV response body failed")
+		return nil, "", nil, errors.Wrapf(err, "pulling AKV response body failed")
 	}
 
 	// Extract the value field found in the response
 	AKVResponse := new(releaseKeyResponse)
 	if err = json.Unmarshal(httpResponseBodyBytes, AKVResponse); err != nil {
-		return nil, "", errors.Wrapf(err, "unmarshalling http response to releasekey response failed")
+		return nil, "", nil, errors.Wrapf(err, "unmarshalling http response to releasekey response failed")
 	}
 
 	return _releaseKey(akv, AKVResponse.Value, privateWrappingKey)
@@ -366,32 +366,32 @@ func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey 
 // (5) Verify the certificate chain for the signer
 // (6) Ensure that the root of the certificate chain is trusted
 // (7) Unwrap the wrapped key from the payload
-func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (key []byte, kty string, err error) {
+func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (key []byte, kty string, key_ops []string, err error) {
 	// (1) Verify that it is a well formed JWS object
 	if err := VerifyJWSToken(AKVJWS); err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	// (2) Use the thumbprint or first entry in the chain to obtain the public key of the signer
 	var header jwsHeader
 	if err := header.extractJWSTokenHeader(AKVJWS); err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	leafCertificate, err := ParseX509Certificate(header.X5C[0])
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "parsing certificate X5C[0] failed")
+		return nil, "", nil, errors.Wrapf(err, "parsing certificate X5C[0] failed")
 	}
 
 	leafKey, ok := leafCertificate.PublicKey.(*rsa.PublicKey)
 	if !ok {
-		return nil, "", errors.Wrapf(err, "could not cast interface to rsa.PublicKey")
+		return nil, "", nil, errors.Wrapf(err, "could not cast interface to rsa.PublicKey")
 	}
 
 	// (3) Signature validation of the JWS token
 	payloadBytes, err := ValidateJWSToken(AKVJWS, leafKey, jwa.SignatureAlgorithm(header.Alg))
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	// (4) (5) and (6) Verify the leaf certificate using a cert chain that is rooted to the the system's cert pool
@@ -405,48 +405,48 @@ func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (ke
 
 		rootCertificate, err := ParseX509Certificate(header.X5C[len(header.X5C)-1])
 		if err != nil {
-			return nil, "", errors.Wrapf(err, "failed to parse root certificate X5C[%d]", len(header.X5C)-1)
+			return nil, "", nil, errors.Wrapf(err, "failed to parse root certificate X5C[%d]", len(header.X5C)-1)
 		}
 
 		roots.AddCert(rootCertificate)
 	} else {
 		roots, err = x509.SystemCertPool()
 		if err != nil {
-			return nil, "", errors.Wrapf(err, "could not generate a system cert pool")
+			return nil, "", nil, errors.Wrapf(err, "could not generate a system cert pool")
 		}
 	}
 
 	if err := VerifyX509CertChain(akv.Endpoint, header.X5C, roots); err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	// (7) Unwrap the wrapped key from the signed payload
 	var payloadJSON releaseKeyResponseJWSPayload
 	if err := json.Unmarshal(payloadBytes, &payloadJSON); err != nil {
-		return nil, "", errors.Wrapf(err, "unmarshalling jws response payload failed")
+		return nil, "", nil, errors.Wrapf(err, "unmarshalling jws response payload failed")
 	}
 
 	// decode KeyHSM no-padding base64 url representation and retrieve the Ciphertext field
 	keyHSMBytes, err := base64.RawURLEncoding.DecodeString(payloadJSON.Response.Key.Key.KeyHSM)
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "decoding keyHSM failed")
+		return nil, "", nil, errors.Wrapf(err, "decoding keyHSM failed")
 	}
 
 	var keyHSMJson releaseKeyKeyHSM
 	if err := json.Unmarshal(keyHSMBytes, &keyHSMJson); err != nil {
-		return nil, "", errors.Wrapf(err, "unmarshalling keyHSM failed")
+		return nil, "", nil, errors.Wrapf(err, "unmarshalling keyHSM failed")
 	}
 
 	// decode Ciphertext no-padding base64 url representation and wnwrap the key
 	ciphertext, err := base64.RawURLEncoding.DecodeString(keyHSMJson.Ciphertext)
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "decoding keyHSM's ciphertext failed")
+		return nil, "", nil, errors.Wrapf(err, "decoding keyHSM's ciphertext failed")
 	}
 
 	key, err = RsaAESKeyUnwrap(payloadJSON.Request.Enc, ciphertext, privateWrappingKey)
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "aes key unwrap failed")
+		return nil, "", nil, errors.Wrapf(err, "aes key unwrap failed")
 	}
 
-	return key, payloadJSON.Response.Key.Key.KTY, nil
+	return key, payloadJSON.Response.Key.Key.KTY, payloadJSON.Response.Key.Key.KeyOps, nil
 }

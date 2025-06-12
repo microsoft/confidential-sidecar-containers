@@ -200,6 +200,7 @@ class SkrTest(unittest.TestCase):
                 ),
             )
 
+            print(f"Response from attest MAA check: {maa_response.content}")
             assert maa_response.status_code == 200, maa_response.content.decode()
             assert json.loads(maa_response.content.decode())["token"] != ""
         else:
@@ -232,6 +233,8 @@ class SkrTest(unittest.TestCase):
                     }
                 ),
             )
+            
+            print(f"Response from key release check: {skr_response.content}")
             assert skr_response.status_code == 200, skr_response.content.decode()
             assert json.loads(json.loads(skr_response.content.decode())["key"])["k"] != ""
         else:
@@ -243,9 +246,9 @@ class SkrTest(unittest.TestCase):
         response = requests.get(
             f"http://{self.skr_ip}:8000/say_hello",
         )
+
         print(f"Response from say_hello check: {response.content.decode()}")
         assert response.status_code == 200
-
         assert get_grpc_response(response.content)["message"] == "Hello GRPC interface test!"
 
     def test_skr_grpc_get_report(self):
@@ -262,6 +265,7 @@ class SkrTest(unittest.TestCase):
                 }
             ),
         )
+
         print(f"Response from get_report check: {response.content.decode()}")
         assert response.status_code == 200
 
@@ -331,6 +335,7 @@ class SkrTest(unittest.TestCase):
                 }
             ),
         )
+
         print(f"Response from unwrap_key check: {response.content.decode()}")
         assert response.status_code == 200
 
@@ -341,6 +346,7 @@ class SkrTest(unittest.TestCase):
                 ).decode()
             )["keyunwrapresults"]["optsdata"]
         ).decode()
+        
         print(f"Unwrapped data: {unwrapped_data}")
         assert unwrapped_data == payload.decode()
 
