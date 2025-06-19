@@ -70,7 +70,12 @@ func main() {
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		defer file.Close()
+		defer func() {
+			err := file.Close()
+			if err != nil {
+				logrus.Fatal(err)
+			}
+		}()
 		logrus.SetOutput(file)
 	}
 
@@ -108,7 +113,7 @@ func main() {
 	}
 
 	// populate missing attributes in KeyBlob
-	for i, _ := range info.AzureFilesystems {
+	for i := range info.AzureFilesystems {
 		// set the api versions and the tee type for which the authority will authorize secure key release
 		info.AzureFilesystems[i].KeyBlob.AKV.APIVersion = "api-version=7.4"
 		info.AzureFilesystems[i].KeyBlob.Authority.APIVersion = "api-version=2020-10-01"
@@ -122,5 +127,4 @@ func main() {
 		logrus.Fatalf("Failed to mount filesystems: %s\n%s", err.Error(), ERROR_STRING)
 	}
 
-	os.Exit(0)
 }

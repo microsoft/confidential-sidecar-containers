@@ -56,9 +56,9 @@ type SNPAttestationReport struct {
 	Reserved2 string `json:"reserved2"`
 	// Identifier unique to the chip 64-byte
 	ChipID string `json:"chip_id"`
-	// The current commited SVN of the firware (version 2 report feature)
+	// The current committed SVN of the firware (version 2 report feature)
 	CommittedSvn uint64 `json:"committed_svn"`
-	// The current commited version of the firware
+	// The current committed version of the firware
 	CommittedVersion uint64 `json:"committed_version"`
 	// The SVN that this guest was launched or migrated at
 	LaunchSvn uint64 `json:"launch_svn"`

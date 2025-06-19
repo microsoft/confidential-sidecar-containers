@@ -74,7 +74,7 @@ func AesUnwrapPadding(block cipher.Block, cipherText []byte) ([]byte, error) {
 		}
 		copy(a, cipherText[:8])
 
-		//Compute intermediate values
+		// Compute intermediate values
 		for j := 5; j >= 0; j-- {
 			for i := n; i >= 1; i-- {
 				t := (n * j) + i
@@ -89,7 +89,7 @@ func AesUnwrapPadding(block cipher.Block, cipherText []byte) ([]byte, error) {
 			}
 		}
 
-		//Output
+		// Output
 		c = arrConcat(r...)
 	}
 
@@ -110,7 +110,7 @@ func AesUnwrapPadding(block cipher.Block, cipherText []byte) ([]byte, error) {
 	copy(aLo, a[4:8])
 	MLI := binary.BigEndian.Uint32(aLo)
 
-	if !(MLI > 8*(uint32(n)-1) && MLI <= 8*uint32(n)) {
+	if MLI <= 8*(uint32(n)-1) || MLI > 8*uint32(n) {
 		return nil, errors.Errorf("integrity check failed - unexpected MLI %v", aLo)
 	}
 

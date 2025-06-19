@@ -24,9 +24,9 @@ const (
 	sha256len = 32
 )
 
-func (certState *CertState) RefreshCertChain(SNPReport SNPAttestationReport) ([]byte, error) {
+func (certState *CertState) RefreshCertChain(snpReport SNPAttestationReport) ([]byte, error) {
 	logrus.Info("Refreshing CertChain...")
-	vcekCertChain, thimTcbm, err := certState.CertFetcher.GetCertChain(SNPReport.ChipID, SNPReport.ReportedTCB)
+	vcekCertChain, thimTcbm, err := certState.CertFetcher.GetCertChain(snpReport.ChipID, snpReport.ReportedTCB)
 	if err != nil {
 		return nil, errors.Wrap(err, "Refreshing CertChain failed")
 	}

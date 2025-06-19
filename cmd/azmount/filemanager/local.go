@@ -25,7 +25,9 @@ func LocalSetup(filePath string, readWrite bool) error {
 	if err != nil {
 		return errors.Wrapf(err, "Failed to open file: %s", filePath)
 	}
-	defer file.Close()
+	defer func() {
+		err = file.Close()
+	}()
 
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -43,50 +45,54 @@ func LocalSetup(filePath string, readWrite bool) error {
 	// Setup data uploader
 	fm.uploadBlock = LocalUploadBlock
 
-	return nil
+	return err
 }
 
-func LocalDownloadBlock(blockIndex int64) (err error, b []byte) {
+func LocalDownloadBlock(blockIndex int64) (b []byte, err error) {
 	logrus.Info("Downloading block...")
 	bytesInBlock := GetBlockSize()
-	var offset int64 = blockIndex * bytesInBlock
+	var offset = blockIndex * bytesInBlock
 	logrus.Tracef("Block offset %d = block index %d * bytes in block %d", offset, blockIndex, bytesInBlock)
-	var count int64 = bytesInBlock
+	var count = bytesInBlock
 
 	file, err := os.OpenFile(fm.filePath, os.O_RDONLY, 0)
 	if err != nil {
 		var empty []byte
-		return errors.Wrapf(err, "Failed to open file: %s", fm.filePath), empty
+		return empty, errors.Wrapf(err, "Failed to open file: %s", fm.filePath)
 	}
-	defer file.Close()
+	defer func() {
+		err = file.Close()
+	}()
 
 	_, err = file.Seek(offset, io.SeekStart)
 	if err != nil {
 		var empty []byte
-		return errors.Wrapf(err, "Failed to seek file: %s", fm.filePath), empty
+		return empty, errors.Wrapf(err, "Failed to seek file: %s", fm.filePath)
 	}
 
 	data := make([]byte, count)
 	_, err = file.Read(data)
 	if err != nil {
 		var empty []byte
-		return errors.Wrapf(err, "Failed to read source file: %s", fm.filePath), empty
+		return empty, errors.Wrapf(err, "Failed to read source file: %s", fm.filePath)
 	}
 
-	return err, data
+	return data, err
 }
 
 func LocalUploadBlock(blockIndex int64, data []byte) error {
 	logrus.Info("Uploading block...")
 	bytesInBlock := GetBlockSize()
-	var offset int64 = blockIndex * bytesInBlock
+	var offset = blockIndex * bytesInBlock
 	logrus.Tracef("Block offset %d = block index %d * bytes in blck %d", offset, blockIndex, bytesInBlock)
 
 	file, err := os.OpenFile(fm.filePath, os.O_RDWR, 0)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to open file: %s", fm.filePath)
 	}
-	defer file.Close()
+	defer func() {
+		err = file.Close()
+	}()
 
 	_, err = file.Seek(offset, io.SeekStart)
 	if err != nil {
@@ -98,5 +104,5 @@ func LocalUploadBlock(blockIndex int64, data []byte) error {
 		return errors.Wrapf(err, "Failed to write to file: %s", fm.filePath)
 	}
 
-	return nil
+	return err
 }
