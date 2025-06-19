@@ -168,7 +168,7 @@ func AzureSetup(urlString string, urlPrivate bool, identity common.Identity) err
 func AzureUploadBlock(blockIndex int64, b []byte) (err error) {
 	logrus.Info("Uploading block...")
 	bytesInBlock := GetBlockSize()
-	var offset int64 = blockIndex * bytesInBlock
+	var offset = blockIndex * bytesInBlock
 	logrus.Tracef("Block offset %d = block index %d * bytes in block %d", offset, blockIndex, bytesInBlock)
 
 	r := bytes.NewReader(b)
@@ -181,30 +181,33 @@ func AzureUploadBlock(blockIndex int64, b []byte) (err error) {
 	return nil
 }
 
-func AzureDownloadBlock(blockIndex int64) (err error, b []byte) {
+func AzureDownloadBlock(blockIndex int64) (b []byte, err error) {
 	logrus.Info("Downloading block...")
 	bytesInBlock := GetBlockSize()
-	var offset int64 = blockIndex * bytesInBlock
+	var offset = blockIndex * bytesInBlock
 	logrus.Tracef("Block offset %d = block index %d * bytes in block %d", offset, blockIndex, bytesInBlock)
-	var count int64 = bytesInBlock
+	var count = bytesInBlock
 
 	get, err := fm.blobURL.Download(fm.ctx, offset, count, azblob.BlobAccessConditions{},
 		false, azblob.ClientProvidedKeyOptions{})
 	if err != nil {
 		var empty []byte
-		return errors.Wrapf(err, "Can't download block"), empty
+		return empty, errors.Wrapf(err, "Can't download block")
 	}
 
 	blobData := &bytes.Buffer{}
 	reader := get.Body(azblob.RetryReaderOptions{})
 	_, err = blobData.ReadFrom(reader)
-	// The client must close the response body when finished with it
-	reader.Close()
-
 	if err != nil {
 		var empty []byte
-		return errors.Wrapf(err, "ReadFrom() failed for block"), empty
+		return empty, errors.Wrapf(err, "ReadFrom() failed for block")
+	}
+	// The client must close the response body when finished with it
+	err = reader.Close()
+	if err != nil {
+		var empty []byte
+		return empty, errors.Wrapf(err, "Failure to close reader")
 	}
 
-	return nil, blobData.Bytes()
+	return blobData.Bytes(), err
 }

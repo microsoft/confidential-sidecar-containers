@@ -159,7 +159,7 @@ github.com/leodido/go-urn/scim/schema
 # github.com/lestrrat-go/backoff/v2 v2.0.8
 ## explicit; go 1.16
 github.com/lestrrat-go/backoff/v2
-# github.com/lestrrat-go/blackmagic v1.0.3
+# github.com/lestrrat-go/blackmagic v1.0.4
 ## explicit; go 1.23
 github.com/lestrrat-go/blackmagic
 # github.com/lestrrat-go/httpcc v1.0.1
@@ -235,19 +235,19 @@ github.com/twitchyliquid64/golang-asm/objabi
 github.com/twitchyliquid64/golang-asm/src
 github.com/twitchyliquid64/golang-asm/sys
 github.com/twitchyliquid64/golang-asm/unsafeheader
-# github.com/ugorji/go/codec v1.2.14
-## explicit; go 1.11
+# github.com/ugorji/go/codec v1.3.0
+## explicit; go 1.21
 github.com/ugorji/go/codec
-# golang.org/x/arch v0.17.0
+# golang.org/x/arch v0.18.0
 ## explicit; go 1.23.0
 golang.org/x/arch/x86/x86asm
-# golang.org/x/crypto v0.38.0
+# golang.org/x/crypto v0.39.0
 ## explicit; go 1.23.0
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/ed25519
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/sha3
-# golang.org/x/net v0.40.0
+# golang.org/x/net v0.41.0
 ## explicit; go 1.23.0
 golang.org/x/net/html
 golang.org/x/net/html/atom
@@ -266,7 +266,7 @@ golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/text v0.25.0
+# golang.org/x/text v0.26.0
 ## explicit; go 1.23.0
 golang.org/x/text/internal/language
 golang.org/x/text/internal/language/compact
@@ -281,8 +281,8 @@ golang.org/x/text/unicode/norm
 # google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822
 ## explicit; go 1.23.0
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.72.2
-## explicit; go 1.23
+# google.golang.org/grpc v1.73.0
+## explicit; go 1.23.0
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff

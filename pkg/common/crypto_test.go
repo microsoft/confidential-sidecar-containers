@@ -50,8 +50,8 @@ func TestRSAPrivateKeyFromJWK(t *testing.T) {
 	expectedP := new(big.Int).SetBytes([]byte("mockP"))
 	expectedQ := new(big.Int).SetBytes([]byte("mockQ"))
 
-	assert.Equal(t, expectedN, rsaPrivateKey.PublicKey.N, "Mismatch in public key N value")
-	assert.Equal(t, expectedE, rsaPrivateKey.PublicKey.E, "Mismatch in public key E value")
+	assert.Equal(t, expectedN, rsaPrivateKey.N, "Mismatch in public key N value")
+	assert.Equal(t, expectedE, rsaPrivateKey.E, "Mismatch in public key E value")
 	assert.Equal(t, expectedD, rsaPrivateKey.D, "Mismatch in private key D value")
 	assert.Equal(t, expectedP, rsaPrivateKey.Primes[0], "Mismatch in private key P value")
 	assert.Equal(t, expectedQ, rsaPrivateKey.Primes[1], "Mismatch in private key Q value")

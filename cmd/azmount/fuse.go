@@ -40,7 +40,9 @@ func FuseSetup(mountpoint string, readWrite bool) error {
 	if err != nil {
 		return errors.Wrapf(err, "Can't start fuse")
 	}
-	defer c.Close()
+	defer func() {
+		err = c.Close()
+	}()
 
 	// The execution flow stops here. This function is never left until there is
 	// a crash or the filesystem is unmounted by the user.
@@ -48,7 +50,7 @@ func FuseSetup(mountpoint string, readWrite bool) error {
 	if err != nil {
 		return errors.Wrapf(err, "Can't serve fuse")
 	}
-	return nil
+	return err
 }
 
 // FS implements the file system.
@@ -57,6 +59,7 @@ type FS struct {
 }
 
 func (fs FS) Root() (fs.Node, error) {
+	//nolint:staticcheck // ignore S1016 as this mimics the example in the bazil/fuse documentation
 	return Dir{readWrite: fs.readWrite}, nil
 }
 
@@ -73,6 +76,7 @@ func (Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 
 func (d Dir) Lookup(ctx context.Context, name string) (fs.Node, error) {
 	if name == "data" {
+		//nolint:staticcheck // ignore S1016 as this mimics the example in the bazil/fuse documentation
 		return File{readWrite: d.readWrite}, nil
 	}
 	return nil, syscall.ENOENT
@@ -131,7 +135,7 @@ func (f File) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadRe
 		return nil
 	}
 
-	err, data := filemanager.GetBytes(int64(offset), int64(to))
+	data, err := filemanager.GetBytes(int64(offset), int64(to))
 	resp.Data = data
 	return err
 }
@@ -167,6 +171,9 @@ func (f File) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.Writ
 }
 
 func (f File) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
-	filemanager.ClearCache()
-	return nil
+	err := filemanager.ClearCache()
+	if err != nil {
+		return errors.Wrapf(err, "Failed to clear cache")
+	}
+	return err
 }

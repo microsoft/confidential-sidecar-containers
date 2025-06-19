@@ -9,8 +9,8 @@ package common
 // Safe use of this is to ensure that the secret has enough entropy. Examples
 // include RSA private keys.
 type KeyDerivationBlob struct {
-	Salt  string `json:"salt,omitempty`
-	Label string `json:"label,omitemtpy`
+	Salt  string `json:"salt,omitempty"`
+	Label string `json:"label,omitempty"`
 }
 
 // KeyBlob contains information about the AKV service that holds the secret

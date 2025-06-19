@@ -9,5 +9,17 @@
     "python.testing.pytestEnabled": false,
     "debugpy.debugJustMyCode": false,
     "python.testing.unittestEnabled": true,
-    "python.envFile": "${workspaceFolder}/cacitesting.env"
+    "python.envFile": "${workspaceFolder}/cacitesting.env",
+    "go.formatTool": "goimports",
+    "go.lintTool": "golint",
+    "go.lintFlags": ["--fast"],
+    "go.useLanguageServer": true,
+    "go.languageServerFlags": ["-rpc.trace"],
+    "[go]": {
+	    "editor.formatOnSave": true,
+	    "editor.codeActionsOnSave": {
+            "source.organizeImports": true,
+            "source.fixAll": true
+	    }
+    }
 }

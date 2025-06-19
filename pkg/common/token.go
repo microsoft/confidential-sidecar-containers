@@ -29,11 +29,11 @@ const (
 
 // GetToken retrieves an authentication token which will be used for authorizing
 // requests sent to Azure services requiring authorization (e.g., Azure Blob, AKV)
-func GetToken(ResourceId string, i Identity) (r TokenResponse, err error) {
+func GetToken(resourceId string, i Identity) (r TokenResponse, err error) {
 
 	// HTTP GET request to authentication token service
 
-	resource_param := "&resource=" + ResourceId
+	resource_param := "&resource=" + resourceId
 	client_id_param := ""
 
 	if i.ClientId != "" {

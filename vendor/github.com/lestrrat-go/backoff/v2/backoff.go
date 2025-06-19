@@ -18,9 +18,9 @@ func Exponential(options ...ExponentialOption) Policy {
 // Continue is a convenience function to check when we can fire
 // the next invocation of the desired backoff code
 //
-// for backoff.Continue(c) {
-//  ... your code ...
-// }
+//	for backoff.Continue(c) {
+//	 ... your code ...
+//	}
 func Continue(c Controller) bool {
 	select {
 	case <-c.Done():

@@ -120,7 +120,8 @@ func main() {
 	var key interface{}
 	var octKey []byte
 
-	if importKeyCfg.Key.KTY == "RSA-HSM" {
+	switch importKeyCfg.Key.KTY {
+	case "RSA-HSM":
 		var jwKey jwk.RSAPrivateKey
 		if keyRSAPEMFile == "" {
 			privateRSAKey, err := rsa.GenerateKey(rand.Reader, common.RSASize)
@@ -152,7 +153,11 @@ func main() {
 				return
 			}
 
-			privateRSAKeyFile.Close()
+			err = privateRSAKeyFile.Close()
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 
 			// convert to JSON Web Key (JWK) format
 			jwKey = jwk.NewRSAPrivateKey()
@@ -164,7 +169,11 @@ func main() {
 			}
 
 			// note that if KeyOps is nil, the HSM will whitelist all operations
-			jwKey.Set("key_ops", importKeyCfg.Key.KeyOps)
+			err = jwKey.Set("key_ops", importKeyCfg.Key.KeyOps)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 			key = jwKey
 		} else {
 
@@ -193,7 +202,7 @@ func main() {
 		}
 		// if the user specified outputing an octek key binary file, derive a key from the RSA
 		// private key. Output the salt and the label so that the key can be re-derived by
-		// entities in possesion of the private key.
+		// entities in possession of the private key.
 		//
 		// note that using a derived octet key is safe as long as the RSA key is not used in
 		// other means.
@@ -234,14 +243,14 @@ func main() {
 
 			fmt.Printf("Symmetric key %s (salt: %s label: %s)\n", hex.EncodeToString(octKey), hex.EncodeToString(salt), labelString)
 		}
-	} else if importKeyCfg.Key.KTY == "oct-HSM" || importKeyCfg.Key.KTY == "" {
+	case "oct-HSM", "":
 		// if not specified, default is to generate an OCT key
 
 		var err error
 
 		if keyHexFile == "" {
 			octKey = make([]byte, 32)
-			rand.Read(octKey)
+			rand.Read(octKey) //nolint:errcheck
 		} else if _, err = os.Stat(keyHexFile); err != nil {
 			// read string keyHexFile as contents of the key
 			octKey, err = hex.DecodeString(keyHexFile)
@@ -267,7 +276,7 @@ func main() {
 			K:       base64.RawURLEncoding.EncodeToString(octKey),
 			KeySize: len(octKey) * 8,
 		}
-	} else {
+	default:
 		fmt.Println("Key not supported")
 		return
 	}

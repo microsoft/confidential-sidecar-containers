@@ -1,0 +1,15 @@
+version: "2"
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - gocritic
+    - errcheck
+    - misspell
+  exclusions:
+    paths:
+      - "vendor/*"
+      

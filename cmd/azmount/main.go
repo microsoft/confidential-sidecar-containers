@@ -59,7 +59,12 @@ func main() {
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		defer file.Close()
+		defer func() {
+			err := file.Close()
+			if err != nil {
+				logrus.Fatal(err)
+			}
+		}()
 		logrus.SetOutput(file)
 	}
 
@@ -114,7 +119,7 @@ func main() {
 
 	if parseError {
 		usage()
-		os.Exit(1)
+		logrus.Fatal("Invalid arguments")
 	}
 
 	logrus.Infof("Starting %s...", os.Args[0])

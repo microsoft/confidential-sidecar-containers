@@ -58,16 +58,17 @@ func RsaAESKeyUnwrap(alg string, ciphertext []byte, priv *rsa.PrivateKey) ([]byt
 	// encryption algorithm
 	var hash hash.Hash
 
-	if alg == "CKM_RSA_AES_KEY_WRAP" {
+	switch alg {
+	case "CKM_RSA_AES_KEY_WRAP":
 		// CKM_RSA_AES_KEY_WRAP relies on SHA1 hash
 		hash = sha1.New()
-	} else if alg == "RSA_AES_KEY_WRAP_256" {
+	case "RSA_AES_KEY_WRAP_256":
 		// RSA_AES_KEY_WRAP_256 relies on SHA256 hash
 		hash = sha256.New()
-	} else if alg == "RSA_AES_KEY_WRAP_384" {
+	case "RSA_AES_KEY_WRAP_384":
 		// RSA_AES_KEY_WRAP_384 relies on SHA384 hash
 		hash = sha512.New384()
-	} else {
+	default:
 		return nil, errors.New("Unsupported hash for the wrapping protocol")
 	}
 
@@ -269,7 +270,7 @@ type ReleaseKeyReleasePolicy struct {
 
 // ImportPlaintextKey imports a plaintext key to a HSM-backed keyvault. The key is associated
 // with a release policy
-func (akv AKV) ImportPlaintextKey(key interface{}, releasePolicy ReleasePolicy, keyName string) (AKVResponse *ImportKeyResponse, err error) {
+func (akv AKV) ImportPlaintextKey(key interface{}, releasePolicy ReleasePolicy, keyName string) (akvResponse *ImportKeyResponse, err error) {
 	// create import key request
 	releasePolicyBytes, err := json.Marshal(releasePolicy)
 	if err != nil {
@@ -308,12 +309,12 @@ func (akv AKV) ImportPlaintextKey(key interface{}, releasePolicy ReleasePolicy, 
 		return nil, errors.Wrapf(err, "pulling AKV response body failed")
 	}
 
-	AKVResponse = new(ImportKeyResponse)
-	if err = json.Unmarshal(httpResponseBodyBytes, AKVResponse); err != nil {
+	akvResponse = new(ImportKeyResponse)
+	if err = json.Unmarshal(httpResponseBodyBytes, akvResponse); err != nil {
 		return nil, errors.Wrapf(err, "unmarshalling http response to importkey response failed")
 	}
 
-	return AKVResponse, nil
+	return akvResponse, nil
 }
 
 // ReleaseKey releases a key from a key vault. It takes as attributes the MAA token, the
@@ -366,15 +367,15 @@ func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey 
 // (5) Verify the certificate chain for the signer
 // (6) Ensure that the root of the certificate chain is trusted
 // (7) Unwrap the wrapped key from the payload
-func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (key []byte, kty string, key_ops []string, err error) {
+func _releaseKey(akv AKV, akvJws string, privateWrappingKey *rsa.PrivateKey) (key []byte, kty string, key_ops []string, err error) {
 	// (1) Verify that it is a well formed JWS object
-	if err := VerifyJWSToken(AKVJWS); err != nil {
+	if err := VerifyJWSToken(akvJws); err != nil {
 		return nil, "", nil, err
 	}
 
 	// (2) Use the thumbprint or first entry in the chain to obtain the public key of the signer
 	var header jwsHeader
-	if err := header.extractJWSTokenHeader(AKVJWS); err != nil {
+	if err := header.extractJWSTokenHeader(akvJws); err != nil {
 		return nil, "", nil, err
 	}
 
@@ -389,7 +390,7 @@ func _releaseKey(akv AKV, AKVJWS string, privateWrappingKey *rsa.PrivateKey) (ke
 	}
 
 	// (3) Signature validation of the JWS token
-	payloadBytes, err := ValidateJWSToken(AKVJWS, leafKey, jwa.SignatureAlgorithm(header.Alg))
+	payloadBytes, err := ValidateJWSToken(akvJws, leafKey, jwa.SignatureAlgorithm(header.Alg))
 	if err != nil {
 		return nil, "", nil, err
 	}

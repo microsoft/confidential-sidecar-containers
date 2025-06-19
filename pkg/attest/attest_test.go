@@ -321,13 +321,20 @@ func Test_MAA(t *testing.T) {
 			resp, err := tc.maa.Attest(tc.snpAttestationReport, tc.vcekCertChain, tc.policyBlob, tc.keyBlob, tc.uvmReferenceInfo)
 			var httpError *common.HTTPError
 
-			if tc.expectErr && err == nil {
-				fmt.Printf("token: %v\n", resp)
-				t.Fatal("expected err got nil")
-			} else if tc.expectErr && !errors.As(err, &httpError) {
-				t.Fatalf("received error does not contain HTTPError type")
-			} else if !tc.expectErr && err != nil {
-				t.Fatalf("did not expect err got %q", err.Error())
+			switch {
+			case tc.expectErr && err == nil:
+				{
+					fmt.Printf("token: %v\n", resp)
+					t.Fatal("expected err got nil")
+				}
+			case tc.expectErr && !errors.As(err, &httpError):
+				{
+					t.Fatalf("received error does not contain HTTPError type")
+				}
+			case !tc.expectErr && err != nil:
+				{
+					t.Fatalf("did not expect err got %q", err.Error())
+				}
 			}
 		})
 	}

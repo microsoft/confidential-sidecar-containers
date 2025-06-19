@@ -39,11 +39,17 @@ func bufDialer(context.Context, string) (net.Conn, error) {
 
 func TestSayHello(t *testing.T) {
 	ctx := context.Background()
-	conn, err := grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient("passthrough:///bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("Failed to dial bufnet: %v", err)
 	}
-	defer conn.Close()
+	defer func() {
+		err := conn.Close()
+		if err != nil {
+			t.Fatalf("Failed to close connection: %s\n", err)
+		}
+	}()
+
 	client := keyprovider.NewKeyProviderServiceClient(conn)
 	resp, err := client.SayHello(ctx, &keyprovider.HelloRequest{Name: "this is a test!"})
 	if err != nil {

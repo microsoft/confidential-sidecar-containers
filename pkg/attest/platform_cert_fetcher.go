@@ -188,31 +188,42 @@ func fetchWithRetry(requestURL string, baseSec int, maxRetries int, httpRequestF
 			retryCount++
 			continue
 		}
-		if 200 <= res.StatusCode && res.StatusCode < 300 {
-			// Got successful status code 2xx
-			defer res.Body.Close()
-			limitedReader := io.LimitReader(res.Body, MaxResponseBodySize)
-			resBody, err := io.ReadAll(limitedReader)
-			if err != nil {
-				logrus.Debugf("fetch on retry %d: http.Get failed: %s", retryCount, err)
+		switch {
+		case 200 <= res.StatusCode && res.StatusCode < 300:
+			{
+				// Got successful status code 2xx
+				defer func() {
+					err = res.Body.Close()
+				}()
+				limitedReader := io.LimitReader(res.Body, MaxResponseBodySize)
+				resBody, err := io.ReadAll(limitedReader)
+				if err != nil {
+					logrus.Debugf("fetch on retry %d: http.Get failed: %s", retryCount, err)
+					retryCount++
+					continue
+				}
+				return resBody, nil
+			}
+		case res.StatusCode == 408 || res.StatusCode == 429 || 500 <= res.StatusCode:
+			{
+				// Got status code that is worth to retry
+				logrus.Debugf("fetch on retry %d: http.Get failed with a status code worth a retry", retryCount)
 				retryCount++
 				continue
 			}
-			return resBody, nil
-		} else if res.StatusCode == 408 || res.StatusCode == 429 || 500 <= res.StatusCode {
-			// Got status code that is worth to retry
-			logrus.Debugf("fetch on retry %d: http.Get failed with a status code worth a retry", retryCount)
-			retryCount++
-			continue
-		} else {
-			// Got status code that is not worth to retry
-			defer res.Body.Close()
-			limitedReader := io.LimitReader(res.Body, MaxResponseBodySize)
-			resBody, err := io.ReadAll(limitedReader)
-			if err != nil {
-				return nil, errors.Errorf("got error while handling non successful response with status code %d: %s", res.StatusCode, err)
+		default:
+			{
+				// Got status code that is not worth to retry
+				defer func() {
+					err = res.Body.Close()
+				}()
+				limitedReader := io.LimitReader(res.Body, MaxResponseBodySize)
+				resBody, err := io.ReadAll(limitedReader)
+				if err != nil {
+					return nil, errors.Errorf("got error while handling non successful response with status code %d: %s", res.StatusCode, err)
+				}
+				return nil, errors.Errorf("GET request failed with status code %d: %s", res.StatusCode, resBody)
 			}
-			return nil, errors.Errorf("GET request failed with status code %d: %s", res.StatusCode, resBody)
 		}
 	}
 	return nil, errors.Wrapf(err, "failed to fetch after %d retries", maxRetries)
@@ -246,8 +257,8 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			if err != nil {
 				return nil, reportedTCB, err
 			}
-			// encode the VCEK cert in PEM format
-			vcekPEMBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+			// encode the VCEK cert in PEM format to the full cert chain
+			fullCertChain := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 
 			// now retrieve the cert chain
 			logrus.Trace("Fetching cert chain from AMD endpoint...")
@@ -258,7 +269,7 @@ func (certFetcher CertFetcher) retrieveCertChain(chipID string, reportedTCB uint
 			}
 
 			// constuct full chain by appending the VCEK cert to the cert chain
-			fullCertChain := append(vcekPEMBytes, certChainPEMBytes[:]...)
+			fullCertChain = append(fullCertChain, certChainPEMBytes...)
 			logrus.Debugf("Full Cert Chain: %s", string(fullCertChain))
 
 			return fullCertChain, reportedTCB, nil

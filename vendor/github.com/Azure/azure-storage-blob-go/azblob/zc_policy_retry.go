@@ -267,7 +267,7 @@ func NewRetryPolicyFactory(o RetryOptions) pipeline.Factory {
 						}
 						if response.Response().Body == http.NoBody {
 							// If the response is empty the caller isn't obligated to call close
-							tryCancel();
+							tryCancel()
 						} else {
 							response.Response().Body = &contextCancelReadCloser{cf: tryCancel, body: response.Response().Body}
 						}

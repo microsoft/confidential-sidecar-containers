@@ -49,12 +49,19 @@ type AttestationReportFetcher interface {
 }
 
 func NewAttestationReportFetcher() (AttestationReportFetcher, error) {
-	if IsSNPVM5() {
-		return NewAttestationReportFetcher5(), nil
-	} else if IsSNPVM6() {
-		return NewAttestationReportFetcher6(), nil
-	} else {
-		return nil, fmt.Errorf("SEV device is not found")
+	switch {
+	case IsSNPVM5():
+		{
+			return NewAttestationReportFetcher5(), nil
+		}
+	case IsSNPVM6():
+		{
+			return NewAttestationReportFetcher6(), nil
+		}
+	default:
+		{
+			return nil, fmt.Errorf("SEV device is not found")
+		}
 	}
 }
 
@@ -92,7 +99,7 @@ Creates and returns byte array of the following C struct
 The padding is based on Section 3.1.2 of System V ABI for AMD64
 https://www.uclibc.org/docs/psABI-x86_64.pdf
 */
-func createPayloadBytes5(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_SIZE]byte, error) {
+func createPayloadBytes5(reportReqPtr uintptr, reportRespPtr uintptr) ([PAYLOAD_SIZE]byte, error) {
 	payload := [PAYLOAD_SIZE]byte{}
 	var buf bytes.Buffer
 	// req_msg_type
@@ -132,7 +139,7 @@ func createPayloadBytes5(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_
 		return payload, err
 	}
 	// response_uaddr
-	if err := binary.Write(&buf, binary.LittleEndian, uint64(ReportRespPtr)); err != nil {
+	if err := binary.Write(&buf, binary.LittleEndian, uint64(reportRespPtr)); err != nil {
 		return payload, err
 	}
 	// error
@@ -187,7 +194,10 @@ func (f *realAttestationReportFetcher5) FetchAttestationReportByte(reportData [R
 	const SNP_REPORT_OFFSET = 32
 	reportBytes := reportRspBytes[SNP_REPORT_OFFSET : SNP_REPORT_OFFSET+ATTESTATION_REPORT_SIZE]
 	if common.GenerateTestData {
-		os.WriteFile("snp_report.bin", reportBytes, 0644)
+		err = os.WriteFile("snp_report.bin", reportBytes, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("writing snp report failed: %v", err)
+		}
 	}
 	return reportBytes, nil
 }
@@ -238,7 +248,7 @@ Creates and returns byte array of the following C struct
 The padding is based on Section 3.1.2 of System V ABI for AMD64
 https://www.uclibc.org/docs/psABI-x86_64.pdf
 */
-func createPayloadBytes6(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_SIZE_6]byte, error) {
+func createPayloadBytes6(reportReqPtr uintptr, reportRespPtr uintptr) ([PAYLOAD_SIZE_6]byte, error) {
 	payload := [PAYLOAD_SIZE_6]byte{}
 	var buf bytes.Buffer
 	// msg_version
@@ -254,7 +264,7 @@ func createPayloadBytes6(reportReqPtr uintptr, ReportRespPtr uintptr) ([PAYLOAD_
 		return payload, err
 	}
 	// resp_data
-	if err := binary.Write(&buf, binary.LittleEndian, uint64(ReportRespPtr)); err != nil {
+	if err := binary.Write(&buf, binary.LittleEndian, uint64(reportRespPtr)); err != nil {
 		return payload, err
 	}
 	// fw_err
@@ -309,7 +319,10 @@ func (f *realAttestationReportFetcher6) FetchAttestationReportByte(reportData [R
 	const SNP_REPORT_OFFSET = 32
 	reportBytes := reportRspBytes[SNP_REPORT_OFFSET : SNP_REPORT_OFFSET+ATTESTATION_REPORT_SIZE]
 	if common.GenerateTestData {
-		os.WriteFile("snp_report.bin", reportBytes, 0644)
+		err = os.WriteFile("snp_report.bin", reportBytes, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("writing snp report failed: %v", err)
+		}
 	}
 	return reportBytes, nil
 }

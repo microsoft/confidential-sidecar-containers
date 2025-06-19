@@ -53,15 +53,16 @@ func GenerateReferenceSlice(offset int64, size int64) []byte {
 	data := make([]byte, size)
 	for i := int64(0); i < size; i++ {
 		realOffset := offset + i
-		if (realOffset % BYTES_PER_KB) == 0 {
+		switch realOffset % BYTES_PER_KB {
+		case 0:
 			data[i] = byte(realOffset >> 24)
-		} else if (realOffset % BYTES_PER_KB) == 1 {
+		case 1:
 			data[i] = byte((realOffset - 1) >> 16)
-		} else if (realOffset % BYTES_PER_KB) == 2 {
+		case 2:
 			data[i] = byte((realOffset - 2) >> 8)
-		} else if (realOffset % BYTES_PER_KB) == 3 {
+		case 3:
 			data[i] = byte(realOffset - 3)
-		} else {
+		default:
 			data[i] = 0
 		}
 	}
@@ -73,7 +74,9 @@ func GenerateReferenceFile(path string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to create file")
 	}
-	defer file.Close()
+	defer func() {
+		err = file.Close()
+	}()
 
 	var offset int64 = 0
 	for {
@@ -92,31 +95,39 @@ func GenerateReferenceFile(path string) error {
 			return errors.Wrapf(err, "failed to write in file")
 		}
 		// increment offset by 1KB
-		offset = offset + BYTES_PER_KB
+		offset += BYTES_PER_KB
 
 		if offset == REFERENCE_FILE_SIZE {
 			break
 		}
 	}
 
-	file.Truncate(REFERENCE_FILE_SIZE)
+	err = file.Truncate(REFERENCE_FILE_SIZE)
+	if err != nil {
+		return errors.Wrapf(err, "failed to truncate file")
+	}
 
-	return nil
+	return err
 }
 
 func GenerateRandomData(size int64) []byte {
 	data := make([]byte, size)
-	rand.Read(data)
+	// Note that no error handling is necessary, as Read always succeeds.
+	rand.Read(data) //nolint:errcheck
 	return data
 }
 
 // Test reading different ranges of bytes from the file. None of them should
 // cross a block boundary.
 func Test_GetBytes_Supported(t *testing.T) {
-	ClearCache()
+	err := ClearCache()
+	if err != nil {
+		t.Errorf("ClearCache() failed: %s", err.Error())
+		return
+	}
 
 	VerifyReadRange := func(t *testing.T, offset int64, size int64) {
-		err, data := GetBytes(offset, offset+size)
+		data, err := GetBytes(offset, offset+size)
 		if err != nil {
 			t.Errorf("GetBytes(%d, %d) failed: %s", offset, offset+size, err.Error())
 			return
@@ -164,17 +175,21 @@ func Test_GetBytes_Supported(t *testing.T) {
 // Test that this function fails when trying to get data in ranges that cross a
 // block boundary
 func Test_GetBytes_Unsupported(t *testing.T) {
-	ClearCache()
+	err := ClearCache()
+	if err != nil {
+		t.Errorf("ClearCache() failed: %s", err.Error())
+		return
+	}
 
 	GetBytesShouldFail := func(t *testing.T, from int64, to int64) {
-		err, _ := GetBytes(from, to)
+		_, err := GetBytes(from, to)
 		if err == nil {
 			t.Errorf("GetBytes(%d, %d) should have failed", from, to)
 		}
 	}
 
 	GetBytesShouldSucceed := func(t *testing.T, from int64, to int64) {
-		err, _ := GetBytes(from, to)
+		_, err := GetBytes(from, to)
 		if err != nil {
 			t.Errorf("GetBytes(%d, %d) should have succeeded", from, to)
 		}
@@ -189,35 +204,37 @@ func Test_GetBytes_Unsupported(t *testing.T) {
 
 	// Test offset values around a block boundary to test for off-by-one
 	// errors in the checks.
-	GetBytesShouldSucceed(t, BLOCK_SIZE, BLOCK2_OFFSET-1)
 	GetBytesShouldSucceed(t, BLOCK_SIZE, BLOCK2_OFFSET)
+	GetBytesShouldSucceed(t, BLOCK_SIZE, BLOCK2_OFFSET-1)
 	GetBytesShouldFail(t, BLOCK_SIZE, BLOCK2_OFFSET+1)
 	GetBytesShouldFail(t, BLOCK_SIZE-1, BLOCK2_OFFSET)
-	GetBytesShouldSucceed(t, BLOCK_SIZE, BLOCK2_OFFSET)
 	GetBytesShouldSucceed(t, BLOCK_SIZE+1, BLOCK2_OFFSET)
 
-	// Test bigger sizes than allowed
+	// Test bigger size than allowed
 	GetBytesShouldFail(t, BLOCK_SIZE, BLOCK3_OFFSET)
-	GetBytesShouldFail(t, BLOCK_SIZE, BLOCK2_OFFSET+1)
 }
 
 // Test getting blocks outside of bounds, and the ones right at the limits.
 func Test_GetBlock_TestBounds(t *testing.T) {
-	ClearCache()
+	err := ClearCache()
+	if err != nil {
+		t.Errorf("ClearCache() failed: %s", err.Error())
+		return
+	}
 
-	err, _ := GetBlock(-1)
+	_, err = GetBlock(-1)
 	if err.Error() != "Invalid block index (-1)" {
 		t.Errorf("GetBlock(-1) should have failed")
 	}
-	err, _ = GetBlock(0)
+	_, err = GetBlock(0)
 	if err != nil {
 		t.Errorf("GetBlock(0) should have succeeded: %s", err.Error())
 	}
-	err, _ = GetBlock(255)
+	_, err = GetBlock(255)
 	if err != nil {
 		t.Errorf("GetBlock(255) should have succeeded: %s", err.Error())
 	}
-	err, _ = GetBlock(256)
+	_, err = GetBlock(256)
 	if err.Error() != "Block index over limit (256 > 255)" {
 		t.Errorf("GetBlock(-1) should have failed")
 	}
@@ -229,7 +246,11 @@ func Test_SetBytes_Supported(t *testing.T) {
 	if !IsReadWrite() {
 		t.Skip("Skipping write test because the cache is read-only")
 	}
-	ClearCache()
+	err := ClearCache()
+	if err != nil {
+		t.Errorf("ClearCache() failed: %s", err.Error())
+		return
+	}
 
 	VerifyWriteRange := func(t *testing.T, offset int64, data []byte) {
 		err := SetBytes(offset, data)
@@ -237,7 +258,7 @@ func Test_SetBytes_Supported(t *testing.T) {
 			t.Errorf("SetBytes(%d) failed: %s", offset, err.Error())
 			return
 		}
-		_, referenceData := GetBytes(offset, offset+int64(len(data)))
+		referenceData, _ := GetBytes(offset, offset+int64(len(data)))
 
 		// get slice of data that is same size as referenceData
 		// for testing data that is too large to write at the end of the file
@@ -288,7 +309,11 @@ func Test_SetBytes_Unsupported(t *testing.T) {
 	if !IsReadWrite() {
 		t.Skip("Skipping write test because the cache is read-only")
 	}
-	ClearCache()
+	err := ClearCache()
+	if err != nil {
+		t.Errorf("ClearCache() failed: %s", err.Error())
+		return
+	}
 
 	SetBytesShouldFail := func(t *testing.T, offset int64, data []byte) {
 		err := SetBytes(offset, data)
@@ -333,12 +358,16 @@ func Test_SetBlock_TestBounds(t *testing.T) {
 	if !IsReadWrite() {
 		t.Skip("Skipping write test because the cache is read-only")
 	}
-	ClearCache()
+	err := ClearCache()
+	if err != nil {
+		t.Errorf("ClearCache() failed: %s", err.Error())
+		return
+	}
 
 	// Generate random data to write
 	data := GenerateRandomData(BLOCK_SIZE)
 
-	err := SetBlock(-1, 0, data)
+	err = SetBlock(-1, 0, data)
 	if err.Error() != "Invalid block index (-1)" {
 		t.Errorf("SetBlock(-1) should have failed")
 	}
@@ -370,7 +399,12 @@ func DoAllTests(m *testing.M, readWrite bool) {
 	if err != nil {
 		fmt.Printf("Failed to create temp dir: %s\n", err.Error())
 	}
-	defer os.RemoveAll(tempDir) // Remove folder at exit
+	defer func() {
+		err := os.RemoveAll(tempDir) // Remove folder at exit
+		if err != nil {
+			fmt.Printf("Failed to remove tempDir: %s\n", err.Error())
+		}
+	}()
 	fmt.Printf("Temporary directory: %s\n", tempDir)
 
 	// Generate the reference file inside the temporary folder so that it is

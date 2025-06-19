@@ -37,7 +37,6 @@ var (
 	_cryptsetupOpen                = cryptsetupOpen
 	_cryptsetupOpenWithHeaderFile  = cryptsetupOpenWithHeaderFile
 	ioutilWriteFile                = os.WriteFile
-	osGetenv                       = os.Getenv
 	osMkdirAll                     = os.MkdirAll
 	osRemoveAll                    = os.RemoveAll
 	osStat                         = os.Stat
@@ -72,7 +71,7 @@ func azmountRun(imageLocalFolder string, azureImageUrl string, azureImageUrlPriv
 		return errors.Wrapf(err, "azmount failed to start")
 	}
 	logrus.Infof("azmount running...")
-	return nil
+	return err
 }
 
 // cryptsetupCommand runs cryptsetup with the provided arguments
@@ -155,12 +154,15 @@ func mountAzureFile(tempDir string, index int, azureImageUrl string, azureImageU
 	// to requests from the kernel, and it gets stuck in the loop that serves
 	// requests, so it is needed to run it in a different process so that the
 	// execution can continue in this one.
-	_azmountRun(imageLocalFolder, azureImageUrl, azureImageUrlPrivate, azmountLogFile, cacheBlockSize, numBlocks, readWrite)
+	err := _azmountRun(imageLocalFolder, azureImageUrl, azureImageUrlPrivate, azmountLogFile, cacheBlockSize, numBlocks, readWrite)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to run azmount for %s", azureImageUrl)
+	}
 
 	// Wait until the file is available
 	count := 0
 	for {
-		_, err := osStat(imageLocalFile)
+		_, err = osStat(imageLocalFile)
 		if err == nil {
 			// Found
 			break
@@ -181,8 +183,7 @@ func mountAzureFile(tempDir string, index int, azureImageUrl string, azureImageU
 func rawRemoteFilesystemKey(tempDir string, rawKeyHexString string) (keyFilePath string, err error) {
 	keyFilePath = filepath.Join(tempDir, "keyfile")
 
-	keyBytes := make([]byte, 64)
-	keyBytes, err = hex.DecodeString(rawKeyHexString)
+	keyBytes, err := hex.DecodeString(rawKeyHexString)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to decode raw key")
 	}
@@ -224,13 +225,14 @@ func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob common.KeyDeri
 		return "", errors.Wrapf(err, "failed to extract raw key")
 	}
 
-	if jwKey.KeyType() == "oct" {
+	switch jwKey.KeyType() {
+	case "oct":
 		rawOctetKeyBytes, ok := rawKey.([]byte)
 		if !ok || len(rawOctetKeyBytes) != 32 {
 			return "", errors.Wrapf(err, "expected 32-byte octet key")
 		}
 		octetKeyBytes = rawOctetKeyBytes
-	} else if jwKey.KeyType() == "RSA" {
+	case "RSA":
 		rawKey, ok := rawKey.(*rsa.PrivateKey)
 		if !ok {
 			return "", errors.Wrapf(err, "expected RSA key")
@@ -265,7 +267,7 @@ func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob common.KeyDeri
 		}
 
 		logrus.Debugf("Symmetric key %s (salt: %s label: %s)", hex.EncodeToString(octetKeyBytes), keyDerivationBlob.Salt, labelString)
-	} else {
+	default:
 		return "", errors.Wrapf(err, "key type %s not supported", jwKey.KeyType())
 	}
 

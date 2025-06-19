@@ -61,6 +61,7 @@ type attestSNPRequestBody struct {
 // and (iv) a nonce
 func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, policyBlob []byte, keyBlob []byte, uvmReferenceInfo []byte) (*attestSNPRequestBody, error) {
 	var request attestSNPRequestBody
+	var err error
 
 	var base64urlEncodedUvmReferenceInfo string
 	if len(uvmReferenceInfo) > 0 {
@@ -69,8 +70,14 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 	logrus.Debugf("base64urlEncodedUvmReferenceInfo: %s", base64urlEncodedUvmReferenceInfo)
 
 	if GenerateTestData {
-		os.WriteFile("body.uvm_reference_info.bin", uvmReferenceInfo, 0644)
-		os.WriteFile("body.uvm_reference_info.base64url", []byte(base64urlEncodedUvmReferenceInfo), 0644)
+		err = os.WriteFile("body.uvm_reference_info.bin", uvmReferenceInfo, 0644)
+		if err != nil {
+			return nil, errors.Wrapf(err, "writing uvm reference info failed")
+		}
+		err = os.WriteFile("body.uvm_reference_info.base64url", []byte(base64urlEncodedUvmReferenceInfo), 0644)
+		if err != nil {
+			return nil, errors.Wrapf(err, "writing uvm reference info base64url failed")
+		}
 	}
 
 	var base64urlEncodedmaaEndorsement string
@@ -80,7 +87,6 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 		}
 
 		logrus.Info("Marshalling MAA Endorsement...")
-		var err error
 		maaEndorsementJSONBytes, err := json.Marshal(maaEndorsement)
 		if err != nil {
 			return nil, errors.Wrapf(err, "marhalling maa endorsement failed")
@@ -88,8 +94,14 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 		base64urlEncodedmaaEndorsement = base64.URLEncoding.EncodeToString(maaEndorsementJSONBytes)
 
 		if GenerateTestData {
-			os.WriteFile("body.endorsements.bin", maaEndorsementJSONBytes, 0644)
-			os.WriteFile("body.endorsements.base64url", []byte(base64urlEncodedmaaEndorsement), 0644)
+			err = os.WriteFile("body.endorsements.bin", maaEndorsementJSONBytes, 0644)
+			if err != nil {
+				return nil, errors.Wrapf(err, "writing maa endorsement failed")
+			}
+			err = os.WriteFile("body.endorsements.base64url", []byte(base64urlEncodedmaaEndorsement), 0644)
+			if err != nil {
+				return nil, errors.Wrapf(err, "writing maa endorsement base64url failed")
+			}
 		}
 	}
 
@@ -110,8 +122,14 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 	request.Report = base64.URLEncoding.EncodeToString(maaReportJSONBytes)
 
 	if GenerateTestData {
-		os.WriteFile("body.maa_report.json", maaReportJSONBytes, 0644)
-		os.WriteFile("body.report.base64url", []byte(request.Report), 0644)
+		err = os.WriteFile("body.maa_report.json", maaReportJSONBytes, 0644)
+		if err != nil {
+			return nil, errors.Wrapf(err, "writing maa report failed")
+		}
+		err = os.WriteFile("body.report.base64url", []byte(request.Report), 0644)
+		if err != nil {
+			return nil, errors.Wrapf(err, "writing maa report base64url failed")
+		}
 	}
 
 	// the key blob is passed as runtime data
@@ -148,10 +166,10 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 // claims and the key blob as runtime claims.
 //
 // Note, the using the leaf cert will be changed to a DID based scheme similar to fragments.
-func (maa MAA) Attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlobBytes []byte, keyBlobBytes []byte, encodedUvmReferenceInfo []byte) (MAAToken string, err error) {
+func (maa MAA) Attest(snpReportHexBytes []byte, vcekCertChain []byte, policyBlobBytes []byte, keyBlobBytes []byte, encodedUvmReferenceInfo []byte) (maaToken string, err error) {
 	// Construct attestation request that contain the four attributes
 	logrus.Info("Constructing MAA Attestation Request...")
-	request, err := newAttestSNPRequestBody(SNPReportHexBytes, vcekCertChain, policyBlobBytes, keyBlobBytes, encodedUvmReferenceInfo)
+	request, err := newAttestSNPRequestBody(snpReportHexBytes, vcekCertChain, policyBlobBytes, keyBlobBytes, encodedUvmReferenceInfo)
 	if err != nil {
 		return "", errors.Wrapf(err, "creating new AttestSNPRequestBody failed")
 	}
@@ -164,7 +182,10 @@ func (maa MAA) Attest(SNPReportHexBytes []byte, vcekCertChain []byte, policyBlob
 	logrus.Debugf("MAA Request: %s\n", string(maaRequestJSONData))
 
 	if GenerateTestData {
-		os.WriteFile("request.json", maaRequestJSONData, 0644)
+		err = os.WriteFile("request.json", maaRequestJSONData, 0644)
+		if err != nil {
+			return "", errors.Wrapf(err, "writing maa request JSON failed")
+		}
 	}
 
 	// HTTP POST request to MAA service
