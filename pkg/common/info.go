@@ -129,29 +129,38 @@ func GetUvmInformation() (UvmInformation, error) {
 
 func GetUvmInformationFromEnv() (UvmInformation, error) {
 	var encodedUvmInformation UvmInformation
+	var err error
 
 	encodedHostCertsFromTHIM := os.Getenv("UVM_HOST_AMD_CERTIFICATE")
 
 	if GenerateTestData {
-		os.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
+		err = os.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
+		if err != nil {
+			return encodedUvmInformation, errors.Wrapf(err, "writing host amd cert failed")
+		}
 	}
 
 	if encodedHostCertsFromTHIM != "" {
-		var err error
 		encodedUvmInformation.InitialCerts, err = ParseTHIMCertsFromString(encodedHostCertsFromTHIM)
 		if err != nil {
-			return encodedUvmInformation, err
+			return encodedUvmInformation, errors.Wrapf(err, "parsing host amd cert failed")
 		}
 	}
 	encodedUvmInformation.EncodedSecurityPolicy = os.Getenv("UVM_SECURITY_POLICY")
 	encodedUvmInformation.EncodedUvmReferenceInfo = os.Getenv("UVM_REFERENCE_INFO")
 
 	if GenerateTestData {
-		os.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
-		os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
+		err = os.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
+		if err != nil {
+			return encodedUvmInformation, errors.Wrapf(err, "writing security policy failed")
+		}
+		err = os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
+		if err != nil {
+			return encodedUvmInformation, errors.Wrapf(err, "writing uvm reference info failed")
+		}
 	}
 
-	return encodedUvmInformation, nil
+	return encodedUvmInformation, err
 }
 
 // From hcsshim pkg/securitypolicy/securitypolicy.go
@@ -186,8 +195,14 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 	}
 
 	if GenerateTestData {
-		os.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
-		os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
+		err = os.WriteFile("uvm_security_policy.base64", []byte(encodedUvmInformation.EncodedSecurityPolicy), 0644)
+		if err != nil {
+			return encodedUvmInformation, errors.Wrapf(err, "writing security policy failed")
+		}
+		err = os.WriteFile("uvm_reference_info.base64", []byte(encodedUvmInformation.EncodedUvmReferenceInfo), 0644)
+		if err != nil {
+			return encodedUvmInformation, errors.Wrapf(err, "writing uvm reference info failed")
+		}
 	}
 
 	encodedHostCertsFromTHIM, err := readSecurityContextFile(securityContextDir, HostAMDCertFilename)
@@ -196,7 +211,10 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 	}
 
 	if GenerateTestData {
-		os.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
+		err = os.WriteFile("uvm_host_amd_certificate.base64", []byte(encodedHostCertsFromTHIM), 0644)
+		if err != nil {
+			return encodedUvmInformation, errors.Wrapf(err, "writing host amd cert failed")
+		}
 	}
 
 	if encodedHostCertsFromTHIM != "" {
@@ -214,8 +232,8 @@ func GetUvmInformationFromFiles() (UvmInformation, error) {
 	return encodedUvmInformation, err
 }
 
-func GetReferenceInfoFile(securityContextDir string, ReferenceInfoFilename string) (string, error) {
-	encodedUvmReferenceInfo, err := readSecurityContextFile(securityContextDir, ReferenceInfoFilename)
+func GetReferenceInfoFile(securityContextDir string, referenceInfoFilename string) (string, error) {
+	encodedUvmReferenceInfo, err := readSecurityContextFile(securityContextDir, referenceInfoFilename)
 	if err != nil {
 		return encodedUvmReferenceInfo, errors.Wrapf(err, "reading uvm reference info failed")
 	}

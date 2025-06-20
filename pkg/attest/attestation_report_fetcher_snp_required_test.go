@@ -14,12 +14,19 @@ import (
 )
 
 func TestFetchReport(t *testing.T) {
-	if IsSNPVM5() {
-		t.Logf("Running in a SNP VM with kernel v5.x")
-	} else if IsSNPVM6() {
-		t.Logf("Running in a SNP VM with kernel v6.x")
-	} else {
-		t.Fatalf("not runnin in a SNP VM")
+	switch {
+	case IsSNPVM5():
+		{
+			t.Logf("Running in a SNP VM with kernel v5.x")
+		}
+	case IsSNPVM6():
+		{
+			t.Logf("Running in a SNP VM with kernel v6.x")
+		}
+	default:
+		{
+			t.Fatalf("not runnin in a SNP VM")
+		}
 	}
 	// Report data for test
 	reportData := [REPORT_DATA_SIZE]byte{}

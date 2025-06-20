@@ -68,10 +68,16 @@ func HTTPPRequest(httpType string, uri string, jsonData []byte, authorizationTok
 func HTTPResponseBody(httpResponse *http.Response) ([]byte, error) {
 	// Pull out response body. We are using a LimitReader to prevent unlimited server response causing buffer overflow
 	var httpResponseBodyBytes []byte
+	var err error
 	if httpResponse != nil && httpResponse.Body != nil {
-		defer httpResponse.Body.Close()
+		defer func() {
+			err = httpResponse.Body.Close()
+			if err != nil {
+				err = errors.Wrapf(err, "Failed to close HTTP response body\n")
+			}
+		}()
 		respLen := httpResponse.ContentLength
-		//134MB is an arbitrary limit size that is appropriate for http reponse using bit manipulation
+		// 134MB is an arbitrary limit size that is appropriate for http response using bit manipulation
 		const respLenLimit134mb = 1 << 20
 		if respLen < 1 || respLen > respLenLimit134mb {
 			respLen = respLenLimit134mb
@@ -81,5 +87,5 @@ func HTTPResponseBody(httpResponse *http.Response) ([]byte, error) {
 	if httpResponse.StatusCode < 200 || httpResponse.StatusCode > 207 {
 		return nil, errors.Wrap(&HTTPError{httpResponse.Status}, string(httpResponseBodyBytes))
 	}
-	return httpResponseBodyBytes, nil
+	return httpResponseBodyBytes, err
 }

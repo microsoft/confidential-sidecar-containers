@@ -112,22 +112,28 @@ func Test_Keywrap(t *testing.T) {
 			} else {
 				key, err := common.AesUnwrapPadding(cipher, tc.wrapKey)
 
-				if tc.expectErr && err == nil {
-					t.Fatal("expected err got nil")
-				} else if tc.expectErr && !strings.Contains(err.Error(), tc.expectedError.Error()) {
-					t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
-				} else if !tc.expectErr {
-					if err != nil {
-						t.Fatalf("did not expect err got %q", err.Error())
+				switch {
+				case tc.expectErr && err == nil:
+					{
+						t.Fatal("expected err got nil")
 					}
+				case tc.expectErr && !strings.Contains(err.Error(), tc.expectedError.Error()):
+					{
+						t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
+					}
+				case !tc.expectErr:
+					{
+						if err != nil {
+							t.Fatalf("did not expect err got %q", err.Error())
+						}
 
-					if tc.expectMatch && !bytes.Equal(tc.expectedContent, key) {
-						t.Fatalf("expected %v == %v", tc.expectedContent, key)
-					} else if !tc.expectMatch && bytes.Equal(tc.expectedContent, key) {
-						t.Fatalf("expected %v != %v", tc.expectedContent, key)
+						if tc.expectMatch && !bytes.Equal(tc.expectedContent, key) {
+							t.Fatalf("expected %v == %v", tc.expectedContent, key)
+						} else if !tc.expectMatch && bytes.Equal(tc.expectedContent, key) {
+							t.Fatalf("expected %v != %v", tc.expectedContent, key)
+						}
 					}
 				}
-
 			}
 		})
 	}
@@ -257,12 +263,19 @@ func Test_AKV(t *testing.T) {
 			for _, token := range tc.token {
 				err := common.VerifyJWSToken(token)
 
-				if tc.expectErr && err == nil {
-					t.Fatal("expected err got nil")
-				} else if tc.expectErr && err.Error() != tc.expectedError.Error() {
-					t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
-				} else if !tc.expectErr && err != nil {
-					t.Fatalf("did not expect err got %q", err.Error())
+				switch {
+				case tc.expectErr && err == nil:
+					{
+						t.Fatal("expected err got nil")
+					}
+				case tc.expectErr && err.Error() != tc.expectedError.Error():
+					{
+						t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
+					}
+				case !tc.expectErr && err != nil:
+					{
+						t.Fatalf("did not expect err got %q", err.Error())
+					}
 				}
 			}
 		})
@@ -312,12 +325,19 @@ func Test_AKV(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := common.ParseX509Certificate(tc.certstring)
 
-			if tc.expectErr && err == nil {
-				t.Fatal("expected err got nil")
-			} else if tc.expectErr && !strings.Contains(err.Error(), tc.expectedError.Error()) {
-				t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
-			} else if !tc.expectErr && err != nil {
-				t.Fatalf("did not expect err got %q", err.Error())
+			switch {
+			case tc.expectErr && err == nil:
+				{
+					t.Fatal("expected err got nil")
+				}
+			case tc.expectErr && !strings.Contains(err.Error(), tc.expectedError.Error()):
+				{
+					t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
+				}
+			case !tc.expectErr && err != nil:
+				{
+					t.Fatalf("did not expect err got %q", err.Error())
+				}
 			}
 		})
 	}
@@ -336,6 +356,9 @@ func Test_AKV(t *testing.T) {
 	}
 	certDNSName := "test-confidential-sidecar"
 	generatedCerts, err := generateTestCerts(certDNSName)
+	if err != nil {
+		t.Fatalf("failed to generate test certs: %v", err)
+	}
 
 	certchainVerificationTestcases := []*certchainVerificationTestcase{
 		// this test passes because the cert chain is complete rooted to the trusted root certificate
@@ -406,12 +429,19 @@ func Test_AKV(t *testing.T) {
 
 			err := common.VerifyX509CertChain(tc.dnsName, tc.x5c, roots)
 
-			if tc.expectErr && err == nil {
-				t.Fatal("expected err got nil")
-			} else if tc.expectErr && !strings.Contains(err.Error(), tc.expectedError.Error()) {
-				t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
-			} else if !tc.expectErr && err != nil {
-				t.Fatalf("did not expect err got %q", err.Error())
+			switch {
+			case tc.expectErr && err == nil:
+				{
+					t.Fatal("expected err got nil")
+				}
+			case tc.expectErr && !strings.Contains(err.Error(), tc.expectedError.Error()):
+				{
+					t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
+				}
+			case !tc.expectErr && err != nil:
+				{
+					t.Fatalf("did not expect err got %q", err.Error())
+				}
 			}
 		})
 	}
@@ -497,19 +527,26 @@ func Test_AKV(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			payloadBytes, err := common.ValidateJWSToken(string(tc.signedPayload), tc.pubkey, jwa.RS256)
 
-			if tc.expectErr && err == nil {
-				t.Fatal("expected err got nil")
-			} else if tc.expectErr && err.Error() != tc.expectedError.Error() {
-				t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
-			} else if !tc.expectErr {
-				if err != nil {
-					t.Fatalf("did not expect err got %q", err.Error())
+			switch {
+			case tc.expectErr && err == nil:
+				{
+					t.Fatal("expected err got nil")
 				}
+			case tc.expectErr && err.Error() != tc.expectedError.Error():
+				{
+					t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
+				}
+			case !tc.expectErr:
+				{
+					if err != nil {
+						t.Fatalf("did not expect err got %q", err.Error())
+					}
 
-				if tc.expectMatch && !bytes.Equal([]byte(tc.expectedContent), payloadBytes) {
-					t.Fatalf("expected %v == %v", tc.expectedContent, string(payloadBytes))
-				} else if !tc.expectMatch && bytes.Equal([]byte(tc.expectedContent), payloadBytes) {
-					t.Fatalf("expected %v != %v", tc.expectedContent, string(payloadBytes))
+					if tc.expectMatch && !bytes.Equal([]byte(tc.expectedContent), payloadBytes) {
+						t.Fatalf("expected %v == %v", tc.expectedContent, string(payloadBytes))
+					} else if !tc.expectMatch && bytes.Equal([]byte(tc.expectedContent), payloadBytes) {
+						t.Fatalf("expected %v != %v", tc.expectedContent, string(payloadBytes))
+					}
 				}
 			}
 		})
@@ -595,19 +632,27 @@ func Test_AKV(t *testing.T) {
 			if ciphertext, err := base64.RawURLEncoding.DecodeString(tc.ciphertextBase64); err == nil {
 				keyBytes, err := common.RsaAESKeyUnwrap(tc.enc, ciphertext, tc.privkey)
 
-				if tc.expectErr && err == nil {
-					t.Fatal("expected err got nil")
-				} else if tc.expectErr && err.Error() != tc.expectedError.Error() {
-					t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
-				} else if !tc.expectErr {
-					if err != nil {
-						t.Fatalf("did not expect err got %q", err.Error())
-					}
+				switch {
 
-					if tc.expectMatch && !bytes.Equal(tc.expectedContent, keyBytes) {
-						t.Fatalf("expected %v == %v", tc.expectedContent, keyBytes)
-					} else if !tc.expectMatch && bytes.Equal(tc.expectedContent, keyBytes) {
-						t.Fatalf("expected %v != %v", tc.expectedContent, keyBytes)
+				case tc.expectErr && err == nil:
+					{
+						t.Fatal("expected err got nil")
+					}
+				case tc.expectErr && err.Error() != tc.expectedError.Error():
+					{
+						t.Fatalf("expected %q got %q", tc.expectedError.Error(), err.Error())
+					}
+				case !tc.expectErr:
+					{
+						if err != nil {
+							t.Fatalf("did not expect err got %q", err.Error())
+						}
+
+						if tc.expectMatch && !bytes.Equal(tc.expectedContent, keyBytes) {
+							t.Fatalf("expected %v == %v", tc.expectedContent, keyBytes)
+						} else if !tc.expectMatch && bytes.Equal(tc.expectedContent, keyBytes) {
+							t.Fatalf("expected %v != %v", tc.expectedContent, keyBytes)
+						}
 					}
 				}
 			} else {

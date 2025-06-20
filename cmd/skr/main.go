@@ -65,7 +65,12 @@ func main() {
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		defer file.Close()
+		defer func() {
+			err := file.Close()
+			if err != nil {
+				logrus.Fatal(err)
+			}
+		}()
 		logrus.SetOutput(file)
 	}
 
@@ -162,7 +167,7 @@ func main() {
 
 	thimTcbm, err := strconv.ParseUint(tcbm, 16, 64)
 	if err != nil {
-		logrus.Fatal("Unable to convert intial TCBM to a uint64")
+		logrus.Fatal("Unable to convert initial TCBM to a uint64")
 	}
 
 	certState := attest.CertState{
@@ -206,5 +211,8 @@ func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo
 	server.POST("/attest/maa", httpginendpoints.PostMAAAttest)
 	server.POST("/key/release", httpginendpoints.PostKeyRelease)
 	httpginendpoints.SetServerReady()
-	server.Run(url)
+	err := server.Run(url)
+	if err != nil {
+		logrus.Fatalf("Failed to start HTTP server: %v\n%s", err, skr.ERROR_STRING)
+	}
 }

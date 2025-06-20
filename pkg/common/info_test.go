@@ -50,8 +50,16 @@ func Test_ParseTHIMCerts(t *testing.T) {
 
 func Test_GetUvmInformation(t *testing.T) {
 	currentSecurityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
-	os.Setenv("UVM_SECURITY_CONTEXT_DIR", "security-context-test")
-	defer os.Setenv("UVM_SECURITY_CONTEXT_DIR", currentSecurityContextDir)
+	err := os.Setenv("UVM_SECURITY_CONTEXT_DIR", "security-context-test")
+	if err != nil {
+		t.Fatalf("Could not set UVM_SECURITY_CONTEXT_DIR: %s", err)
+	}
+	defer func() {
+		err := os.Setenv("UVM_SECURITY_CONTEXT_DIR", currentSecurityContextDir)
+		if err != nil {
+			t.Fatalf("Could not restore UVM_SECURITY_CONTEXT_DIR: %s", err)
+		}
+	}()
 	uvmInfo, err := GetUvmInformation()
 	if err != nil {
 		t.Fatalf("Could not get UVM information")
