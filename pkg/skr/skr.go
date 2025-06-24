@@ -142,9 +142,13 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, SKRK
 
 		logrus.Trace("Encoding RSA key as JWK...")
 		jwKey := jwk.NewRSAPrivateKey()
-		err = jwKey.FromRaw(privateRSAKey)
-		if err != nil {
+		if err := jwKey.FromRaw(privateRSAKey); err != nil {
 			return nil, errors.Wrapf(err, "could not encode RSA key as JWK")
+		}
+		if len(keyOps) > 0 {
+			if err := jwKey.Set(jwk.KeyOpsKey, keyOps); err != nil {
+				return nil, errors.Wrapf(err, "setting key_ops on JWK failed")
+			}
 		}
 		return jwKey, nil
 	} else if kty == "EC-HSM" || kty == "EC" {
