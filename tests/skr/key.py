@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 
 
-def generate_key():
+def generate_oct_key():
     with tempfile.NamedTemporaryFile() as tmp_key_file:
         print("Generating key file")
         subprocess.check_call(
@@ -55,21 +55,24 @@ def generate_release_policy(attestation_endpoint, host_data):
 
 def deploy_key(
     key_id: str,
+    key_ops: list[str],
     attestation_endpoint: str,
     hsm_endpoint: str,
     key_data: bytes,
     security_policy: str,
+    kty: str = "oct",
 ):
 
     response = requests.put(
         url=f"https://{hsm_endpoint}/keys/{key_id}?api-version=7.4",
         data=json.dumps(
             {
+                # https://learn.microsoft.com/en-us/cli/azure/keyvault/key?view=azure-cli-latest#az-keyvault-key-create
                 "key": {
-                    "kty": "oct-HSM",
+                    "kty": kty, # Key types: EC, EC-HSM, RSA, RSA-HSM, oct, oct-HSM
                     "k": urlsafe_b64encode(binascii.unhexlify(key_data)).decode(),
                     "key_size": 256,
-                    "key_ops": ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
+                    "key_ops": key_ops, # list of permitted JSON web key operations: decrypt, encrypt, export, import, sign, unwrapKey, verify, wrapKey
                 },
                 "hsm": True,
                 "attributes": {
@@ -100,4 +103,4 @@ def deploy_key(
     )
 
     assert response.status_code == 200, response.content
-    print(f"Deployed key {key_id} into the HSM")
+    print(f"Deployed {kty} key {key_id} into the HSM")

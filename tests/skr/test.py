@@ -19,9 +19,9 @@ import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from attestation import SNP_REPORT_STRUCTURE
 try:
-    from .key import generate_key, deploy_key, generate_release_policy
+    from .key import generate_oct_key, deploy_key, generate_release_policy
 except ImportError:
-    from key import generate_key, deploy_key, generate_release_policy
+    from key import generate_oct_key, deploy_key, generate_release_policy
 
 from c_aci_testing.args.parameters.location import parse_location
 from c_aci_testing.args.parameters.managed_identity import \
@@ -205,20 +205,50 @@ class SkrTest(unittest.TestCase):
         else:
             print("\nSkipping MAA test as no endpoint provided.\n")
 
-    def test_skr_http_key_release(self):
-
-        if (self.attestation_endpoint != "" and self.hsm_endpoint != ""):
+    def test_skr_http_oct_key_release(self):
+        if self.attestation_endpoint != "" and self.hsm_endpoint != "":
             # Deploy a Key to the mHSM
             key_id = f"{self.id}-key"
             with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_skr.rego")) as f:
                 deploy_key(
                     key_id=key_id,
+                    kty="oct-HSM",
+                    key_ops=["encrypt", "decrypt", "wrapKey", "unwrapKey"],
                     attestation_endpoint=self.attestation_endpoint,
                     hsm_endpoint=self.hsm_endpoint,
-                    key_data=generate_key(),
+                    key_data=generate_oct_key(),
                     security_policy=f.read(),
                 )
+            self._run_key_release_test(
+                key_id=key_id,
+                key_ops=["encrypt", "decrypt", "wrapKey", "unwrapKey"],
+            )
+        else:
+            print("\nSkipping Key Release test as MAA/mHSM endpoints not provided.\n")
 
+    def test_skr_http_ec_key_release(self):
+        if self.attestation_endpoint != "" and self.hsm_endpoint != "":
+            # Generate a key in the HSM
+            key_id = f"{self.id}-ec-key"
+            with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_skr.rego")) as f:
+                security_policy = generate_release_policy(
+                    attestation_endpoint=self.attestation_endpoint,
+                    host_data=hashlib.sha256(f.read().encode()).hexdigest()
+                )
+                subprocess.check_call([
+                    "az", "keyvault", "key", "create",
+                    "--id", f"https://{self.hsm_endpoint}/keys/{key_id}",
+                    "--ops", "sign", "verify",
+                    "--kty", "EC-HSM", "--curve", "P-256", "--exportable",
+                    "--policy", security_policy])
+            self._run_key_release_test(
+                key_id=key_id,
+                key_ops=["sign", "verify"],
+            )
+        else:
+            print("\nSkipping Key Release test as MAA/mHSM endpoints not provided.\n")
+
+    def _run_key_release_test(self, key_id, key_ops):
             skr_response = requests.post(
                 url=f"http://{self.skr_ip}:8000/key/release",
                 headers={
@@ -232,12 +262,10 @@ class SkrTest(unittest.TestCase):
                     }
                 ),
             )
+            key = json.loads(json.loads(skr_response.content.decode())["key"])
             assert skr_response.status_code == 200, skr_response.content.decode()
-            assert json.loads(json.loads(skr_response.content.decode())["key"])["k"] != ""
-            expected_key_ops = {"encrypt", "decrypt", "wrapKey", "unwrapKey"}
-            assert set(json.loads(json.loads(skr_response.content.decode())["key"])["key_ops"]) == expected_key_ops
-        else:
-            print("\nSkipping Key Release test as MAA/mHSM endpoints not provided.\n")
+            assert key["k"] != "" if "oct" in key["kty"] else key["x"] != "" and key["y"] != ""
+            assert set(key["key_ops"]) == set(key_ops)
 
 
     def test_skr_grpc_say_hello(self):

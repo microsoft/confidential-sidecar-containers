@@ -15,7 +15,7 @@ import sys
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from skr.key import generate_key, deploy_key
+from skr.key import generate_oct_key, deploy_key
 try:
     from .encfs import deploy_encfs
 except ImportError:
@@ -114,9 +114,11 @@ class EncFSTest(unittest.TestCase):
             )
 
             with open(os.path.join(os.path.realpath(os.path.dirname(__file__)), "policy_encfs.rego")) as f:
-                key_data = generate_key()
+                key_data = generate_oct_key()
                 deploy_key(
                     key_id=key_id,
+                    kty="oct-HSM",
+                    key_ops=["encrypt", "decrypt", "wrapKey", "unwrapKey"],
                     attestation_endpoint=attestation_endpoint,
                     hsm_endpoint=hsm_endpoint,
                     key_data=key_data,
