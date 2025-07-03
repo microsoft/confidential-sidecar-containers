@@ -63,8 +63,7 @@ There are **two options** for generating security policies:
 The following command generates a security policy and automatically injects it into the template. <br>
 Include the `--debug-mode` option so the generated policy allows shelling into the container to see the released key in this example.
 
-> [!WARNING]  
-> `--debug-mode` is only used as an example and **not recommended for production**.
+> ⚠️ **Warning**: `--debug-mode` is only used as an example and **not recommended for production**.
 
 ```shell
 az confcom acipolicygen -a aci-arm-template.json --debug-mode
