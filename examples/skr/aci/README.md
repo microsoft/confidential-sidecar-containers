@@ -34,7 +34,7 @@ In our confidential container group example, we will deploy the SKR sidecar alon
 | `attest/maa test`   | `/tests/skr/attest_client.sh`          | - `AttestClientMAAEndpoint`: passes the Microsoft Azure Attestation endpoint which will author the attestation token.<br>- `AttestClientRuntimeData`: passes a blob whose `SHA-256` digest will be encoded in the attestation token as runtime claim. |
 | `key/release test`  | `/tests/skr/skr_client.sh`             | - `SkrClientKID`: passes the key identifier of the key to be released from the key vault.<br>- `SkrClientAKVEndpoint`: passes the key vault endpoint from which the key will be released.<br>- `SkrClientMAAEndpoint`: passes the Microsoft Azure Attestation (MAA) endpoint shall author the attestation token required for releasing the secret. The MAA endpoint shall be the same as the one specified in the SKR policy during the key import to the key vault. |
 
-For issues during setup, refer to the Troubleshooting guide: `examples\encfs\TROUBLESHOOTING.md`
+For issues during setup, refer to the Troubleshooting guide: [`examples\encfs\TROUBLESHOOTING.md`](..\..\..\examples\encfs\TROUBLESHOOTING.md)
 
 <br> 
 
@@ -59,11 +59,10 @@ There are two options for generating security policies:
   <summary><h3>ㅤOption 1:ㅤARM Template </h3></summary>
 
 The following command generates a security policy and automatically injects it into the template. <br>
-Include the `--debug-mode` option so the generated policy allows shelling into the container to see the released key in this example. 
+Include the `--debug-mode` option so the generated policy allows shelling into the container to see the released key in this example.
+
 > [!WARNING]  
 > `--debug-mode` is only used as an example and **not recommended for production**.
-
-
 
 ```shell
 az confcom acipolicygen -a aci-arm-template.json --debug-mode
@@ -332,6 +331,7 @@ For more information on vault types, see the overviews for [Vaults](https://lear
 #### 2.1 Create a Vault
 
 - [ ] Use one of the previous `az keyvault create` commands to create a vault with your desired level of security.
+
   > [!NOTE]  
   > Continue to use the chosen vault type for the remainder of the setup.
 
