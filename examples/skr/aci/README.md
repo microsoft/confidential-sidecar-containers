@@ -46,7 +46,7 @@ To generate security policies:
 - [ ] Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest#install)
 - [ ] Then, install the `confcom` CLI extension [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples) (instructions under 'extension examples').
 
-There are two options for generating security policies:
+There are **two options** for generating security policies:
 
 1. The ARM template can be used directly to generate a security policy.
 2. A config file can be used to generate a policy fragment for a particular image (this is called "image-attached fragments" and is useful in cases where stable key release policies are required).
@@ -56,7 +56,9 @@ There are two options for generating security policies:
 ---
 
 <details>
-  <summary><h3>ㅤOption 1:ㅤARM Template </h3></summary>
+  <summary>ㅤOption 1:ㅤARM Template </summary>
+
+<br> 
 
 The following command generates a security policy and automatically injects it into the template. <br>
 Include the `--debug-mode` option so the generated policy allows shelling into the container to see the released key in this example.
@@ -77,7 +79,7 @@ More information on ARM templates [here](https://learn.microsoft.com/en-us/azure
 ---
 
 <details>
-  <summary><h3>ㅤOption 2:ㅤImage-attached fragments </h3></summary>
+  <summary>ㅤOption 2:ㅤImage-attached fragments </summary>
 
   The following command generates a security policy and attaches it to the container in an OCI-compliant registry like Azure Container Registry (ACR). To do this, a copy of the SKR container must be made and pushed to an ACR instance with write access. This can be done with:
 
