@@ -332,8 +332,8 @@ For more information on vault types, see the overviews for [Vaults](https://lear
 
 - [ ] Use one of the previous `az keyvault create` commands to create a vault with your desired level of security.
 
-  > [!NOTE]  
-  > Continue to use the chosen vault type for the remainder of the setup.
+> [!NOTE]  
+> Continue to use the chosen vault type for the remainder of the setup.
 
 - [ ] Replace [SkrClientAKVEndpoint](aci-arm-template.json#L70) in `aci-arm-template.json` with the appropriate endpoint based on the chosen vault:
 
