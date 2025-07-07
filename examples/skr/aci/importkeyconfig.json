@@ -1,9 +1,9 @@
 {
     "key": {
-        "kid": "<key-vault-key-identifier>",
+        "kid": "<key-vault-key-name-to-create>",
         "kty": "<key-type-of-key-imported-to-akv>",
         "authority": {
-            "endpoint": "<attestation-authority-endpoint>"
+            "endpoint": "<maa-endpoint>"
         },
         "akv": {
             "endpoint": "<key-vault-endpoint>",

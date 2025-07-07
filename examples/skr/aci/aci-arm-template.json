@@ -19,7 +19,7 @@
       "identity": {
         "type": "UserAssigned",
         "userAssignedIdentities": {
-          "<managed-identity-with-right-permissions-to-key-vault>": {}
+          "<full-path-to-managed-identity-with-right-permissions-to-key-vault>": {}
         }
       },
       "properties": {
@@ -63,7 +63,7 @@
               "environmentVariables": [
                 {
                   "name": "SkrClientMAAEndpoint",
-                  "value": "<authority-of-key-imported-to-key-vault>"
+                  "value": "<maa-endpoint>"
                 },
                 {
                   "name": "SkrClientAKVEndpoint",
@@ -71,7 +71,7 @@
                 },
                 {
                   "name": "SkrClientKID",
-                  "value": "<key-vault-key-identifier>"
+                  "value": "<key-vault-key-name>"
                 }
               ],
               "image": "mcr.microsoft.com/aci/skr:2.10",

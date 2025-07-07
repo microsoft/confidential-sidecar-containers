@@ -21,6 +21,7 @@
     - [📄 6. Generate Security Policy](#-6-generate-security-policy)
     - [📤 7. Import Keys into AKV/mHSM](#-7-import-keys-into-akvmhsm)
     - [📦 8. Deployment](#-8-deployment)
+    - [📋 9. List and Monitor Deployments](#-9-list-and-monitor-deployments)
 
 <br> 
 
@@ -56,7 +57,7 @@ There are **two options** for generating security policies:
 ---
 
 <details>
-  <summary>ㅤOption 1:ㅤARM Template </summary>
+  <summary><h3>ㅤOption 1:ㅤARM Template </h3></summary>
 
 <br> 
 
@@ -78,7 +79,7 @@ More information on ARM templates [here](https://learn.microsoft.com/en-us/azure
 ---
 
 <details>
-  <summary>ㅤOption 2:ㅤImage-attached fragments </summary>
+  <summary><h3>ㅤOption 2:ㅤImage-attached fragments </h3></summary>
 
   The following command generates a security policy and attaches it to the container in an OCI-compliant registry like Azure Container Registry (ACR). To do this, a copy of the SKR container must be made and pushed to an ACR instance with write access. This can be done with:
 
@@ -268,7 +269,7 @@ Once you have decided on an attestation provider:
 > - [ ] Copy the AttestURI endpoint value (**WITHOUT** https://) to:
 >
 > - [Attestation Authority endpoint](importkeyconfig.json#L6) in `importkeyconfig.json`
-> - [SkrClientMAAEndpoint](aci-arm-template.json#L66) and [AttestClientMAAEndpoint](aci-arm-template.json#L106) in `aci-arm-template.json`
+> - [SkrClientMAAEndpoint](aci-arm-template.json#L66) and [AttestClientMAAEndpoint](aci-arm-template.json#L115) in `aci-arm-template.json`
 
 <br>
 
@@ -285,9 +286,6 @@ Once you have decided on an attestation provider:
 #### Useful AKV Commands
 
 ```shell
-# Set object ID of current user
-oid=$(az ad signed-in-user show --query id -o tsv)
-
 # -----------------------------------------------
 # Standard Vault
 # -----------------------------------------------
@@ -312,12 +310,13 @@ az keyvault key create --vault-name "$VAULT_NAME" -n "$KEY_NAME" --protection hs
 # Managed HSM (mHSM)
 # -----------------------------------------------
 # Vault Commands
+oid=$(az ad signed-in-user show --query id -o tsv)
 az keyvault create --hsm-name "$VAULT_NAME" -g "$RESOURCE_GROUP" -l "$REGION" --administrators $oid
 az keyvault delete --hsm-name "$VAULT_NAME" -g "$RESOURCE_GROUP"
 az keyvault purge  --hsm-name "$VAULT_NAME"
 
 # Key Commands
-az keyvault key create --hsm-name "$VAULT_NAME" -n "$KEY_NAME" --kty RSA-HSM 
+az keyvault key create --hsm-name "$VAULT_NAME" -n "$KEY_NAME" --kty RSA-HSM  # or `oct-HSM`
 az keyvault key delete --hsm-name "$VAULT_NAME" -n "$KEY_NAME"
 az keyvault key purge  --hsm-name "$VAULT_NAME" -n "$KEY_NAME"
 ```
@@ -328,13 +327,12 @@ For more information on vault types, see the overviews for [Vaults](https://lear
 
 <br>
 
-
 #### 2.1 Create a Vault
 
 - [ ] Use one of the previous `az keyvault create` commands to create a vault with your desired level of security.
 
 > [!NOTE]  
-> Continue to use the chosen vault type for the remainder of the setup.
+> Continue to use the chosen **vault type** and **region** for the remainder of the setup.
 
 - [ ] Replace [SkrClientAKVEndpoint](aci-arm-template.json#L70) in `aci-arm-template.json` with the appropriate endpoint based on the chosen vault:
 
@@ -343,7 +341,7 @@ For more information on vault types, see the overviews for [Vaults](https://lear
   | **AKV**    | `<VAULT_NAME>.vault.azure.net` |
   | **mHSM**   | `<VAULT_NAME>.managedhsm.azure.net` |
 
-- [ ] (Optional) If you wish to upgrade from ***standard*** to ***premium***, run:
+- [ ] **Optional** - If you wish to upgrade from ***standard*** to ***premium***, run:
   ```shell
   az keyvault update --set properties.sku.name=premium -n "$VAULT_NAME" -g "$RESOURCE_GROUP" 
   ```
@@ -357,7 +355,7 @@ For more information on vault types, see the overviews for [Vaults](https://lear
 > 
 > However, you may need an admin to grant you permission to assign roles.
 >
-> If this happens, use the following to refresh credentials: `az account clear && az login`
+> If you are granted new permissions, use the following to refresh credentials: `az account clear && az login`
 
 
 <br>
@@ -375,6 +373,7 @@ After setting up an Azure Key Vault resource:
 <br>
 
 If using ***standard*** or ***premium*** AKV:
+
 - [ ] Assign the `Key Vault Crypto Service Release User` role to your managed identity <br> 
 (previously `Key Vault Crypto Officer` and `Key Vault Crypto User`)
 
@@ -384,6 +383,16 @@ az role assignment create \
 --role "Key Vault Crypto Service Release User" \
 --scope "subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/vaults/$VAULT_NAME" \
 --assignee-principal-type ServicePrincipal
+```
+
+- [ ] **If running locally** - You may need to assign the `Key Vault Crypto Officer` role to your user identity:
+
+```shell
+az role assignment create \
+--assignee-object-id "$USER_ID" \
+--role "Key Vault Crypto Officer" \
+--scope "subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/vaults/$VAULT_NAME" \
+--assignee-principal-type User
 ```
 
 <br>
@@ -396,12 +405,24 @@ If using a ***managed HSM***:
 az role assignment create \
 --assignee-object-id "$PRINCIPAL_ID" \
 --role "Managed HSM Crypto Service Release User" \
---scope "subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/managedHSMs/$VAULT_NAME"
+--scope "subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/managedHSMs/$VAULT_NAME" \
+--assignee-principal-type ServicePrincipal
 ```
+
+- [ ] **If running locally** - You may need to assign the `Managed HSM Crypto Officer` role to your user identity:
+
+```shell
+az role assignment create \
+--assignee-object-id "$USER_ID" \
+--role "Managed HSM Crypto Officer" \
+--scope "subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.KeyVault/managedHSMs/$VAULT_NAME" \
+--assignee-principal-type User
+```
+
 <br>
 
-
 #### 2.3 Check User Managed Identity
+
 If you already have a user-assigned managed identity with the appropriate access permissions:
 
 - [ ] Run the following command to list the managed identities for a `RESOURCE_GROUP`:
@@ -427,11 +448,15 @@ Depending on whether you are using a public or private registry, do **one** of t
 <br>
 
 ### 🪙 4. Obtain the AAD token
+
 - [ ] Use the appropriate command to obtain the AAD token with permission to the AKV or mHSM:
 
   ```shell
-  az account get-access-token --resource "https://vault.azure.net"      # For AKV
-  az account get-access-token --resource "https://managedhsm.azure.net" # For mHSM
+  # For AKV
+  az account get-access-token --resource "https://vault.azure.net" --query "accessToken" --output tsv
+
+  # For mHSM
+  az account get-access-token --resource "https://managedhsm.azure.net" --query "accessToken" --output tsv
   ```
 
 - [ ] Replace the following with the `accessToken` from the previous command's output:
@@ -439,27 +464,28 @@ Depending on whether you are using a public or private registry, do **one** of t
   
 <br>
 
-
 ### 📝 5. Fill in Key Information
+
 After setting up an Azure Key Vault resource:
+
 - Within `importkeyconfig.json`:
   - [ ] Add a key name **to be created** and imported into the key vault, under [`key.kid`](importkeyconfig.json#L3).
   - [ ] Copy the key name into [`SkrClientKID`](aci-arm-template.json#L74) in the `aci-arm-template.json`.
   - [ ] Replace the [`key-vault-endpoint`](importkeyconfig.json#L9) (**WITHOUT** https://) in the format: `<VAULT_NAME>.vault.azure.net` 
-    - [ ] If not using a specific [`api_version`](importkeyconfig.json#L9), leave value as an empty string.
+    - [ ] If not using a specific [`api_version`](importkeyconfig.json#L10), you can leave the value as an empty string.
 
 - Additionally, fill in (or remove) these optional fields in the `importkeyconfig.json` file: 
   - [ ] [Key derivation](importkeyconfig.json#L14) for RSA keys
-  - [ ] [Key type: `RSA-HSM` or `oct-HSM`](importkeyconfig.json#L4)
+  - [ ] [Key type](importkeyconfig.json#L4): `RSA-HSM` or `oct-HSM` 
+    - Supported key types for each vault are listed [here](https://learn.microsoft.com/en-us/azure/key-vault/keys/about-keys#hsm-protected-keys).
   
 - For the `aci-arm-template.json`:
-  - [ ] Run the following command to get the full managed identity, and replace [managed-identity-with-right-permissions-to-key-vault](aci-arm-template.json#L22) with the output:
+  - [ ] Run the following command to get the full managed identity, and replace [`full-path-to-managed-identity-with-right-permissions-to-key-vault`](aci-arm-template.json#L22) with the output:
 
     ```shell
     az identity show -n "$MANAGED_ID_NAME" -g "$RESOURCE_GROUP" --query id -o tsv
     ```
   - [ ] Remove or fill out `LogFile` and `LogLevel` (under `environmentVariables`)
-
 
 <br>
 
@@ -475,25 +501,26 @@ After installing the [Azure `confcom` CLI extension](#policy-generation):
   az confcom acipolicygen -a "aci-arm-template.json" --debug-mode
   ```
 
-- [ ] Accept the prompt to automatically populate the [`cce policy`](aci-arm-template.json#L136) field of `aci-arm-template.json.`
-      
+- [ ] Accept the prompt to automatically populate the [`cce policy`](aci-arm-template.json#L152) field in `aci-arm-template.json`
+
   This should output the `SHA-256` digest of the security policy.
 
-  - [ ] Copy it and replace the [`hash-digest-of-the-security-policy`](importkeyconfig.json#L18) string of the `importkeyconfig.json` file.
+  - [ ] Copy it and replace the [`hash-digest-of-the-security-policy`](importkeyconfig.json#L22) string in `importkeyconfig.json`
 
 <br>
 
-
 ### 📤 7. Import Keys into AKV/mHSM
 
-Once the key vault resource is ready and the `importkeyconfig.json` file is completely filled out, the user can import `RSA-HSM` or `oct-HSM` keys into it using the `importkey` tool placed under `<parent_repo_dir>/tools/importkey` as discussed in the tools' [readme file](https://github.com/microsoft/confidential-sidecar-containers/tree/main/tools/importkey).
+Once the key vault resource is ready and the `importkeyconfig.json` file is completely filled out, the user can import `RSA-HSM` or `oct-HSM` keys into it using the `importkey` tool placed under `<parent_repo_dir>/tools/importkey` as discussed in the tools' [`README.md`](https://github.com/microsoft/confidential-sidecar-containers/tree/main/tools/importkey).
 
 To import the key into AKV/mHSM:
+
 - [ ] Use the following command from the `/examples/skr/aci/` directory:
 
   ```shell
   go run "../../../tools/importkey/main.go" -c "importkeyconfig.json"
   ```
+
   - [ ] Append this option to see the key get released: `-kh /path/to/encryptionKeyFile`
 
 Upon successful import completion, you should see something similar to the following:
@@ -519,29 +546,62 @@ az keyvault key list --hsm-name   "$VAULT_NAME" -o table  # For mHSM
 
 You can deploy using the CLI ***or*** Azure Portal:
 
-CLI:
+**CLI**:
+
+- [ ] Run:
 
   ```shell
   az deployment group create -g "$RESOURCE_GROUP" --template-file "aci-arm-template.json"
   ```
 
-Azure Portal: 
+**Azure Portal**:
+
 - [ ] Go to Azure portal and click on `deploy a custom template`
 - [ ] Click `Build your own template in the editor`
-      
+
     By this time, the `aci-arm-template.json` file should be completely filled out.
 - [ ] Copy and paste the ARM template into the field to start a deployment.
 
-<br>
+**Once the deployment is done**:
 
-
-Once the deployment is done:
 - [ ] Verify the key has been successfully released, by connecting to the shell of the `skr-sidecar-container` container
 - [ ] Check log.txt and you should see the following log message:
 
     ```text
     level=debug msg=Releasing key blob: {doc-sample-key-release}
-    ``` 
+    ```
 
 Alternatively, you can:
+
 - [ ] Shell into the container `test-skr-client-hsm-skr` and the released key is in `keyrelease.out`.
+
+<br>
+
+### 📋 9. List and Monitor Deployments
+
+After deploying, you can list and monitor your deployments:
+
+**List all deployments in the resource group**:
+```shell
+az deployment group list -g "$RESOURCE_GROUP" -o table
+```
+
+**Show details of a specific deployment**:
+```shell
+az deployment group show -g "$RESOURCE_GROUP" -n "aci-arm-template"
+```
+
+**List container groups in the resource group**:
+```shell
+az container list -g "$RESOURCE_GROUP" -o table
+```
+
+**Show container group details and status**:
+```shell
+az container show -g "$RESOURCE_GROUP" -n "aciSKRSidecarTest"
+```
+
+**View container logs** (replace values for `-n` and `--container-name` with yours):
+```shell
+az container logs -g "$RESOURCE_GROUP" -n "aciSKRSidecarTest" --container-name "skr-sidecar-container"
+```
