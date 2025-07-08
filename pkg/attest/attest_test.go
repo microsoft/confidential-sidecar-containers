@@ -89,7 +89,7 @@ func Test_MAA(t *testing.T) {
 
 	certFetcher := CertFetcher{
 		EndpointType: "AzCache",
-		Endpoint:     "americas.test.acccache.azure.net",
+		Endpoint:     "thimpft2.thim.azure-test.net",
 		TEEType:      "SevSnpVM",
 		APIVersion:   "api-version=2020-10-15-preview",
 		ClientID:     "clientId=ConfidentialSidecarContainersTest",
@@ -102,7 +102,7 @@ func Test_MAA(t *testing.T) {
 
 	ProductionCertCache := CertFetcher{
 		EndpointType: "AzCache",
-		Endpoint:     "americas.acccache.azure.net",
+		Endpoint:     "thimpft2.thim.azure-test.net",
 		TEEType:      "SevSnpVM",
 		APIVersion:   "api-version=2020-10-15-preview",
 		ClientID:     "clientId=ConfidentialSidecarContainersTest",

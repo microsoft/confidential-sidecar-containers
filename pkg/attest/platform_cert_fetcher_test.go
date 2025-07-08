@@ -22,7 +22,7 @@ func Test_CertFetcher(t *testing.T) {
 	}
 
 	ValidEndpointType := "AzCache"
-	ValidEndpoint := "americas.test.acccache.azure.net"
+	ValidEndpoint := "thimpft2.thim.azure-test.net"
 	ValidTEEType := "SevSnpVM"
 	ValidAPIVersion := "api-version=2021-07-22-preview"
 	ClientID := "clientId=ConfidentialSidecarContainersTest"
