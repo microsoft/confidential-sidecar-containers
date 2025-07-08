@@ -7,3 +7,4 @@
 /docker/encfs/bin
 /tools/get-snp-report/bin
 __pycache__
+*private_key.pem

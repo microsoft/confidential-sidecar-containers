@@ -149,7 +149,7 @@ Upon successful import completion, you should see something similar to the follo
 
 ```text
 [34 71 33 117 113 25 191 84 199 236 137 166 201 103 83 20 203 233 66 236 121 110 223 2 122 99 106 20 22 212 49 224]
-https://<mhsm-name>.managedhsm.azure.net/keys/doc-sample-key-release/8659****0cdff08
+https://<mhsm-name>.managedhsm.azure.net/keys/<key-vault-key-name>/8659****0cdff08
 {"version":"0.2","anyOf":[{"authority":"<authority-url-name>","allOf":[{"claim":"x-ms-sevsnpvm-hostdata","equals":"aaa7***7cc09d"},{"claim":"x-ms-compliance-status","equals":"azure-compliant-uvm"},{"claim":"x-ms-sevsnpvm-is-debuggable","equals":"false"},{"claim":"x-ms-sevsnpvm-vmpl","equals":"0"}]}]}
 ```
 
