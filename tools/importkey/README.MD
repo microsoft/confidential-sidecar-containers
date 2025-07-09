@@ -1,10 +1,10 @@
 # importkey
 
-Takes a configuration to a JSON file and imports a key to Azure Key Vault resource, supporting both AKV Premium and Managed HSM.
+Takes a path to a JSON configuration file and imports a key to Azure Key Vault resource, supporting both AKV Premium and Managed HSM.
 The tool will succeed only if the Azure user has the right access permissions to the Azure Key Vault endpoint.
 Upon successful import key operation, it outputs the secret and the keypath (aka key identifier).
 
-`importkey` exists as a tool to make it easier to import keys to a key vault.
+> `importkey` exists as a tool to make it easier to import keys to a key vault.
 It is not intended to be used by "end users" but could be used as a basis for such a tool.
 
 When importing a key to the key vault, a release policy is coupled with the key.
@@ -55,38 +55,37 @@ The authority (MAA endpoint) is also included in the policy so that the vault is
 ```
 
 The tool currently supports two types of keys specified in the `kty` attribute of the configuration: `RSA-HSM` and `oct-HSM` (default operation mode).
-The tool randomly samples an RSA or an octet key.
-Alternatively, the user may specify a path to the private RSA key in ASN.1 DER wrapped in PKCS8 format or the octet key to import (oct-HSM) in hexstring format.
+
+The tool randomly samples an RSA or an octet key. 
+
+Alternatively, the user may specify a path to the private RSA key in `ASN.1 DER` wrapped in `PKCS8` format or the octet key to import (oct-HSM) in hexstring format.
 
 ## CLI Options
 
-- -c
+Required:
 
-    JSON configuration file to process (required)
+- `-c` -  configuration file to process
 
-- -kh
+Optional:
 
-    Path for octet key or contents of octet key (optional)
+- `-kh` - Path for octet key or contents of octet key
 
-- -kp
+- `-kp` - Path for RSA key in `ASN.1 DER` wrapped in `PKCS8` format.
 
-    Path for RSA key in ASN.1 DER wrapped in PKCS8 format.
+- `-a` - Flag to indicate whether running inside Azure (`default = false`)
 
-- -a
-
-    Flag to indicate whether running inside Azure (optional, default = false)
-
-- -out
-
-    Flag to indicate whether outputing a binary file containing the oct key.
+- `-out` - Flag to indicate whether outputting a binary file containing the oct key.
     For RSA keys, the oct key is derived from the RSA's secret exponent.
-    The key derivation information may be passed via the key_derivation attribute (salt passed as a hexstring and label passed as a string).
 
-The tool can work outside an Azure VM by obtaining the token from the akv.BearerToken field in the configuration file.
-The field can be updated using a token retrieved using the command
+The key derivation information may be passed via the `key_derivation` attribute (salt passed as a hexstring and label passed as a string).
 
-`az login`
+The tool can work outside an Azure VM by obtaining the token from the `akv.BearerToken` field in the configuration file.
 
-`az account get-access-token --resource https://managedhsm.azure.net`
+The field can be updated using a token retrieved using the commands:
+
+```shell
+az login
+az account get-access-token --resource https://managedhsm.azure.net
+```
 
 The tool can work inside an Azure VM assuming the VM has been assigned a managed identity that has the right permissions to access the AKV endpoint.
