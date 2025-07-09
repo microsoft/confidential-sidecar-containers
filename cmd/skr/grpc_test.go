@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	server "github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/grpcserver"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/keyprovider"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/key_provider"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
@@ -25,7 +25,7 @@ var (
 func init() {
 	lis = bufconn.Listen(bufSize)
 	s := grpc.NewServer()
-	keyprovider.RegisterKeyProviderServiceServer(s, &server.Server{})
+	key_provider.RegisterKeyProviderServiceServer(s, &server.Server{})
 	go func() {
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("Server exited with error: %v", err)
@@ -50,8 +50,8 @@ func TestSayHello(t *testing.T) {
 		}
 	}()
 
-	client := keyprovider.NewKeyProviderServiceClient(conn)
-	resp, err := client.SayHello(ctx, &keyprovider.HelloRequest{Name: "this is a test!"})
+	client := key_provider.NewKeyProviderServiceClient(conn)
+	resp, err := client.SayHello(ctx, &key_provider.HelloRequest{Name: "this is a test!"})
 	if err != nil {
 		t.Fatalf("grpc exposed endpoint failed with error: %v", err)
 	}

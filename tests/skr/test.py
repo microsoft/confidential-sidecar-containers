@@ -295,6 +295,37 @@ class SkrTest(unittest.TestCase):
         print(f"Response from get_report check: {response.content.decode()}")
         assert response.status_code == 200
 
+    def test_skr_grpc_get_attestation_data(self):
+
+        input_report_data = b"EXAMPLE"
+        response = requests.get(
+            f"http://{self.skr_ip}:8000/get_attestation_data",
+            headers={
+                "Content-Type": "application/json",
+            },
+            data=json.dumps(
+                {
+                    "runtime_data": base64.urlsafe_b64encode(input_report_data).decode(),
+                }
+            ),
+        )
+        decoded_response = response.content.decode()
+        print(f"Response from get_attestation_data check: {decoded_response}")
+        assert response.status_code == 200
+
+        # "AttestationReport": here is be a base64 encoded version of the whole SNP report.
+        # and will need to be made into hex to suit check_report_data
+
+        reportB64 = get_grpc_response(response.content)["attestationReport"]
+        print(f"Base64 report: {reportB64}")
+        reportRaw = base64.b64decode(reportB64)
+        reportHex = reportRaw.hex()
+        print(f"Hex report: {reportHex}")
+        check_report_data(
+            report=reportHex,
+            expected_report_data=input_report_data,
+        )
+
     def test_skr_grpc_unwrap_key(self):
 
         # Generate a key in the HSM
@@ -367,7 +398,7 @@ class SkrTest(unittest.TestCase):
         unwrapped_data = base64.b64decode(
             json.loads(
                 base64.b64decode(
-                    get_grpc_response(response.content)["KeyProviderKeyWrapProtocolOutput"]
+                    get_grpc_response(response.content)["keyProviderKeyWrapProtocolOutput"]
                 ).decode()
             )["keyunwrapresults"]["optsdata"]
         ).decode()

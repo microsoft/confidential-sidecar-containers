@@ -15,7 +15,7 @@ def grpc_request(request, method):
         "-v", "-plaintext",
         "-d", request,
         "127.0.0.1:50000",
-        f"keyprovider.KeyProviderService.{method}"
+        f"key_provider.KeyProviderService.{method}"
     ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     return Response(
@@ -36,15 +36,28 @@ def grpc_get_report():
     except Exception as e: ...
 
     return grpc_request(
-        request=f'{{"reportDataHexString":"{runtime_data}"}}',
+        request=f'{{"report_data_hex_string":"{runtime_data}"}}',
         method="GetReport",
+    )
+
+@app.route('/get_attestation_data', methods=['GET'])
+def grpc_get_attestation_data():
+    runtime_data = ""
+    try:
+        request_json = request.get_json()
+        runtime_data = request_json["runtime_data"] or ""
+    except Exception as e: ...
+
+    return grpc_request(
+        request=f'{{"b64_runtime_data_string":"{runtime_data}"}}',
+        method="GetAttestationData",
     )
 
 @app.route('/unwrap_key', methods=['GET'])
 def grpc_unwrap_key():
     return grpc_request(
         request=json.dumps({
-            "KeyProviderKeyWrapProtocolInput": base64.b64encode(json.dumps({
+            "key_provider_key_wrap_protocol_input": base64.b64encode(json.dumps({
                 "op": "keyunwrap",
                 "keywrapparams": {},
                 "keyunwrapparams": {

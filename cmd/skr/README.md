@@ -7,7 +7,7 @@ If the port number is not specified, the port will default to 8080.
 This script take the environment variables `SkrSideCarArgs`, `Port`, `LogFile`, and `LogLevel` and passes them into `/bin/skr` with their corresponding flags.
 
 To use the GRPC server instead of the HTTP server, the tool can be executed using the same script [skr.sh](https://github.com/Microsoft/confidential-sidecar-containers/blob/main//docker/skr/skr.sh).
-But instead expecting the environment variables `Port`, `ServerType`, `LogFile`, and `LogLevel` and passes them into `/bin/skr` with their corresponding flags.
+But instead expecting the environment variables `Port`, `ServerType`, `LogFile`, and `LogLevel` and passes them into `/bin/skr` with their corresponding flags, where `Port` is specified as `50000`.
 
 ## HTTP API
 
@@ -128,20 +128,27 @@ grpcurl -v -plaintext 127.0.0.1:50000 list
 The `<ip:port> list <service-name>` command lists the exposed APIs under a specific service on a specific IP address and port.
 
 ```bash
-grpcurl -v -plaintext 127.0.0.1:50000  list keyprovider.KeyProviderService
+grpcurl -v -plaintext 127.0.0.1:50000  list key_provider.KeyProviderService
 ```
 
 The `SayHello` method of the KeyProviderService is used to test whether APIs under KeyProviderService can be reached.
 
 ```bash
-grpcurl -v -plaintext -d '{"name":"This is a GRPC test!"}' 127.0.0.1:50000  keyprovider.KeyProviderService.SayHello
+grpcurl -v -plaintext -d '{"name":"This is a GRPC test!"}' 127.0.0.1:50000  key_provider.KeyProviderService.SayHello
 ```
 
 The `GetReport` method of the KeyProviderService is used to get the SNP report in hex string format.
-Users can optionally provide `reportDataHexString` and the input will show under report data section of the SNP report.
+Users can optionally provide `report_data_hex_string` and the input will show under report data section of the SNP report.
 
 ```bash
-grpcurl -v -plaintext -d '{"reportDataHexString":""}' 127.0.0.1:50000  keyprovider.KeyProviderService.GetReport
+grpcurl -v -plaintext -d '{"report_data_hex_string":""}' 127.0.0.1:50000  key_provider.KeyProviderService.GetReport
+```
+
+The `GetAttestationData` method of the KeyProviderService is used to get the combined attestation data similar to the HTTP `attest/combined` endpoint.
+Users can optionally provide `b64_runtime_data_string` to prevent replay attacks by guaranteeing the freshness of the attestation report.
+
+```bash
+grpcurl -v -plaintext -d '{"b64_runtime_data_string":""}' 127.0.0.1:50000  key_provider.KeyProviderService.GetAttestationData
 ```
 
 The `UnWrapKey` method of the KeyProviderService is used to test whether the key can be released.
@@ -153,5 +160,5 @@ ANNO=`cat wrapped`
 
 REQ=`echo "{\"op\":\"keyunwrap\",\"keywrapparams\":{},\"keyunwrapparams\":{\"dc\":{\"Parameters\":{\"attestation-agent\":[\"${AAA}\"]}},\"annotation\":\"${ANNO}\"}}" | base64 -w0`
 
-grpcurl -plaintext -d "{\"KeyProviderKeyWrapProtocolInput\":\"${REQ}\"}" 127.0.0.1:50000 keyprovider.KeyProviderService.UnWrapKey
+grpcurl -plaintext -d "{\"key_provider_key_wrap_protocol_input\":\"${REQ}\"}" 127.0.0.1:50000 keyprovider.KeyProviderService.UnWrapKey
 ```

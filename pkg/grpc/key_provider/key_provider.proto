@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+option go_package = "./key_provider";
+
+package key_provider;
+
+message KeyProviderKeyWrapProtocolInput {
+    bytes key_provider_key_wrap_protocol_input = 1;
+}
+
+message KeyProviderKeyWrapProtocolOutput {
+    bytes key_provider_key_wrap_protocol_output = 1;
+}
+
+message KeyProviderGetReportInput {
+  string report_data_hex_string = 1;
+}
+
+message KeyProviderGetReportOutput {
+  string report_hex_string = 1;
+}
+
+message KeyProviderGetAttestationDataInput {
+  string b64_runtime_data_string = 1;
+}
+
+message KeyProviderGetAttestationDataOutput {
+  string endorsed_tcb = 1;
+	string certs = 2;
+  string attestation_report = 3;
+	string uvm_reference_info = 4;
+}
+
+service KeyProviderService {
+    rpc WrapKey(KeyProviderKeyWrapProtocolInput) returns (KeyProviderKeyWrapProtocolOutput) {};
+    rpc UnWrapKey(KeyProviderKeyWrapProtocolInput) returns (KeyProviderKeyWrapProtocolOutput) {};
+    rpc GetReport(KeyProviderGetReportInput) returns (KeyProviderGetReportOutput) {};
+    rpc GetAttestationData(KeyProviderGetAttestationDataInput) returns (KeyProviderGetAttestationDataOutput) {};
+    rpc SayHello (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
+}

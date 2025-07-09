@@ -16,7 +16,7 @@ import (
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
 	server "github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/grpcserver"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/keyprovider"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/key_provider"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -185,7 +185,7 @@ func main() {
 		// start grpc server
 		s := grpc.NewServer()
 		server := server.Server{ServerCertState: &certState, EncodedUvmInformation: &EncodedUvmInformation, Azure_info: &info}
-		keyprovider.RegisterKeyProviderServiceServer(s, &server)
+		key_provider.RegisterKeyProviderServiceServer(s, &server)
 		reflection.Register(s)
 		logrus.Printf("server listening at %v", lis.Addr())
 		if err := s.Serve(lis); err != nil {

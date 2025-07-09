@@ -19,7 +19,7 @@ import (
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
-	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/keyprovider"
+	"github.com/Microsoft/confidential-sidecar-containers/pkg/grpc/key_provider"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/skr"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -28,7 +28,7 @@ import (
 )
 
 type Server struct {
-	keyprovider.UnimplementedKeyProviderServiceServer
+	key_provider.UnimplementedKeyProviderServiceServer
 	ServerCertState       *attest.CertState
 	EncodedUvmInformation *common.UvmInformation
 	Azure_info            *AzureInformation
@@ -109,9 +109,9 @@ type KeyProviderProtocolOutput struct {
 	KeyUnwrapResults KeyUnwrapResults `json:"keyunwrapresults,omitempty"`
 }
 
-func (s *Server) SayHello(ctx context.Context, in *keyprovider.HelloRequest) (*keyprovider.HelloReply, error) {
+func (s *Server) SayHello(ctx context.Context, in *key_provider.HelloRequest) (*key_provider.HelloReply, error) {
 	logrus.Printf("Received: %v", in.GetName())
-	return &keyprovider.HelloReply{Message: "Hello " + in.GetName()}, nil
+	return &key_provider.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
 func directWrap(optsdata []byte, key_path string) ([]byte, error) {
@@ -163,7 +163,7 @@ func directWrap(optsdata []byte, key_path string) ([]byte, error) {
 	return annotationBytes, nil
 }
 
-func (s *Server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKeyWrapProtocolInput) (*keyprovider.KeyProviderKeyWrapProtocolOutput, error) {
+func (s *Server) WrapKey(c context.Context, grpcInput *key_provider.KeyProviderKeyWrapProtocolInput) (*key_provider.KeyProviderKeyWrapProtocolOutput, error) {
 	var input keyProviderInput
 	str := string(grpcInput.KeyProviderKeyWrapProtocolInput)
 	err := json.Unmarshal(grpcInput.KeyProviderKeyWrapProtocolInput, &input)
@@ -204,12 +204,12 @@ func (s *Server) WrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKe
 		KeyWrapResults: KeyWrapResults{Annotation: annotationBytes},
 	})
 
-	return &keyprovider.KeyProviderKeyWrapProtocolOutput{
+	return &key_provider.KeyProviderKeyWrapProtocolOutput{
 		KeyProviderKeyWrapProtocolOutput: protocolBytes,
 	}, nil
 }
 
-func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProviderKeyWrapProtocolInput) (*keyprovider.KeyProviderKeyWrapProtocolOutput, error) {
+func (s *Server) UnWrapKey(c context.Context, grpcInput *key_provider.KeyProviderKeyWrapProtocolInput) (*key_provider.KeyProviderKeyWrapProtocolOutput, error) {
 	var input keyProviderInput
 	str := string(grpcInput.KeyProviderKeyWrapProtocolInput)
 	err := json.Unmarshal(grpcInput.KeyProviderKeyWrapProtocolInput, &input)
@@ -288,12 +288,12 @@ func (s *Server) UnWrapKey(c context.Context, grpcInput *keyprovider.KeyProvider
 		return nil, errors.Wrapf(err, "Unwrapping failed\n%s", skr.ERROR_STRING)
 	}
 
-	return &keyprovider.KeyProviderKeyWrapProtocolOutput{
+	return &key_provider.KeyProviderKeyWrapProtocolOutput{
 		KeyProviderKeyWrapProtocolOutput: protocolBytes,
 	}, nil
 }
 
-func (s *Server) GetReport(c context.Context, in *keyprovider.KeyProviderGetReportInput) (*keyprovider.KeyProviderGetReportOutput, error) {
+func (s *Server) GetReport(c context.Context, in *key_provider.KeyProviderGetReportInput) (*key_provider.KeyProviderGetReportOutput, error) {
 	reportDataStr := in.GetReportDataHexString()
 	logrus.Printf("Received report data: %v", reportDataStr)
 
@@ -314,8 +314,51 @@ func (s *Server) GetReport(c context.Context, in *keyprovider.KeyProviderGetRepo
 		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report, %s\n%s", err, skr.ERROR_STRING)
 	}
 
-	return &keyprovider.KeyProviderGetReportOutput{
+	return &key_provider.KeyProviderGetReportOutput{
 		ReportHexString: SNPReportHex,
+	}, nil
+}
+
+func (s *Server) GetAttestationData(c context.Context, grpcInput *key_provider.KeyProviderGetAttestationDataInput) (*key_provider.KeyProviderGetAttestationDataOutput, error) {
+	logrus.Info("GetAttestationData...")
+	runtimeDataStr := grpcInput.GetB64RuntimeDataString()
+	logrus.Infof("Received runtime data: %v", runtimeDataStr)
+
+	uvmInfo, err := common.GetUvmInformation() // from the env.
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "uvmInfo is not set\n%s", skr.ERROR_STRING)
+	}
+
+	// standard base64 decode the incoming runtime data
+	runtimeDataBytes, err := base64.StdEncoding.DecodeString(runtimeDataStr)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "decoding base64-encoded runtime data of request failed\n%s", skr.ERROR_STRING)
+	}
+
+	// Get the attestation report
+	var reportFetcher attest.AttestationReportFetcher
+	if !attest.IsSNPVM() {
+		return nil, status.Errorf(codes.FailedPrecondition, "SEV guest driver is missing.\n%s", skr.ERROR_STRING)
+	}
+	reportFetcher, err = attest.NewAttestationReportFetcher()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report, %s\n%s", err, skr.ERROR_STRING)
+	}
+
+	reportData := attest.GenerateMAAReportData(runtimeDataBytes)
+	rawReport, err := reportFetcher.FetchAttestationReportByte(reportData)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to retrieve attestation report, %s\n%s", err, skr.ERROR_STRING)
+	}
+
+	certs := uvmInfo.InitialCerts
+	certsB64 := base64.StdEncoding.EncodeToString([]byte(certs.VcekCert + certs.CertificateChain))
+
+	return &key_provider.KeyProviderGetAttestationDataOutput{
+		EndorsedTcb:       certs.Tcbm,                                   // PSP TCB version
+		Certs:             certsB64,                                     // AMD certificate chain matching the attestation report
+		AttestationReport: base64.StdEncoding.EncodeToString(rawReport), // attestation report base64 encoded
+		UvmReferenceInfo:  uvmInfo.EncodedUvmReferenceInfo,
 	}, nil
 }
 
