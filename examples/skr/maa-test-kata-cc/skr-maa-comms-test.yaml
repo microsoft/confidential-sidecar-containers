@@ -13,7 +13,7 @@ spec:
       value: /opt/confidential-containers/share/kata-containers
     - name: LogLevel
       value: debug
-    image: mcr.microsoft.com/aci/skr:2.10
+    image: mcr.microsoft.com/aci/skr:2.11
     name: skr
     volumeMounts:
     - mountPath: /opt/confidential-containers/share/kata-containers/reference-info-base64
