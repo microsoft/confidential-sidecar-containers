@@ -160,5 +160,5 @@ ANNO=`cat wrapped`
 
 REQ=`echo "{\"op\":\"keyunwrap\",\"keywrapparams\":{},\"keyunwrapparams\":{\"dc\":{\"Parameters\":{\"attestation-agent\":[\"${AAA}\"]}},\"annotation\":\"${ANNO}\"}}" | base64 -w0`
 
-grpcurl -plaintext -d "{\"key_provider_key_wrap_protocol_input\":\"${REQ}\"}" 127.0.0.1:50000 keyprovider.KeyProviderService.UnWrapKey
+grpcurl -plaintext -d "{\"key_provider_key_wrap_protocol_input\":\"${REQ}\"}" 127.0.0.1:50000 key_provider.KeyProviderService.UnWrapKey
 ```

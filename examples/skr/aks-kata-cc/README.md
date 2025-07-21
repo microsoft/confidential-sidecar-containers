@@ -208,13 +208,13 @@ kubectl exec --stdin --tty skr-secret-provisioning -c example-unwrap -- /bin/sh
 grpcurl -v -plaintext 127.0.0.1:50000 list
 
 # This command lists the exposed APIs under KeyProviderService on port 127.0.0.1:50000
-grpcurl -v -plaintext 127.0.0.1:50000  list keyprovider.KeyProviderService
+grpcurl -v -plaintext 127.0.0.1:50000  list key_provider.KeyProviderService
 
 # Call the SayHello service. We use the SayHello method to test whether APIs under KeyProviderService can be reached
-grpcurl -v -plaintext -d '{"name":"This is a GRPC test!"}' 127.0.0.1:50000  keyprovider.KeyProviderService.SayHello
+grpcurl -v -plaintext -d '{"name":"This is a GRPC test!"}' 127.0.0.1:50000  key_provider.KeyProviderService.SayHello
 
 # Call the GetReport service to get the SNP report in hex string format. Users can optionally provide `reportDataHexString` and the input will show under report data section of the SNP report. This is used for detecting a replay attack.
-grpcurl -v -plaintext -d '{"reportDataHexString":""}' 127.0.0.1:50000  keyprovider.KeyProviderService.GetReport
+grpcurl -v -plaintext -d '{"reportDataHexString":""}' 127.0.0.1:50000  key_provider.KeyProviderService.GetReport
 
 ```
 
@@ -230,14 +230,14 @@ ANNO=`cat wrapped`
 
 REQ=`echo "{\"op\":\"keyunwrap\",\"keywrapparams\":{},\"keyunwrapparams\":{\"dc\":{\"Parameters\":{\"attestation-agent\":[\"${AAA}\"]}},\"annotation\":\"${ANNO}\"}}" | base64 -w0`
 
-grpcurl -plaintext -d "{\"KeyProviderKeyWrapProtocolInput\":\"${REQ}\"}" 127.0.0.1:50000 keyprovider.KeyProviderService.UnWrapKey
+grpcurl -plaintext -d "{\"KeyProviderKeyWrapProtocolInput\":\"${REQ}\"}" 127.0.0.1:50000 key_provider.KeyProviderService.UnWrapKey
 ```
 
 Upon successful key release, you should see:
 
 ```json
 Resolved method descriptor:
-rpc UnWrapKey ( .keyprovider.keyProviderKeyWrapProtocolInput ) returns ( .keyprovider.keyProviderKeyWrapProtocolOutput );
+rpc UnWrapKey ( .key_provider.keyProviderKeyWrapProtocolInput ) returns ( .key_provider.keyProviderKeyWrapProtocolOutput );
 
 Request metadata to send:
 (empty)
