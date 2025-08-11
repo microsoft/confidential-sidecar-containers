@@ -105,7 +105,6 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, skrK
 		// set the azure authentication token to the AKV instance
 		skrKeyBlob.AKV.BearerToken = bearerToken
 	}
-	logrus.Debugf("AAD Token: %s ", skrKeyBlob.AKV.BearerToken)
 
 	// use the MAA token obtained from the AKV's authority to retrieve the key identified by kid. The ReleaseKey
 	// operation requires the private wrapping key to unwrap the encrypted key material released from
