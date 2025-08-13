@@ -120,8 +120,6 @@ func main() {
 		info.AzureFilesystems[i].KeyBlob.Authority.TEEType = "SevSnpVM"
 	}
 
-	logrus.Debugf("JSON = %+v", info)
-
 	err = MountAzureFilesystems(tempDir, info)
 	if err != nil {
 		logrus.Fatalf("Failed to mount filesystems: %s\n%s", err.Error(), ERROR_STRING)

@@ -116,7 +116,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, skrK
 		return nil, errors.Wrapf(err, "releasing the key %s failed", skrKeyBlob.KID)
 	}
 
-	logrus.Debugf("Key Type: %s Key %v", kty, keyBytes)
+	logrus.Debugf("Successfully released key with type: %s", kty)
 
 	switch kty {
 	case "oct", "oct-HSM":
