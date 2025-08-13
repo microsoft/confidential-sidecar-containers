@@ -110,30 +110,39 @@ class SkrTest(unittest.TestCase):
         status_response = requests.get(
             f"http://{self.skr_ip}:8000/status",
         )
+        print(f"GET http://{self.skr_ip}:8000/status")
         print(f"Response from status check: {status_response.content}")
         assert status_response.status_code == 200
+
+    def http_post_with_json(self, url, json_data) -> requests.Response:
+        data = json.dumps(json_data)
+        print(f"POST {url} with data:\n{data}")
+        response = requests.post(
+            url=url,
+            headers={
+                "Content-Type": "application/json",
+            },
+            data=data,
+        )
+        print(f"Got: {response.status_code}")
+        return response
 
     def test_skr_http_attest_raw(self):
 
         input_report_data = b"EXAMPLE"
-        attestation_resp = requests.post(
-            url=f"http://{self.skr_ip}:8000/attest/raw",
-            headers={
-                "Content-Type": "application/json",
-            },
-            data=json.dumps(
-                {
-                    "runtime_data": base64.urlsafe_b64encode(
-                        input_report_data
-                    ).decode(),
-                }
-            ),
+        attestation_resp = self.http_post_with_json(
+            f"http://{self.skr_ip}:8000/attest/raw",
+            {
+                "runtime_data": base64.urlsafe_b64encode(input_report_data).decode(),
+            }
         )
-        print(f"Response from attestation check: {attestation_resp.content}")
-        assert attestation_resp.status_code == 200, attestation_resp.content.decode()
+        resp_content = attestation_resp.content.decode()
+        print(f"Response from attestation check: {resp_content}")
+        assert attestation_resp.status_code == 200, resp_content
+
         # "report": here is be a hex encoded version of the whole SNP report.
         check_report_data(
-            report=json.loads(attestation_resp.content.decode())["report"],
+            report=json.loads(resp_content)["report"],
             expected_report_data=input_report_data,
         )
 
@@ -158,7 +167,7 @@ class SkrTest(unittest.TestCase):
 
         # "evidence": here is be a base64 encoded version of the whole SNP report.
         # and will need to be made into hex to suit check_report_data
-        
+
         responseCombinedJSON = json.loads(attestation_resp.content.decode())
         print(f"JSON response: {responseCombinedJSON}")
         reportB64 = responseCombinedJSON["evidence"]
@@ -187,21 +196,18 @@ class SkrTest(unittest.TestCase):
                 }
             )
 
-            maa_response = requests.post(
-                url=f"http://{self.skr_ip}:8000/attest/maa",
-                headers={
-                    "Content-Type": "application/json",
-                },
-                data=json.dumps(
-                    {
-                        "maa_endpoint": self.attestation_endpoint,
-                        "runtime_data": base64.urlsafe_b64encode(test_key.encode()).decode(),
-                    }
-                ),
+            maa_response = self.http_post_with_json(
+                f"http://{self.skr_ip}:8000/attest/maa",
+                {
+                    "maa_endpoint": self.attestation_endpoint,
+                    "runtime_data": base64.urlsafe_b64encode(test_key.encode()).decode(),
+                }
             )
 
-            assert maa_response.status_code == 200, maa_response.content.decode()
-            assert json.loads(maa_response.content.decode())["token"] != ""
+            resp_content = maa_response.content.decode()
+            print(f"Response from maa check: {resp_content}")
+            assert maa_response.status_code == 200, resp_content
+            assert json.loads(resp_content)["token"] != ""
         else:
             print("\nSkipping MAA test as no endpoint provided.\n")
 
@@ -266,7 +272,6 @@ class SkrTest(unittest.TestCase):
             assert skr_response.status_code == 200, skr_response.content.decode()
             assert key["k"] != "" if "oct" in key["kty"] else key["x"] != "" and key["y"] != ""
             assert set(key["key_ops"]) == set(key_ops)
-
 
     def test_skr_grpc_say_hello(self):
 
