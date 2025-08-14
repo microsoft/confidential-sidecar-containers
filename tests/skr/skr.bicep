@@ -65,6 +65,16 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
               port: 8080
             }
           ]
+          environmentVariables: [
+            {
+              name: 'LogLevel'
+              value: 'trace'
+            }
+            {
+              name: 'LogFile'
+              value: '/tmp/skr.log'
+            }
+          ]
           resources: {
             requests: {
               memoryInGB: 4
@@ -85,6 +95,14 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
             {
               name: 'Port'
               value: '50000'
+            }
+            {
+              name: 'LogLevel'
+              value: 'debug'
+            }
+            {
+              name: 'LogFile'
+              value: '/tmp/skr.log'
             }
           ]
           ports: [

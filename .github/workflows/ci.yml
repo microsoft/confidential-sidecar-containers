@@ -239,5 +239,3 @@ jobs:
           source cacitesting.env
           export LOCATION=${{ env.LOCATION }}
           python -m unittest discover -s tests/encfs
-
-

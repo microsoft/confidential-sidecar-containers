@@ -8,7 +8,6 @@ param managedIDName string
 param sidecarArgsB64 string
 var mount_point = '/mnt/remote'
 
-
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
   name: deployment().name
   location: location
@@ -63,7 +62,9 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
               mountPath: '/mnt/remote'
             }
           ]
-          environmentVariables: [{name: 'ENCFS_MOUNT', value: '/mnt/remote'}]
+          environmentVariables: [
+            { name: 'ENCFS_MOUNT', value: '/mnt/remote' }
+          ]
           resources: {
             requests: {
               memoryInGB: 4
@@ -90,6 +91,14 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
             {
               name: 'EncfsSideCarArgs'
               value: sidecarArgsB64
+            }
+            {
+              name: 'LogLevel'
+              value: 'trace'
+            }
+            {
+              name: 'LogFile'
+              value: '/tmp/skr.log'
             }
           ]
           resources: {

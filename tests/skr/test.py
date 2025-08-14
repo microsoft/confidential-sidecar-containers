@@ -90,7 +90,7 @@ class SkrTest(unittest.TestCase):
             target_path=cls.target_dir,
             deployment_name=cls.id,
             tag=cls.tag,
-            cleanup=True,
+            cleanup=False,
             **vars(args),
         )
 
@@ -158,7 +158,7 @@ class SkrTest(unittest.TestCase):
 
         # "evidence": here is be a base64 encoded version of the whole SNP report.
         # and will need to be made into hex to suit check_report_data
-        
+
         responseCombinedJSON = json.loads(attestation_resp.content.decode())
         print(f"JSON response: {responseCombinedJSON}")
         reportB64 = responseCombinedJSON["evidence"]
