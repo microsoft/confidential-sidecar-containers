@@ -112,8 +112,27 @@ func main() {
 		logrus.Fatalf("Failed to unmarshal base64 string: %s\n%s", err.Error(), ERROR_STRING)
 	}
 
+	logrus.Infof("%d filesystems to mount:", len(info.AzureFilesystems))
+
 	// populate missing attributes in KeyBlob
-	for i := range info.AzureFilesystems {
+	for i, fs := range info.AzureFilesystems {
+		logrus.Infof("  %s -> %s (read-write: %t)", fs.MountPoint, fs.AzureUrl, fs.ReadWrite)
+		// KeyBlob only contains the identifier of the key, so we can print it,
+		// but we need to ensure we do not print any AKV tokens, if it has any.
+		// SafeString() handles that.
+		logrus.Debugf("    keyBlob: %s", fs.KeyBlob.SafeString())
+		// KeyDerivationBlob contains the salt and label used to derive the key,
+		// but the actual HKDF derivation requires the RSA private key, acquired
+		// via key release, and so we can safely print it since it won't expose
+		// the derived key.
+		logrus.Debugf("    KeyDerivationBlob: %+v", fs.KeyDerivationBlob)
+		if fs.RawKeyHexString != "" {
+			if allowTestingWithRawKey {
+				logrus.Debug("    RawKeyHexString provided, using it for testing and skipping skr")
+			} else {
+				logrus.Warnf("filesystem %s: provided RawKeyHexString will be ignored as this image does not allow testing with raw key input.", fs.MountPoint)
+			}
+		}
 		// set the api versions and the tee type for which the authority will authorize secure key release
 		info.AzureFilesystems[i].KeyBlob.AKV.APIVersion = "api-version=7.4"
 		info.AzureFilesystems[i].KeyBlob.Authority.APIVersion = "api-version=2020-10-01"

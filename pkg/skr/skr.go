@@ -41,7 +41,7 @@ Troubleshooting: https://github.com/microsoft/confidential-sidecar-containers/bl
 // The return type is a JWK key
 func SecureKeyRelease(identity common.Identity, certState attest.CertState, skrKeyBlob common.KeyBlob, uvmInformation common.UvmInformation) (_ jwk.Key, err error) {
 	logrus.Info("Performing secure key release...")
-	logrus.Debugf("Releasing key blob: %v", skrKeyBlob)
+	logrus.Debugf("Releasing key blob: %s", skrKeyBlob.SafeString())
 
 	// Retrieve an MAA token
 	var maaToken string
