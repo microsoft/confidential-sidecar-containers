@@ -147,7 +147,7 @@ class EncFSTest(unittest.TestCase):
             target_path=os.path.realpath(os.path.dirname(__file__)),
             deployment_name=id,
             tag=id,
-            cleanup=False,
+            cleanup=True,
             prefer_pull=True, # Images are built earlier, so don't rebuild
             **args_dict,
         )
