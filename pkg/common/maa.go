@@ -67,7 +67,7 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 	if len(uvmReferenceInfo) > 0 {
 		base64urlEncodedUvmReferenceInfo = base64.URLEncoding.EncodeToString(uvmReferenceInfo)
 	}
-	logrus.Debugf("base64urlEncodedUvmReferenceInfo: %s", base64urlEncodedUvmReferenceInfo)
+	logrus.Tracef("base64urlEncodedUvmReferenceInfo: %s", base64urlEncodedUvmReferenceInfo)
 
 	if GenerateTestData {
 		err = os.WriteFile("body.uvm_reference_info.bin", uvmReferenceInfo, 0644)
@@ -113,7 +113,9 @@ func newAttestSNPRequestBody(snpAttestationReport []byte, vcekCertChain []byte, 
 		Endorsements: base64urlEncodedmaaEndorsement,
 	}
 
-	logrus.Debugf("Marshalling maaReport: %+v", maaReport)
+	// We will eventually debug-log the maa request outside, so no need to be
+	// too verbose in the debug level log.
+	logrus.Tracef("Marshalling maaReport: %+v", maaReport)
 	maaReportJSONBytes, err := json.Marshal(maaReport)
 	if err != nil {
 		return nil, errors.Wrapf(err, "marhalling maa Report failed")
@@ -174,7 +176,7 @@ func (maa MAA) Attest(snpReportHexBytes []byte, vcekCertChain []byte, policyBlob
 		return "", errors.Wrapf(err, "creating new AttestSNPRequestBody failed")
 	}
 
-	logrus.Debugf("Marshalling MAA Attestation Request: %+v", request)
+	logrus.Tracef("Marshalling MAA Attestation Request: %+v", request)
 	maaRequestJSONData, err := json.Marshal(request)
 	if err != nil {
 		return "", errors.Wrapf(err, "marshalling maa request failed")
