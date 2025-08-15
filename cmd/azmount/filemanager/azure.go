@@ -61,7 +61,6 @@ func tokenRefresher(credential azblob.TokenCredential) (t time.Duration) {
 		logrus.Errorf("Error retrieving token: %s", err)
 		return 0
 	}
-	logrus.Debugf("Retrieved new token: %s", refreshToken.AccessToken)
 
 	// Duration expects nanosecond count
 	ExpiresInSeconds, err := strconv.ParseInt(refreshToken.ExpiresIn, 10, 64)
@@ -125,16 +124,14 @@ func AzureSetup(urlString string, urlPrivate bool, identity common.Identity) err
 						return errors.Wrapf(err, "Timeout of 60 seconds expired. Could not obtain token")
 					}
 				} else {
-					logrus.Debugf("Token obtained: %s", token.AccessToken)
 					accessToken = token.AccessToken
 					break
 				}
 			}
 		}
 		tokenCredential := azblob.NewTokenCredential(accessToken, tokenRefresherFunc)
-		logrus.Debugf("Token credential created: %s", tokenCredential.Token())
 		fm.blobURL = azblob.NewPageBlobURL(*u, azblob.NewPipeline(tokenCredential, azblob.PipelineOptions{}))
-		logrus.Debugf("Blob URL created: %s", fm.blobURL)
+		logrus.Debugf("Blob URL created.")
 	} else {
 		// we can use anonymous credentials to access public azure blob storage
 		logrus.Trace("Using anonymous credentials to access public azure blob storage...")

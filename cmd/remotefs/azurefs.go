@@ -266,7 +266,7 @@ func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob common.KeyDeri
 			return "", errors.Wrapf(err, "failed to derive oct key")
 		}
 
-		logrus.Debugf("Symmetric key %s (salt: %s label: %s)", hex.EncodeToString(octetKeyBytes), keyDerivationBlob.Salt, labelString)
+		logrus.Debugf("Symmetric key salt: %s label: %s", keyDerivationBlob.Salt, labelString)
 	default:
 		return "", errors.Wrapf(err, "key type %s not supported", jwKey.KeyType())
 	}

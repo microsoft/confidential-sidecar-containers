@@ -41,7 +41,7 @@ Troubleshooting: https://github.com/microsoft/confidential-sidecar-containers/bl
 // The return type is a JWK key
 func SecureKeyRelease(identity common.Identity, certState attest.CertState, skrKeyBlob common.KeyBlob, uvmInformation common.UvmInformation) (_ jwk.Key, err error) {
 	logrus.Info("Performing secure key release...")
-	logrus.Debugf("Releasing key blob: %v", skrKeyBlob)
+	logrus.Debugf("Releasing key blob: %s", skrKeyBlob.SafeString())
 
 	// Retrieve an MAA token
 	var maaToken string
@@ -105,7 +105,6 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, skrK
 		// set the azure authentication token to the AKV instance
 		skrKeyBlob.AKV.BearerToken = bearerToken
 	}
-	logrus.Debugf("AAD Token: %s ", skrKeyBlob.AKV.BearerToken)
 
 	// use the MAA token obtained from the AKV's authority to retrieve the key identified by kid. The ReleaseKey
 	// operation requires the private wrapping key to unwrap the encrypted key material released from
@@ -117,7 +116,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, skrK
 		return nil, errors.Wrapf(err, "releasing the key %s failed", skrKeyBlob.KID)
 	}
 
-	logrus.Debugf("Key Type: %s Key %v", kty, keyBytes)
+	logrus.Debugf("Successfully released key with type: %s", kty)
 
 	switch kty {
 	case "oct", "oct-HSM":
