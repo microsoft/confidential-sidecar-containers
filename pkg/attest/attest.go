@@ -6,6 +6,7 @@ package attest
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
@@ -125,7 +126,8 @@ func (certState *CertState) getCollateral(maa common.MAA, runtimeDataBytes []byt
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "Decoding policy from Base64 format failed")
 	}
-	logrus.Debugf("   inittimeDataBytes:    %v", inittimeDataBytes)
+	logrus.Tracef("   inittimeDataBytes:    %q", string(inittimeDataBytes))
+	logrus.Tracef("   runtimeDataBytes:   %q", string(runtimeDataBytes))
 
 	// Fetch the attestation report
 	var reportFetcher AttestationReportFetcher
@@ -143,6 +145,7 @@ func (certState *CertState) getCollateral(maa common.MAA, runtimeDataBytes []byt
 	}
 
 	reportData := GenerateMAAReportData(runtimeDataBytes)
+	logrus.Debugf("   reportData: %s", hex.EncodeToString(reportData[:]))
 	logrus.Info("Fetching Attestation Report...")
 	SNPReportBytes, err := reportFetcher.FetchAttestationReportByte(reportData)
 	if err != nil {
