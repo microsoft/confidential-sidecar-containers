@@ -5,8 +5,10 @@ package common
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type Identity struct {
@@ -41,6 +43,27 @@ func GetToken(resourceId string, i Identity) (r TokenResponse, err error) {
 	}
 
 	uri := TokenURITemplate + resource_param + client_id_param
+
+	tries := 0
+	for {
+		r, err = _getToken(uri)
+		if err == nil {
+			return r, nil
+		}
+		tries++
+		logrus.Errorf("GetToken: attempt %d failed: %v", tries, err)
+		if tries < 3 {
+			delay := time.Second * time.Duration(tries * tries)
+			logrus.Debugf("Retrying after %ds", delay/time.Second)
+			time.Sleep(delay)
+		} else {
+			logrus.Errorf("GetToken failed after %d attempts", tries)
+			return r, err
+		}
+	}
+}
+
+func _getToken(uri string) (r TokenResponse, err error) {
 	httpResponse, err := HTTPGetRequest(uri, true)
 
 	if err != nil {
