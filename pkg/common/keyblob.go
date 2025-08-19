@@ -3,6 +3,8 @@
 
 package common
 
+import "fmt"
+
 // KeyDerivationBlob contains information about the key that needs to be derived
 // from a secret that has been released
 //
@@ -26,4 +28,12 @@ type KeyBlob struct {
 	KeyOps    []string `json:"key_ops,omitempty"`
 	Authority MAA      `json:"authority"`
 	AKV       AKV      `json:"akv"`
+}
+
+// Return a string representing this keyBlob without any AKV tokens
+func (kb KeyBlob) SafeString() string {
+	return fmt.Sprintf(
+		"keyBlob{ KID: %v, KTY: %v, KeyOps: %v, Authority: %+v, AKV: { Endpoint: %v, APIVersion: %v } }",
+		kb.KID, kb.KTY, kb.KeyOps, kb.Authority, kb.AKV.Endpoint, kb.AKV.APIVersion,
+	)
 }

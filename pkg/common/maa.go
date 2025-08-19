@@ -217,6 +217,6 @@ func (maa MAA) Attest(snpReportHexBytes []byte, vcekCertChain []byte, policyBlob
 		return "", errors.New("empty token string in maa response")
 	}
 
-	logrus.Debugf("MAA Token: %s", maaResponse.Token)
+	logrus.Debugf("MAA Token (signature redacted): %s", RedactMAAToken(maaResponse.Token))
 	return maaResponse.Token, nil
 }

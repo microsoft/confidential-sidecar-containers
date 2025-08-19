@@ -4,7 +4,10 @@
 package common
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -59,4 +62,38 @@ func GetToken(resourceId string, i Identity) (r TokenResponse, err error) {
 	}
 
 	return r, nil
+}
+
+// Remove the signature from a MAA token, but leaving the information JSON
+// intact.
+//
+// When loglevel is "debug" or higher, we log the received MAA token. To avoid
+// leaking them, safely redact the token by removing the signature.
+//
+// This function also checks that it is indeed a MAA token, and will redact the
+// whole string if it is not.
+func RedactMAAToken(token string) string {
+	// JWT consists of three parts: header, payload, and signature, separated by
+	// dots.  We check the issuer in the payload and remove the last part.
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return "<redacted invalid token: not a JWT>"
+	}
+	decodedPayload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "<redacted invalid token: failed to decode payload>"
+	}
+	var payload map[string]interface{}
+	err = json.Unmarshal(decodedPayload, &payload)
+	if err != nil {
+		return "<redacted invalid token: failed to unmarshal payload>"
+	}
+	issuer, ok := payload["iss"].(string)
+	if !ok {
+		return "<redacted invalid token: invalid issuer>"
+	}
+	if !strings.HasSuffix(issuer, ".attest.azure.net") {
+		return fmt.Sprintf("<redacted token with issuer %s>", issuer)
+	}
+	return strings.Join([]string{parts[0], parts[1], "***"}, ".")
 }
