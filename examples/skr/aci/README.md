@@ -85,9 +85,9 @@ More information on ARM templates [here](https://learn.microsoft.com/en-us/azure
 
 ```bash
 az acr login -n <my-registry>
-docker pull mcr.microsoft.com/aci/skr:2.11
-docker tag mcr.microsoft.com/aci/skr:2.11 <my-registry>.azurecr.io/skr:2.11
-docker push <my-registry>.azurecr.io/skr:2.11
+docker pull mcr.microsoft.com/aci/skr:2.12
+docker tag mcr.microsoft.com/aci/skr:2.12 <my-registry>.azurecr.io/skr:2.12
+docker push <my-registry>.azurecr.io/skr:2.12
 ```
 
 Create a configuration file with the container details as illustrated below:
@@ -111,7 +111,7 @@ Create a configuration file with the container details as illustrated below:
                   "value": "<optional-loglevel-trace-debug-info-warning-error-fatal-panic>"
                 }
               ],
-              "image": "<my-registry>/skr:2.11"
+              "image": "<my-registry>/skr:2.12"
             }
         }
     ]
@@ -128,7 +128,7 @@ Then run the command to generate a policy fragment and upload it to the image re
 az confcom acifragmentgen -i fragment_config.json \
       --debug-mode \
       --upload-fragment \
-      --image-target <my-registry>/skr:2.11 \
+      --image-target <my-registry>/skr:2.12 \
       --key <path-to-my-key> \
       --chain <path-to-my-cert-chain> \
       --svn 1 \
@@ -139,7 +139,7 @@ After this policy fragment is generated and uploaded, there are two more steps t
 The first is to create an import statement for the policy fragment with the following command:
 
 ```bash
-az confcom acifragmentgen --generate-import --image <my-registry>/skr:2.11 --fragments-json fragments.json --minimum-svn 1
+az confcom acifragmentgen --generate-import --image <my-registry>/skr:2.12 --fragments-json fragments.json --minimum-svn 1
 ```
 
 Which will output the fragment's import statement in json format to the file `fragments.json`.
