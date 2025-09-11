@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/Microsoft/confidential-sidecar-containers/internal/httpginendpoints"
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/attest"
@@ -137,6 +138,20 @@ func main() {
 	}
 
 	common.MAAClientUserAgent = info.MAAConfig.UserAgent
+	if common.MAAClientUserAgent == "" {
+		logrus.Info("Default MAA User-Agent not provided in AzureInfo blob. Getting a managed identity token to construct a default value...")
+		// Assigning to / reading from a pointer in Go is atomic, so we fetch
+		// the default user agent (i.e. the subscription ID) in a separate
+		// goroutine to not delay server startup.
+		identity := info.Identity // Make a copy
+		go func() {
+			ua := getDefaultMAAUserAgent(identity)
+			common.MAAClientUserAgent = ua
+			logrus.Infof("Successfully fetched token, setting default MAA User-Agent to: %s", ua)
+		}()
+	} else {
+		logrus.Infof("Using provided MAA User-Agent: %s", common.MAAClientUserAgent)
+	}
 
 	EncodedUvmInformation, err := common.GetUvmInformation() // from the env.
 	if err != nil {
@@ -216,5 +231,48 @@ func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo
 	err := server.Run(url)
 	if err != nil {
 		logrus.Fatalf("Failed to start HTTP server: %v\n%s", err, skr.ERROR_STRING)
+	}
+}
+
+func getDefaultMAAUserAgent(identity common.Identity) string {
+	token, err := skr.GetKeyvaultAccessToken(false, identity)
+	if err != nil {
+		logrus.Errorf("Failed to get token for key vault from managed identity: %v", err)
+		return ""
+	}
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		logrus.Errorf("acquired token is not a JWT")
+		return ""
+	}
+	decodedPayload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		logrus.Errorf("failed to decode payload from acquired token: %v", err)
+		return ""
+	}
+	var payload map[string]interface{}
+	err = json.Unmarshal(decodedPayload, &payload)
+	if err != nil {
+		logrus.Errorf("failed to unmarshal payload from acquired token: %v", err)
+		return ""
+	}
+	rid, ok := payload["xms_az_rid"].(string)
+	if !ok || rid == "" {
+		logrus.Debugf("No xms_az_rid in token - not a managed identity token, using client id instead")
+		appid, ok := payload["appid"].(string)
+		if !ok || appid == "" {
+			logrus.Errorf("No appid in token - cannot construct default MAA User-Agent")
+			return ""
+		}
+		return fmt.Sprintf("client_id=%s", appid)
+	}
+	rid_parts := strings.Split(rid, "/")
+	// 	/subscriptions/.../...
+	if len(rid_parts) >= 3 && rid_parts[1] == "subscriptions" {
+		subscription_id := rid_parts[2]
+		return fmt.Sprintf("subscription_id=%s", subscription_id)
+	} else {
+		logrus.Errorf("Invalid Azure resource ID in xms_az_rid - cannot construct default MAA User-Agent")
+		return ""
 	}
 }
