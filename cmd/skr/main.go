@@ -136,6 +136,8 @@ func main() {
 		}
 	}
 
+	common.MAAClientUserAgent = info.MAAConfig.UserAgent
+
 	EncodedUvmInformation, err := common.GetUvmInformation() // from the env.
 	if err != nil {
 		logrus.Infof("Failed to extract UVM_* environment variables: %s", err.Error())

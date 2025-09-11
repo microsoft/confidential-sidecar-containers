@@ -45,6 +45,8 @@ type AzureInformation struct {
 	// useful only when the container group has been assigned
 	// more than one managed identity.
 	Identity common.Identity `json:"identity,omitempty"`
+	// Miscellaneous configuration for attestation
+	MAAConfig MAAConfig `json:"maaconfig,omitempty"`
 }
 
 const (
@@ -107,6 +109,10 @@ type KeyProviderProtocolOutput struct {
 	KeyWrapResults KeyWrapResults `json:"keywrapresults,omitempty"`
 	// KeyUnwrapResult encodes the result to key unwrap if operation is to unwrap
 	KeyUnwrapResults KeyUnwrapResults `json:"keyunwrapresults,omitempty"`
+}
+
+type MAAConfig struct {
+	UserAgent string `json:"user_agent,omitempty"`
 }
 
 func (s *Server) SayHello(ctx context.Context, in *key_provider.HelloRequest) (*key_provider.HelloReply, error) {
