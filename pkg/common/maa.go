@@ -193,7 +193,7 @@ func (maa MAA) Attest(snpReportHexBytes []byte, vcekCertChain []byte, policyBlob
 	// HTTP POST request to MAA service
 	uri := fmt.Sprintf(AttestRequestURITemplate, maa.Endpoint, maa.TEEType, maa.APIVersion)
 	logrus.Debugf("Posting MAA Attestation Request to %s", uri)
-	httpResponse, err := HTTPPRequest("POST", uri, maaRequestJSONData, "")
+	httpResponse, err := HTTPPRequest("POST", uri, maaRequestJSONData, "", nil)
 	if err != nil {
 		return "", errors.Wrapf(err, "maa post request failed")
 	}

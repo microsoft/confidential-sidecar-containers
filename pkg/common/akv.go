@@ -299,7 +299,7 @@ func (akv AKV) ImportPlaintextKey(key interface{}, releasePolicy ReleasePolicy, 
 	fmt.Println(string(importKeyJSON))
 	// Create HTTP request for AKV
 	uri := fmt.Sprintf(AKVImportKeyRequestURITemplate, akv.Endpoint, keyName, akv.APIVersion)
-	httpResponse, err := HTTPPRequest("PUT", uri, importKeyJSON, akv.BearerToken)
+	httpResponse, err := HTTPPRequest("PUT", uri, importKeyJSON, akv.BearerToken, nil)
 	if err != nil {
 		return nil, errors.Wrapf(err, "AKV put request failed")
 	}
@@ -339,7 +339,7 @@ func (akv AKV) ReleaseKey(maaTokenBase64 string, kid string, privateWrappingKey 
 
 	uri := fmt.Sprintf(AKVReleaseKeyRequestURITemplate, akv.Endpoint, kid, akv.APIVersion)
 
-	httpResponse, err := HTTPPRequest("POST", uri, releaseKeyJSONData, akv.BearerToken)
+	httpResponse, err := HTTPPRequest("POST", uri, releaseKeyJSONData, akv.BearerToken, nil)
 	if err != nil {
 		return nil, "", nil, errors.Wrapf(err, "AKV post request failed")
 	}
