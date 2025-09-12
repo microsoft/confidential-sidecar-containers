@@ -28,7 +28,7 @@ KATA: https://github.com/microsoft/confidential-sidecar-containers/blob/main/exa
 Troubleshooting: https://github.com/microsoft/confidential-sidecar-containers/blob/main/examples/skr/TROUBLESHOOTING.md`
 )
 
-func GetKeyvaultAccessToken(isManagedHsm bool, identity common.Identity) (string, error) {
+func GetAccessTokenForKeyvault(isManagedHsm bool, identity common.Identity) (string, error) {
 	ResourceIDTemplate := ResourceIdVault
 	if isManagedHsm {
 		ResourceIDTemplate = ResourceIdManagedHSM
@@ -106,7 +106,7 @@ func SecureKeyRelease(identity common.Identity, certState attest.CertState, skrK
 	}
 
 	if skrKeyBlob.AKV.BearerToken == "" {
-		skrKeyBlob.AKV.BearerToken, err = GetKeyvaultAccessToken(strings.Contains(skrKeyBlob.AKV.Endpoint, "managedhsm"), identity)
+		skrKeyBlob.AKV.BearerToken, err = GetAccessTokenForKeyvault(strings.Contains(skrKeyBlob.AKV.Endpoint, "managedhsm"), identity)
 		if err != nil {
 			return nil, err
 		}

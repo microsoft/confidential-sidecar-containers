@@ -31,6 +31,8 @@ func usage() {
 	flag.PrintDefaults()
 }
 
+const ConfidentialSkrContainerIdentifier = "ConfidentialSkrContainer"
+
 func main() {
 	azureInfoBase64string := flag.String("base64", "", "optional base64-encoded json string with azure information")
 	logLevel := flag.String("loglevel", "warning", "Logging Level: trace, debug, info, warning, error, fatal, panic.")
@@ -140,17 +142,24 @@ func main() {
 	common.MAAClientUserAgent = info.MAAConfig.UserAgent
 	if common.MAAClientUserAgent == "" {
 		logrus.Info("Default MAA User-Agent not provided in AzureInfo blob. Getting a managed identity token to construct a default value...")
-		// Assigning to / reading from a pointer in Go is atomic, so we fetch
-		// the default user agent (i.e. the subscription ID) in a separate
-		// goroutine to not delay server startup.
+
+		// we fetch the default user agent (i.e. the subscription ID) in a
+		// separate goroutine to not delay server startup - acquiring a token
+		// can take 1-2 seconds, and longer if the request fails and we retry.
+
+		// Sets a default MAA user agent indicating the request is from this
+		// sidecar immediately, before we have the subscription ID.
+		common.MAAClientUserAgent = ConfidentialSkrContainerIdentifier
+
+		// Assigning to / reading from a pointer in Go is atomic
 		identity := info.Identity // Make a copy
 		go func() {
-			ua := getDefaultMAAUserAgent(identity)
+			ua := getDefaultClientIdentifier(identity)
 			common.MAAClientUserAgent = ua
 			logrus.Infof("Successfully fetched token, setting default MAA User-Agent to: %s", ua)
 		}()
 	} else {
-		logrus.Infof("Using provided MAA User-Agent: %s", common.MAAClientUserAgent)
+		logrus.Infof("Using provided string %s as User-Agent for request to MAA", common.MAAClientUserAgent)
 	}
 
 	EncodedUvmInformation, err := common.GetUvmInformation() // from the env.
@@ -234,8 +243,13 @@ func setupServer(certState *attest.CertState, identity *common.Identity, uvmInfo
 	}
 }
 
-func getDefaultMAAUserAgent(identity common.Identity) string {
-	token, err := skr.GetKeyvaultAccessToken(false, identity)
+// Get a string that can be used as a User-Agent, or other places where we need
+// to identify this client. (Used when a custom one is not provided by the user)
+func getDefaultClientIdentifier(identity common.Identity) string {
+	// We're getting a token in order to extract the subscription or client ID,
+	// not for any actual access. However, in order to get a token we have to
+	// specify a resource, and so we use keyvault in this case.
+	token, err := skr.GetAccessTokenForKeyvault(false, identity)
 	if err != nil {
 		logrus.Errorf("Failed to get token for key vault from managed identity: %v", err)
 		return ""
@@ -264,13 +278,13 @@ func getDefaultMAAUserAgent(identity common.Identity) string {
 			logrus.Errorf("No appid in token - cannot construct default MAA User-Agent")
 			return ""
 		}
-		return fmt.Sprintf("client_id=%s", appid)
+		return fmt.Sprintf("%s client_id=%s", ConfidentialSkrContainerIdentifier, appid)
 	}
 	rid_parts := strings.Split(rid, "/")
 	// 	/subscriptions/.../...
 	if len(rid_parts) >= 3 && rid_parts[1] == "subscriptions" {
 		subscription_id := rid_parts[2]
-		return fmt.Sprintf("subscription_id=%s", subscription_id)
+		return fmt.Sprintf("%s subscription_id=%s", ConfidentialSkrContainerIdentifier, subscription_id)
 	} else {
 		logrus.Errorf("Invalid Azure resource ID in xms_az_rid - cannot construct default MAA User-Agent")
 		return ""

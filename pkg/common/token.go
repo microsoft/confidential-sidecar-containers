@@ -32,8 +32,9 @@ const (
 	TokenURITemplate = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01"
 )
 
-// GetToken retrieves an authentication token which will be used for authorizing
-// requests sent to Azure services requiring authorization (e.g., Azure Blob, AKV)
+// GetToken retrieves an authentication token from IMDS which will be used for
+// authorizing requests sent to Azure services requiring authorization (e.g.,
+// Azure Blob, AKV)
 func GetToken(resourceId string, i Identity) (r TokenResponse, err error) {
 
 	// HTTP GET request to authentication token service
