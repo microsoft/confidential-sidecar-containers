@@ -270,9 +270,14 @@ func getDefaultClientIdentifier(identity common.Identity) string {
 		logrus.Errorf("failed to unmarshal payload from acquired token: %v", err)
 		return ""
 	}
+	// xms_az_rid is a (not always present) optional claim for managed identity
+	// tokens. (Third party users should not rely on it, and hence there is no
+	// public documentation.  Search for it on eng.ms.):
 	rid, ok := payload["xms_az_rid"].(string)
 	if !ok || rid == "" {
 		logrus.Debugf("No xms_az_rid in token - not a managed identity token, using client id instead")
+		// appid is publicly documented at
+		// https://learn.microsoft.com/en-us/entra/identity-platform/access-token-claims-reference
 		appid, ok := payload["appid"].(string)
 		if !ok || appid == "" {
 			logrus.Errorf("No appid in token - cannot construct default MAA User-Agent")
