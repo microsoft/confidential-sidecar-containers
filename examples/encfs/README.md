@@ -4,6 +4,7 @@
 
 - [Policy generation](#policy-generation)
 - [Step by Step Example](#step-by-step-example)
+- [Limitations](#limitations)
 
 ### Policy generation
 
@@ -236,3 +237,7 @@ Alternatively, the enabled command in test-encfs-container outputs the following
 This is a file inside the filesystem.
 This is a file inside the filesystem.
 ```
+
+### Limitations
+Where an attacker controls the storage underlying an encrypted filesystem they may replace parts or all of the filesystem with an earlier version. This is known as a "roll back" attack. This is particularly true if the system using the filesystem goes down and comes back up. 
+This sidecar uses Azure blob storage and so Azure could replace the filesystem with an earlier one. This sort of attrack is mitigated to an extent by the use of Managed Identities to control access to the Azure blob storeage. However, customer operators and Azure itself have access to those identities and they should not be relied upon for confidentiality. 
