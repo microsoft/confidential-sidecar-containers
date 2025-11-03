@@ -20,6 +20,8 @@ const (
 	AttestRequestURITemplate = "https://%s/attest/%s?%s"
 )
 
+var MAAClientUserAgent string = ""
+
 // MAA contains information about the MAA service that acts as the
 // author of the claims
 type MAA struct {
@@ -190,10 +192,16 @@ func (maa MAA) Attest(snpReportHexBytes []byte, vcekCertChain []byte, policyBlob
 		}
 	}
 
+	extraHeaders := make(map[string]string)
+	if MAAClientUserAgent != "" {
+		extraHeaders["User-Agent"] = MAAClientUserAgent
+		logrus.Debugf("Adding User-Agent to MAA request: %s", MAAClientUserAgent)
+	}
+
 	// HTTP POST request to MAA service
 	uri := fmt.Sprintf(AttestRequestURITemplate, maa.Endpoint, maa.TEEType, maa.APIVersion)
 	logrus.Debugf("Posting MAA Attestation Request to %s", uri)
-	httpResponse, err := HTTPPRequest("POST", uri, maaRequestJSONData, "")
+	httpResponse, err := HTTPPRequest("POST", uri, maaRequestJSONData, "", extraHeaders)
 	if err != nil {
 		return "", errors.Wrapf(err, "maa post request failed")
 	}

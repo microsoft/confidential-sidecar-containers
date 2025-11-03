@@ -47,7 +47,8 @@ func HTTPGetRequest(uri string, metadata bool) (*http.Response, error) {
 	return httpClientDoRequest(req)
 }
 
-func HTTPPRequest(httpType string, uri string, jsonData []byte, authorizationToken string) (*http.Response, error) {
+// extraHeaders: Optional, additional headers to add to the request.  May be nil.
+func HTTPPRequest(httpType string, uri string, jsonData []byte, authorizationToken string, extraHeaders map[string]string) (*http.Response, error) {
 	if httpType != "POST" && httpType != "PUT" {
 		return nil, errors.Errorf("invalid http request")
 	}
@@ -60,6 +61,9 @@ func HTTPPRequest(httpType string, uri string, jsonData []byte, authorizationTok
 	req.Header.Set("Content-Type", "application/json")
 	if authorizationToken != "" {
 		req.Header.Add("Authorization", "Bearer "+authorizationToken)
+	}
+	for k, v := range extraHeaders {
+		req.Header.Add(k, v)
 	}
 
 	return httpClientDoRequest(req)
