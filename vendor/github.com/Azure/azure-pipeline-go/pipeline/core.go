@@ -2,12 +2,11 @@ package pipeline
 
 import (
 	"context"
+	"github.com/mattn/go-ieproxy"
 	"net"
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/mattn/go-ieproxy"
 )
 
 // The Factory interface represents an object that can create its Policy object. Each HTTP request sent
@@ -270,7 +269,7 @@ var enableForceLog bool = true
 // There is no threadsafety or locking on the underlying variable,
 // so call this function just once at startup of your application
 // (Don't later try to change the sanitizer on the fly).
-func SetLogSanitizer(s LogSanitizer) {
+func SetLogSanitizer(s LogSanitizer)(){
 	sanitizer = s
 }
 
@@ -278,6 +277,8 @@ func SetLogSanitizer(s LogSanitizer) {
 // There is no threadsafety or locking on the underlying variable,
 // so call this function just once at startup of your application
 // (Don't later try to change the setting on the fly).
-func SetForceLogEnabled(enable bool) {
+func SetForceLogEnabled(enable bool)() {
 	enableForceLog = enable
 }
+
+
