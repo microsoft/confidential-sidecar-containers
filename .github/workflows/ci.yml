@@ -157,7 +157,7 @@ jobs:
 
       - name: Install Azure CLI
         env:
-          AZ_CLI_VERSION: 2.74.0
+          AZ_CLI_VERSION: 2.80.0
         run: ./scripts/install-az-cli.sh
 
       - name: Setup Docker
@@ -214,7 +214,7 @@ jobs:
 
       - name: Install Azure CLI
         env:
-          AZ_CLI_VERSION: 2.74.0
+          AZ_CLI_VERSION: 2.80.0
         run: ./scripts/install-az-cli.sh
 
       - name: Setup Docker
