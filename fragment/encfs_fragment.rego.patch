@@ -1,0 +1,162 @@
+--- encfs_fragment.orig.rego	2025-11-27 02:09:21.401233508 +0000
++++ encfs_fragment.rego	2025-11-27 02:09:42.158357459 +0000
+@@ -1,76 +1,15 @@
+ package microsoft_confidential_sidecars
+ 
+ svn := "1"
+-framework_version := "0.2.3"
++framework_version := "0.5.0"
+ 
+-fragments := [
+-  {
+-    "feed": "mcr.microsoft.com/aci/aci-cc-infra-fragment",
+-    "includes": [
+-      "containers",
+-      "fragments"
+-    ],
+-    "issuer": "did:x509:0:sha256:I__iuL25oXEVFdTP_aBLx_eT1RPHbCQ_ECBQfYZpt9s::eku:1.3.6.1.4.1.311.76.59.1.3",
+-    "minimum_svn": "4"
+-  }
+-]
++parameters := {}
+ 
+ containers := [
+   {
+     "allow_elevated": false,
+     "allow_stdio_access": true,
+-    "capabilities": {
+-      "ambient": [],
+-      "bounding": [
+-        "CAP_AUDIT_WRITE",
+-        "CAP_CHOWN",
+-        "CAP_DAC_OVERRIDE",
+-        "CAP_FOWNER",
+-        "CAP_FSETID",
+-        "CAP_KILL",
+-        "CAP_MKNOD",
+-        "CAP_NET_BIND_SERVICE",
+-        "CAP_NET_RAW",
+-        "CAP_SETFCAP",
+-        "CAP_SETGID",
+-        "CAP_SETPCAP",
+-        "CAP_SETUID",
+-        "CAP_SYS_CHROOT"
+-      ],
+-      "effective": [
+-        "CAP_AUDIT_WRITE",
+-        "CAP_CHOWN",
+-        "CAP_DAC_OVERRIDE",
+-        "CAP_FOWNER",
+-        "CAP_FSETID",
+-        "CAP_KILL",
+-        "CAP_MKNOD",
+-        "CAP_NET_BIND_SERVICE",
+-        "CAP_NET_RAW",
+-        "CAP_SETFCAP",
+-        "CAP_SETGID",
+-        "CAP_SETPCAP",
+-        "CAP_SETUID",
+-        "CAP_SYS_CHROOT"
+-      ],
+-      "inheritable": [],
+-      "permitted": [
+-        "CAP_AUDIT_WRITE",
+-        "CAP_CHOWN",
+-        "CAP_DAC_OVERRIDE",
+-        "CAP_FOWNER",
+-        "CAP_FSETID",
+-        "CAP_KILL",
+-        "CAP_MKNOD",
+-        "CAP_NET_BIND_SERVICE",
+-        "CAP_NET_RAW",
+-        "CAP_SETFCAP",
+-        "CAP_SETGID",
+-        "CAP_SETPCAP",
+-        "CAP_SETUID",
+-        "CAP_SYS_CHROOT"
+-      ]
+-    },
++    "capabilities": {"ambient":[],"bounding":["CAP_AUDIT_WRITE","CAP_CHOWN","CAP_DAC_OVERRIDE","CAP_FOWNER","CAP_FSETID","CAP_KILL","CAP_MKNOD","CAP_NET_BIND_SERVICE","CAP_NET_RAW","CAP_SETFCAP","CAP_SETGID","CAP_SETPCAP","CAP_SETUID","CAP_SYS_CHROOT"],"effective":["CAP_AUDIT_WRITE","CAP_CHOWN","CAP_DAC_OVERRIDE","CAP_FOWNER","CAP_FSETID","CAP_KILL","CAP_MKNOD","CAP_NET_BIND_SERVICE","CAP_NET_RAW","CAP_SETFCAP","CAP_SETGID","CAP_SETPCAP","CAP_SETUID","CAP_SYS_CHROOT"],"inheritable":[],"permitted":["CAP_AUDIT_WRITE","CAP_CHOWN","CAP_DAC_OVERRIDE","CAP_FOWNER","CAP_FSETID","CAP_KILL","CAP_MKNOD","CAP_NET_BIND_SERVICE","CAP_NET_RAW","CAP_SETFCAP","CAP_SETGID","CAP_SETPCAP","CAP_SETUID","CAP_SYS_CHROOT"]},
+     "command": [
+       "bash"
+     ],
+@@ -89,51 +28,6 @@
+         "pattern": "TERM=xterm",
+         "required": false,
+         "strategy": "string"
+-      },
+-      {
+-        "pattern": "(?i)(FABRIC)_.+=.+",
+-        "required": false,
+-        "strategy": "re2"
+-      },
+-      {
+-        "pattern": "HOSTNAME=.+",
+-        "required": false,
+-        "strategy": "re2"
+-      },
+-      {
+-        "pattern": "T(E)?MP=.+",
+-        "required": false,
+-        "strategy": "re2"
+-      },
+-      {
+-        "pattern": "FabricPackageFileName=.+",
+-        "required": false,
+-        "strategy": "re2"
+-      },
+-      {
+-        "pattern": "HostedServiceName=.+",
+-        "required": false,
+-        "strategy": "re2"
+-      },
+-      {
+-        "pattern": "IDENTITY_API_VERSION=.+",
+-        "required": false,
+-        "strategy": "re2"
+-      },
+-      {
+-        "pattern": "IDENTITY_HEADER=.+",
+-        "required": false,
+-        "strategy": "re2"
+-      },
+-      {
+-        "pattern": "IDENTITY_SERVER_THUMBPRINT=.+",
+-        "required": false,
+-        "strategy": "re2"
+-      },
+-      {
+-        "pattern": "azurecontainerinstance_restarted_by=.+",
+-        "required": false,
+-        "strategy": "re2"
+       }
+     ],
+     "exec_processes": [],
+@@ -145,22 +39,14 @@
+       "a97945d4c649159c0077c96b76a55a4f528266cdfa32c40797c82f4bf6604607",
+       "1ef47860519f72e1cfbf19252b1ce419fe293183d88ea36b5261b80015ee5044"
+     ],
+-    "mounts": [
+-      {
+-        "destination": "/etc/resolv.conf",
+-        "options": [
+-          "rbind",
+-          "rshared",
+-          "rw"
+-        ],
+-        "source": "sandbox:///tmp/atlas/resolvconf/.+",
+-        "type": "bind"
+-      }
+-    ],
++    "mounts": [],
+     "name": "cacidashboardaci.azurecr.io/encfs-fragment:latest",
+     "no_new_privileges": false,
+     "seccomp_profile_sha256": "",
+-    "signals": [],
++    "signals": [
++      2,
++      9
++    ],
+     "user": {
+       "group_idnames": [
+         {
