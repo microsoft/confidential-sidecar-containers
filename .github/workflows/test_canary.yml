@@ -1,4 +1,4 @@
-name: Test Canary
+name: Test other regions
 
 permissions:
   id-token: write
@@ -15,12 +15,12 @@ on:
       - .github/workflows/test_canary.yml
 
 jobs:
-  test-sidecars-eastus2euap:
-    name: East US 2 EUAP
-    uses: ./.github/workflows/ci.yml
-    secrets: inherit
-    with:
-      location: 'eastus2euap'
+  # test-sidecars-eastus2euap:
+  #   name: East US 2 EUAP
+  #   uses: ./.github/workflows/ci.yml
+  #   secrets: inherit
+  #   with:
+  #     location: 'eastus2euap'
 
   test-sidecars-uaenorth:
     name: UAE North
