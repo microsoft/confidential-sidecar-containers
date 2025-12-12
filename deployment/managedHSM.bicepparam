@@ -1,5 +1,4 @@
 using './managedHSM.bicep'
 
-param name = 'cacisidecars'
+param name = 'confidentialsidecars'
 param adminObjectIds = []
-
