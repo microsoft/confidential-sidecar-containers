@@ -39,6 +39,44 @@ For issues during setup, refer to the Troubleshooting guide: [`examples\skr\TROU
 
 <br> 
 
+## ⚙️ Configuration
+
+### Configuring MAA User-Agent (Optional)
+
+The SKR sidecar can be configured to send a custom User-Agent header with Microsoft Azure Attestation (MAA) requests. This is useful for tracking and identifying requests from specific container groups or deployments.
+
+**To configure a custom User-Agent:**
+
+1. Create a JSON configuration file (e.g., `azureinfo.json`) with the following structure:
+   ```json
+   {
+       "maaconfig": {
+           "user_agent": "MyApp/1.0"
+       }
+   }
+   ```
+
+2. Base64-encode the configuration:
+   ```shell
+   cat azureinfo.json | base64 -w0
+   ```
+
+3. Pass the base64-encoded string to the SKR sidecar via the `SkrSideCarArgs` environment variable with the `-base64` flag:
+   ```json
+   {
+       "name": "SkrSideCarArgs",
+       "value": "-base64 <base64-encoded-azure-info>"
+   }
+   ```
+
+If no custom User-Agent is provided, the sidecar will automatically generate one based on the managed identity's subscription ID (for managed identities) or client ID (for service principals) in the format:
+- For managed identities: `ConfidentialSkrContainer subscription_id=<subscription-id>`
+- For service principals: `ConfidentialSkrContainer client_id=<client-id>`
+
+See [`azureinfo.json`](azureinfo.json) for an example configuration file.
+
+<br> 
+
 ## 🧰 Policy generation
 
 Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group.
