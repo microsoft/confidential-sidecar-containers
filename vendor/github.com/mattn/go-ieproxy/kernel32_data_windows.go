@@ -1,9 +1,8 @@
 package ieproxy
 
 import (
-	"unsafe"
-
 	"golang.org/x/sys/windows"
+	"unsafe"
 )
 
 var kernel32 = windows.NewLazySystemDLL("kernel32.dll")
