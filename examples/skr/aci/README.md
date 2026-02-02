@@ -1,6 +1,6 @@
 # Attestation and Secure Key Release Sidecar ACI Example
 
-<br> 
+<br>
 
 ## 🔖 Table of Contents
 
@@ -23,9 +23,9 @@
     - [📦 8. Deployment](#-8-deployment)
     - [📋 9. List and Monitor Deployments](#-9-list-and-monitor-deployments)
 
-<br> 
+<br>
 
-## 🌐 Overview 
+## 🌐 Overview
 In our confidential container group example, we will deploy the SKR sidecar along with a set of test containers that exercise and test the REST API:
 
 | Container             | Entry Point                           | Environment Variables                                                                                                            |
@@ -37,13 +37,13 @@ In our confidential container group example, we will deploy the SKR sidecar alon
 
 For issues during setup, refer to the Troubleshooting guide: [`examples\skr\TROUBLESHOOTING.md`](..\..\skr\TROUBLESHOOTING.md)
 
-<br> 
+<br>
 
 ## 🧰 Policy generation
 
 Deploying a confidential container group requires generating a security policy that restricts what containers can run within the container group.
 
-To generate security policies: 
+To generate security policies:
 - [ ] Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest#install)
 - [ ] Then, install the `confcom` CLI extension [here](https://github.com/Azure/azure-cli-extensions/tree/main/src/confcom/azext_confcom#microsoft-azure-cli-confcom-extension-examples) (instructions under 'extension examples').
 
@@ -59,7 +59,7 @@ There are **two options** for generating security policies:
 <details>
   <summary><h3>ㅤOption 1:ㅤARM Template </h3></summary>
 
-<br> 
+<br>
 
 The following command generates a security policy and automatically injects it into the template. <br>
 Include the `--debug-mode` option so the generated policy allows shelling into the container to see the released key in this example.
@@ -85,9 +85,9 @@ More information on ARM templates [here](https://learn.microsoft.com/en-us/azure
 
 ```bash
 az acr login -n <my-registry>
-docker pull mcr.microsoft.com/aci/skr:2.12
-docker tag mcr.microsoft.com/aci/skr:2.12 <my-registry>.azurecr.io/skr:2.12
-docker push <my-registry>.azurecr.io/skr:2.12
+docker pull mcr.microsoft.com/aci/skr:2.14
+docker tag mcr.microsoft.com/aci/skr:2.14 <my-registry>.azurecr.io/skr:2.14
+docker push <my-registry>.azurecr.io/skr:2.14
 ```
 
 Create a configuration file with the container details as illustrated below:
@@ -111,7 +111,7 @@ Create a configuration file with the container details as illustrated below:
                   "value": "<optional-loglevel-trace-debug-info-warning-error-fatal-panic>"
                 }
               ],
-              "image": "<my-registry>/skr:2.12"
+              "image": "<my-registry>/skr:2.14"
             }
         }
     ]
@@ -128,7 +128,7 @@ Then run the command to generate a policy fragment and upload it to the image re
 az confcom acifragmentgen -i fragment_config.json \
       --debug-mode \
       --upload-fragment \
-      --image-target <my-registry>/skr:2.12 \
+      --image-target <my-registry>/skr:2.14 \
       --key <path-to-my-key> \
       --chain <path-to-my-cert-chain> \
       --svn 1 \
@@ -139,7 +139,7 @@ After this policy fragment is generated and uploaded, there are two more steps t
 The first is to create an import statement for the policy fragment with the following command:
 
 ```bash
-az confcom acifragmentgen --generate-import --image <my-registry>/skr:2.12 --fragments-json fragments.json --minimum-svn 1
+az confcom acifragmentgen --generate-import --image <my-registry>/skr:2.14 --fragments-json fragments.json --minimum-svn 1
 ```
 
 Which will output the fragment's import statement in json format to the file `fragments.json`.
@@ -201,9 +201,9 @@ The following is an example of running SKR sidecar on Confidential ACI.
 az login
 ```
 
-<br> 
+<br>
 
-> [!TIP] 
+> [!TIP]
 > To streamline the setup process, you can take advantage of the [`.env`](.env) and [`env.sh`](env.sh) files.
 >
 > **Note**: This approach may only work for Linux-based terminals (`Zsh`, `Git Bash`, `WSL`, etc.)
@@ -220,7 +220,7 @@ print_env
 
 >
 
-<br> 
+<br>
 
 ### 🔗 1. Obtain an Attestation Endpoint
 
@@ -230,8 +230,8 @@ Below are the **MAA endpoints** (as of April 2025) for the four regions in which
 - West US: `sharedwus.wus.attest.azure.net`
 - North Europe: `sharedneu.neu.attest.azure.net`
 - West Europe: `sharedweu.weu.attest.azure.net`
-  
-<br> 
+
+<br>
 
 - [ ] If you don't already have a resource group, create one with:
 
@@ -250,9 +250,9 @@ az attestation list
 
 <details>
   <summary>ㅤIf at this point, you don't already have a valid attestation endpoint:</summary>
-  
-  <br> 
-  
+
+  <br>
+
 - [ ] Create a [Microsoft Azure Attestation](https://learn.microsoft.com/en-us/azure/attestation/quickstart-azure-cli) endpoint to author the attestation token.
 
 Once you have decided on an attestation provider:
@@ -260,11 +260,11 @@ Once you have decided on an attestation provider:
   ```shell
   az attestation show -n "$ATTESTATION_PROVIDER_NAME" -g "$RESOURCE_GROUP"
   ```
-  <br> 
+  <br>
 
 </details>
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 >
 > - [ ] Copy the AttestURI endpoint value (**WITHOUT** https://) to:
 >
@@ -275,7 +275,7 @@ Once you have decided on an attestation provider:
 
 ### 🔐 2. Azure Key Vault (AKV) and User Managed Identity
 
-> [!NOTE]  
+> [!NOTE]
 > The following vault types are listed in order of security ***and*** cost from **least to greatest**:
 > - `Standard`: Software-protected keys only. Lower cost. Suitable for general-purpose secrets and keys.
 > - `Premium`: Supports HSM-backed keys (FIPS 140-2 Level 2). Required for higher security and compliance.
@@ -300,7 +300,7 @@ az keyvault key delete --vault-name "$VAULT_NAME" -n "$KEY_NAME"
 az keyvault key purge  --vault-name "$VAULT_NAME" -n "$KEY_NAME"
 
 # -----------------------------------------------
-# Premium Vault, HSM-backed keys 
+# Premium Vault, HSM-backed keys
 # (Only 'create' commands differ from `Standard`)
 # -----------------------------------------------
 az keyvault create -n "$VAULT_NAME" -g "$RESOURCE_GROUP" -l "$REGION" --sku premium
@@ -331,7 +331,7 @@ For more information on vault types, see the overviews for [Vaults](https://lear
 
 - [ ] Use one of the previous `az keyvault create` commands to create a vault with your desired level of security.
 
-> [!NOTE]  
+> [!NOTE]
 > Continue to use the chosen **vault type** and **region** for the remainder of the setup.
 >
 > Also, keep in mind that the `<key-vault-key-name>` in the JSONs are the key to be created and imported into the vault. You should not have to create this manually.
@@ -345,14 +345,14 @@ For more information on vault types, see the overviews for [Vaults](https://lear
 
 - [ ] **Optional** - If you wish to upgrade from ***standard*** to ***premium***, run:
   ```shell
-  az keyvault update --set properties.sku.name=premium -n "$VAULT_NAME" -g "$RESOURCE_GROUP" 
+  az keyvault update --set properties.sku.name=premium -n "$VAULT_NAME" -g "$RESOURCE_GROUP"
   ```
 
 <br>
 
 #### 2.2 Generate a User Managed Identity
 
-> [!Important]  
+> [!Important]
 > If you do not already have a managed identity, you can create one below.
 >
 > However, you may need an admin to grant you permission to assign roles.
@@ -365,7 +365,7 @@ For more information on vault types, see the overviews for [Vaults](https://lear
 After setting up an Azure Key Vault resource:
 
 - [ ]  You can create a [user-assigned managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-manage-user-assigned-managed-identities?pivots=identity-mi-methods-azp) that will be attached to the container group so that the containers have the correct access permissions to Azure services and resources.
-  
+
   Or, run:
   ```shell
   az identity create -n "$MANAGED_ID_NAME" -g "$RESOURCE_GROUP" -l "$REGION"
@@ -376,7 +376,7 @@ After setting up an Azure Key Vault resource:
 
 If using ***standard*** or ***premium*** AKV:
 
-- [ ] Assign the `Key Vault Crypto Service Release User` role to your managed identity <br> 
+- [ ] Assign the `Key Vault Crypto Service Release User` role to your managed identity <br>
 (previously `Key Vault Crypto Officer` and `Key Vault Crypto User`)
 
 ```shell
@@ -401,7 +401,7 @@ az role assignment create \
 
 If using a ***managed HSM***:
 
-- [ ] Assign the `Managed HSM Crypto Service Release User` role to your managed identity <br> 
+- [ ] Assign the `Managed HSM Crypto Service Release User` role to your managed identity <br>
 (previously `Managed HSM Crypto Officer` and `Managed HSM Crypto User`)
 
 ```shell
@@ -465,7 +465,7 @@ Depending on whether you are using a public or private registry, do **one** of t
 
 - [ ] Replace the following with the `accessToken` from the previous command's output:
   - [AAD token](importkeyconfig.json#L11) in `importkeyconfig.json`
-  
+
 <br>
 
 ### 📝 5. Fill in Key Information
@@ -475,14 +475,14 @@ After setting up an Azure Key Vault resource:
 - Within `importkeyconfig.json`:
   - [ ] Add a key name **to be created** and imported into the key vault, under [`key.kid`](importkeyconfig.json#L3).
   - [ ] Copy the key name into [`SkrClientKID`](aci-arm-template.json#L74) in the `aci-arm-template.json`.
-  - [ ] Replace the [`key-vault-endpoint`](importkeyconfig.json#L9) (**WITHOUT** https://) in the format: `<VAULT_NAME>.vault.azure.net` 
+  - [ ] Replace the [`key-vault-endpoint`](importkeyconfig.json#L9) (**WITHOUT** https://) in the format: `<VAULT_NAME>.vault.azure.net`
     - [ ] If not using a specific [`api_version`](importkeyconfig.json#L10), you can leave the value as an empty string.
 
-- Additionally, fill in (or remove) these optional fields in the `importkeyconfig.json` file: 
+- Additionally, fill in (or remove) these optional fields in the `importkeyconfig.json` file:
   - [ ] [Key derivation](importkeyconfig.json#L14) for RSA keys
-  - [ ] [Key type](importkeyconfig.json#L4): `RSA-HSM` or `oct-HSM` 
+  - [ ] [Key type](importkeyconfig.json#L4): `RSA-HSM` or `oct-HSM`
     - Supported key types for each vault are listed [here](https://learn.microsoft.com/en-us/azure/key-vault/keys/about-keys#hsm-protected-keys).
-  
+
 - For the `aci-arm-template.json`:
   - [ ] Run the following command to get the full managed identity, and replace [`full-path-to-managed-identity-with-right-permissions-to-key-vault`](aci-arm-template.json#L22) with the output:
 
