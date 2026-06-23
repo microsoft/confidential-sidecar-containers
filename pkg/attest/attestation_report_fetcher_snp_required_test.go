@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-//go:build !skip_snp_required
+//go:build linux && !skip_snp_required
 
 // This test requires to be ran inside SNP VM.
 // To skip this, you can use `go test ./... -tag skip_snp_required`.
