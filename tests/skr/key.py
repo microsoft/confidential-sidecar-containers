@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
+import argparse
 from base64 import b64encode, urlsafe_b64encode
 import hashlib
 import json
@@ -59,9 +61,15 @@ def deploy_key(
     attestation_endpoint: str,
     hsm_endpoint: str,
     key_data: bytes,
-    security_policy: str,
+    security_policy: str | None = None,
     kty: str = "oct",
+    host_data: str | None = None,
 ):
+
+    if host_data is None:
+        if security_policy is None:
+            raise ValueError("security_policy or host_data must be provided")
+        host_data = hashlib.sha256(security_policy.encode()).hexdigest()
 
     response = requests.put(
         url=f"https://{hsm_endpoint}/keys/{key_id}?api-version=7.4",
@@ -83,7 +91,7 @@ def deploy_key(
                     "data": b64encode(
                         generate_release_policy(
                             attestation_endpoint=attestation_endpoint,
-                            host_data=hashlib.sha256(security_policy.encode()).hexdigest(),
+                            host_data=host_data,
                         ).encode()
                     ).decode(),
                     "immutable": False,
@@ -104,3 +112,66 @@ def deploy_key(
 
     assert response.status_code == 200, response.content
     print(f"Deployed {kty} key {key_id} into the HSM")
+
+
+def _hex_key(value: str) -> bytes:
+    try:
+        key_data = binascii.unhexlify(value)
+    except binascii.Error as error:
+        raise argparse.ArgumentTypeError("raw key must be hexadecimal") from error
+
+    if len(key_data) != 32:
+        raise argparse.ArgumentTypeError("raw key must contain exactly 32 bytes")
+    return key_data
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Deploy an exportable key with an MAA release policy to a managed HSM."
+    )
+    parser.add_argument("key_id", help="Name for the key in the managed HSM")
+    parser.add_argument(
+        "raw_key",
+        type=_hex_key,
+        help="32-byte octet key encoded as 64 hexadecimal characters",
+    )
+    parser.add_argument(
+        "host_data",
+        help="Host data value written verbatim to the release policy",
+    )
+    parser.add_argument(
+        "--attestation-endpoint",
+        required=True,
+        help="Microsoft Azure Attestation endpoint hostname",
+    )
+    parser.add_argument(
+        "--hsm-endpoint",
+        required=True,
+        help="Managed HSM endpoint hostname",
+    )
+    parser.add_argument(
+        "--key-ops",
+        nargs="+",
+        default=["encrypt", "decrypt", "wrapKey", "unwrapKey"],
+        help="Permitted JSON Web Key operations",
+    )
+    parser.add_argument(
+        "--kty",
+        default="oct-HSM",
+        help="JSON Web Key type (default: oct-HSM)",
+    )
+    args = parser.parse_args()
+
+    deploy_key(
+        key_id=args.key_id,
+        key_ops=args.key_ops,
+        attestation_endpoint=args.attestation_endpoint,
+        hsm_endpoint=args.hsm_endpoint,
+        key_data=binascii.hexlify(args.raw_key),
+        host_data=args.host_data,
+        kty=args.kty,
+    )
+
+
+if __name__ == "__main__":
+    main()
