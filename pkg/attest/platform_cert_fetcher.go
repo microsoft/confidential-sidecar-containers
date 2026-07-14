@@ -17,7 +17,9 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -36,6 +38,9 @@ const (
 	AmdCertChainRequestURITemplate   = "https://%s/%s/cert_chain"
 	LocalTHIMUriTemplate             = "http://%s" // To-Do update once we know what this looks like
 	defaultLocalThimURI              = "169.254.169.254/metadata/THIM/amd/certification"
+	fabricNodeHostEnv                = "Fabric_NodeIPOrFQDN"
+	localThimPort                    = "2377"
+	localThimPath                    = "/metadata/THIM/amd/certification"
 )
 
 const (
@@ -344,10 +349,20 @@ func getThimCertsHttp(uri string) (*http.Response, error) {
 	return httpResponse, nil
 }
 
-func (certFetcher CertFetcher) GetThimCerts(uri string) (*common.THIMCerts, error) {
-	if len(uri) == 0 {
-		uri = defaultLocalThimURI
+func resolveLocalThimURI(uri string) string {
+	if uri != "" {
+		return uri
 	}
+
+	if fabricNodeHost := os.Getenv(fabricNodeHostEnv); fabricNodeHost != "" {
+		return net.JoinHostPort(fabricNodeHost, localThimPort) + localThimPath
+	}
+
+	return defaultLocalThimURI
+}
+
+func (certFetcher CertFetcher) GetThimCerts(uri string) (*common.THIMCerts, error) {
+	uri = resolveLocalThimURI(uri)
 	uri = fmt.Sprintf(LocalTHIMUriTemplate, uri)
 	THIMCertsBytes, err := fetchWithRetry(uri, defaultRetryBaseSec, defaultRetryMaxRetries, getThimCertsHttp)
 	if err != nil {
