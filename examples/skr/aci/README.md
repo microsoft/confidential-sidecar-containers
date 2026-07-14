@@ -440,6 +440,24 @@ If you already have a user-assigned managed identity with the appropriate access
   az identity show -g "$RESOURCE_GROUP" -n "$MANAGED_ID_NAME"
   ```
 
+For Windows ACI container groups, include the identity's principal ID in the JSON encoded by `SkrSideCarArgs`:
+
+```json
+{
+  "identity": {
+    "principal_id": "<managed-identity-principal-id>"
+  }
+}
+```
+
+Obtain the principal ID with:
+
+```shell
+az identity show -g "$RESOURCE_GROUP" -n "$MANAGED_ID_NAME" --query principalId -o tsv
+```
+
+The `principal_id` field is used when both `IDENTITY_ENDPOINT` and `IDENTITY_HEADER` are injected into the container. It may be omitted for the standard IMDS flow.
+
 <br>
 
 ### 🪪 3. Populate Image Registry Credentials

@@ -7,6 +7,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -15,7 +18,8 @@ import (
 )
 
 type Identity struct {
-	ClientId string `json:"client_id"`
+	ClientId    string `json:"client_id"`
+	PrincipalId string `json:"principal_id"`
 }
 
 type TokenResponse struct {
@@ -30,27 +34,18 @@ type TokenResponse struct {
 
 const (
 	TokenURITemplate = "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01"
+	identityEndpoint = "IDENTITY_ENDPOINT"
+	identityHeader   = "IDENTITY_HEADER"
+	secretHeaderName = "secret"
 )
 
 // GetToken retrieves an authentication token from IMDS which will be used for
 // authorizing requests sent to Azure services requiring authorization (e.g.,
 // Azure Blob, AKV)
 func GetToken(resourceId string, i Identity) (r TokenResponse, err error) {
-
-	// HTTP GET request to authentication token service
-
-	resource_param := "&resource=" + resourceId
-	client_id_param := ""
-
-	if i.ClientId != "" {
-		client_id_param = "&client_id=" + i.ClientId
-	}
-
-	uri := TokenURITemplate + resource_param + client_id_param
-
 	tries := 0
 	for {
-		r, err = _getToken(uri)
+		r, err = _getToken(resourceId, i)
 		if err == nil {
 			return r, nil
 		}
@@ -67,11 +62,53 @@ func GetToken(resourceId string, i Identity) (r TokenResponse, err error) {
 	}
 }
 
-func _getToken(uri string) (r TokenResponse, err error) {
-	httpResponse, err := HTTPGetRequest(uri, true)
+func newTokenRequest(resourceId string, identity Identity) (*http.Request, error) {
+	endpoint := os.Getenv(identityEndpoint)
+	header := os.Getenv(identityHeader)
+	useACIEndpoint := endpoint != "" && header != ""
+
+	if !useACIEndpoint {
+		endpoint = TokenURITemplate
+	} else if identity.PrincipalId == "" {
+		return nil, errors.New("identity.principal_id must be provided in the AzureInformation base64 when IDENTITY_ENDPOINT and IDENTITY_HEADER are set (i.e. on Windows)")
+	}
+
+	uri, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, errors.Wrapf(err, "parsing managed identity endpoint failed")
+	}
+	query := uri.Query()
+	query.Set("resource", resourceId)
+	if useACIEndpoint {
+		query.Set("principalId", identity.PrincipalId)
+	} else if identity.ClientId != "" {
+		query.Set("client_id", identity.ClientId)
+	}
+	uri.RawQuery = query.Encode()
+
+	request, err := http.NewRequest(http.MethodGet, uri.String(), nil)
+	if err != nil {
+		return nil, errors.Wrapf(err, "http get request creation failed")
+	}
+	if useACIEndpoint {
+		request.Header.Set(secretHeaderName, header)
+	} else {
+		request.Header.Set("Metadata", "true")
+	}
+
+	return request, nil
+}
+
+func _getToken(resourceId string, identity Identity) (r TokenResponse, err error) {
+	request, err := newTokenRequest(resourceId, identity)
+	if err != nil {
+		return r, err
+	}
+
+	httpResponse, err := httpClientDoRequest(request)
 
 	if err != nil {
-		return r, errors.Wrapf(err, "http get authentication token failed for %s", uri)
+		return r, errors.Wrapf(err, "http get authentication token failed for %s", request.URL.String())
 	}
 
 	httpResponseBodyBytes, err := HTTPResponseBody(httpResponse)
