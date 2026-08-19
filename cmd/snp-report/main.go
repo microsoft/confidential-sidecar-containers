@@ -4,6 +4,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -24,6 +25,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error fetching attestation report: %v\n", err)
 		os.Exit(1)
 	}
+
+	fmt.Println(hex.EncodeToString(reportBytes))
 
 	report := attest.SNPAttestationReport{}
 	if err := report.DeserializeReport(reportBytes); err != nil {
