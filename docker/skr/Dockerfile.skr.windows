@@ -11,6 +11,5 @@ FROM mcr.microsoft.com/windows/nanoserver:ltsc2025
 
 WORKDIR C:\app
 COPY --from=build C:\out\skr.exe C:\out\get-snp-report.exe C:\app\
-COPY .\docker\skr\amdsnppspapi.dll C:\app\
 
 ENTRYPOINT ["C:\\app\\skr.exe"]

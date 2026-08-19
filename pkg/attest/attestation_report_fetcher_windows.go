@@ -9,10 +9,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 	"unsafe"
 
 	"github.com/Microsoft/confidential-sidecar-containers/pkg/common"
+	"github.com/sirupsen/logrus"
 )
 
 // Userland API for the AMD SEV-SNP PSP driver on Windows, exposed by
@@ -65,19 +67,31 @@ type snpPspApiGuestRequestResult struct {
 }
 
 func NewAttestationReportFetcher() (AttestationReportFetcher, error) {
-	dll, err := syscall.LoadDLL(snpPspApiDllName)
+	securityContextDir, err := common.GetUvmSecurityCtxDir()
 	if err != nil {
-		return nil, fmt.Errorf("error loading %s: %w", snpPspApiDllName, err)
+		return nil, fmt.Errorf("error finding security context directory: %w", err)
+	}
+
+	dllPath := filepath.Join(securityContextDir, snpPspApiDllName)
+
+	if _, err := os.Stat(dllPath); os.IsNotExist(err) {
+		logrus.Warnf("%s not found, trying LoadDLL(\"%s\") directly", dllPath, snpPspApiDllName)
+		dllPath = snpPspApiDllName
+	}
+
+	dll, err := syscall.LoadDLL(dllPath)
+	if err != nil {
+		return nil, fmt.Errorf("error loading %s: %w", dllPath, err)
 	}
 
 	isSnpModeProc, err := dll.FindProc("SnpPspIsSnpMode")
 	if err != nil {
-		return nil, fmt.Errorf("error finding SnpPspIsSnpMode in %s: %w", snpPspApiDllName, err)
+		return nil, fmt.Errorf("error finding SnpPspIsSnpMode in %s: %w", dllPath, err)
 	}
 
 	fetchReportProc, err := dll.FindProc("SnpPspFetchAttestationReport")
 	if err != nil {
-		return nil, fmt.Errorf("error finding SnpPspFetchAttestationReport in %s: %w", snpPspApiDllName, err)
+		return nil, fmt.Errorf("error finding SnpPspFetchAttestationReport in %s: %w", dllPath, err)
 	}
 
 	// Confirm we are running in an SEV-SNP VM before returning a fetcher.
