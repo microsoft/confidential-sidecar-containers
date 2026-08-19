@@ -24,52 +24,52 @@ import (
 // tokenRefresher is a function callback passed during the creation of token credentials
 // its implementation shall update an expired token with a new token and return the new
 // expiring duration.
-func tokenRefresher(credential azblob.TokenCredential) (t time.Duration) {
+func tokenRefresher(identity common.Identity) func(azblob.TokenCredential) time.Duration {
+	return func(credential azblob.TokenCredential) (t time.Duration) {
 
-	// we extract the audience from the existing token so that we can set the resource
-	// id for retrieving a new (refresh) token  for the same audience.
-	currentToken := credential.Token()
-	// JWT tokens comprise three fields. the second field is the payload (or claims).
-	// we care about the `aud` attribute of the payload
-	currentTokenFields := strings.Split(currentToken, ".")
-	logrus.Debugf("Current token fields: %v", currentTokenFields)
+		// we extract the audience from the existing token so that we can set the resource
+		// id for retrieving a new (refresh) token  for the same audience.
+		currentToken := credential.Token()
+		// JWT tokens comprise three fields. the second field is the payload (or claims).
+		// we care about the `aud` attribute of the payload
+		currentTokenFields := strings.Split(currentToken, ".")
+		logrus.Debugf("Current token fields: %v", currentTokenFields)
 
-	payload, err := base64.RawURLEncoding.DecodeString(currentTokenFields[1])
-	if err != nil {
-		logrus.Errorf("Error decoding base64 token payload: %s", err)
-		return 0
+		payload, err := base64.RawURLEncoding.DecodeString(currentTokenFields[1])
+		if err != nil {
+			logrus.Errorf("Error decoding base64 token payload: %s", err)
+			return 0
+		}
+		logrus.Debugf("Current token payload: %s", string(payload))
+
+		var payloadMap map[string]interface{}
+		err = json.Unmarshal([]byte(payload), &payloadMap)
+		if err != nil {
+			logrus.Errorf("Error unmarshalling token payload: %s", err)
+			return 0
+		}
+		audience := payloadMap["aud"].(string)
+
+		identity.ClientId = payloadMap["appid"].(string)
+
+		// retrieve token using the existing token audience
+		logrus.Debugf("Retrieving new token for audience %s and identity %s", audience, identity)
+		refreshToken, err := common.GetToken(audience, identity)
+
+		if err != nil {
+			logrus.Errorf("Error retrieving token: %s", err)
+			return 0
+		}
+
+		// Duration expects nanosecond count
+		ExpiresInSeconds, err := strconv.ParseInt(refreshToken.ExpiresIn, 10, 64)
+		if err != nil {
+			logrus.Errorf("Error parsing token expiration to seconds: %s", err)
+			return 0
+		}
+		credential.SetToken(refreshToken.AccessToken)
+		return time.Duration(1000 * 1000 * 1000 * ExpiresInSeconds)
 	}
-	logrus.Debugf("Current token payload: %s", string(payload))
-
-	var payloadMap map[string]interface{}
-	err = json.Unmarshal([]byte(payload), &payloadMap)
-	if err != nil {
-		logrus.Errorf("Error unmarshalling token payload: %s", err)
-		return 0
-	}
-	audience := payloadMap["aud"].(string)
-
-	identity := common.Identity{
-		ClientId: payloadMap["appid"].(string),
-	}
-
-	// retrieve token using the existing token audience
-	logrus.Debugf("Retrieving new token for audience %s and identity %s", audience, identity)
-	refreshToken, err := common.GetToken(audience, identity)
-
-	if err != nil {
-		logrus.Errorf("Error retrieving token: %s", err)
-		return 0
-	}
-
-	// Duration expects nanosecond count
-	ExpiresInSeconds, err := strconv.ParseInt(refreshToken.ExpiresIn, 10, 64)
-	if err != nil {
-		logrus.Errorf("Error parsing token expiration to seconds: %s", err)
-		return 0
-	}
-	credential.SetToken(refreshToken.AccessToken)
-	return time.Duration(1000 * 1000 * 1000 * ExpiresInSeconds)
 }
 
 // For more information about the library used to access Azure:
@@ -105,7 +105,7 @@ func AzureSetup(urlString string, urlPrivate bool, identity common.Identity) err
 				return errors.Wrapf(err, "retrieving authentication token using workload identity failed")
 			}
 		} else {
-			tokenRefresherFunc = tokenRefresher
+			tokenRefresherFunc = tokenRefresher(identity)
 			// we use token credentials to access private azure blob storage the blob's
 			// url Host denotes the scope/audience for which we need to get a token
 			logrus.Trace("Using token credentials to access private azure blob storage...")
