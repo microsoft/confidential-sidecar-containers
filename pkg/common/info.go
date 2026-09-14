@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -88,16 +89,21 @@ const uvmSecurityCtxDirDefault = "/opt/confidential-containers/share/kata-contai
 
 func GetUvmSecurityCtxDir() (string, error) {
 	securityContextDir := os.Getenv("UVM_SECURITY_CONTEXT_DIR")
-	// no UVM_SECURITY_CONTEXT_DIR set, so iterate through the root directory
+	// no UVM_SECURITY_CONTEXT_DIR set, so iterate through the root directory.
+	// On Windows the UVM root is C:\, elsewhere it is /.
+	scanRoot := "/"
+	if runtime.GOOS == "windows" {
+		scanRoot = `C:\`
+	}
 	if securityContextDir == "" {
-		files, err := os.ReadDir("/")
+		files, err := os.ReadDir(scanRoot)
 		if err != nil {
 			return "", err
 		}
 		for _, file := range files {
 			if strings.Contains(file.Name(), "security-context-") {
 				// found the security context dir
-				securityContextDir = filepath.Join("/", file.Name())
+				securityContextDir = filepath.Join(scanRoot, file.Name())
 				break
 			}
 		}
