@@ -101,6 +101,22 @@ func TestNewTokenRequest(t *testing.T) {
 	}
 }
 
+func TestNewTokenRequestDecodesResource(t *testing.T) {
+	t.Setenv(identityEndpoint, "http://10.0.0.1/token?api-version=2021-02-01")
+	t.Setenv(identityHeader, "header-secret")
+
+	request, err := newTokenRequest(
+		"https%3A%2F%2Fmanagedhsm.azure.net",
+		Identity{PrincipalId: "principal-id"},
+	)
+	if err != nil {
+		t.Fatalf("did not expect an error: %v", err)
+	}
+	if actual := request.URL.Query().Get("resource"); actual != "https://managedhsm.azure.net" {
+		t.Errorf("expected decoded resource, got %q", actual)
+	}
+}
+
 func Test_RedactMAAToken(t *testing.T) {
 	th := "e30."
 	testCases := [][2]string{
