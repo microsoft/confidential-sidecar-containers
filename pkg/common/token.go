@@ -77,8 +77,12 @@ func newTokenRequest(resourceId string, identity Identity) (*http.Request, error
 	if err != nil {
 		return nil, errors.Wrapf(err, "parsing managed identity endpoint failed")
 	}
+	resource, err := url.QueryUnescape(resourceId)
+	if err != nil {
+		return nil, errors.Wrapf(err, "decoding managed identity resource failed")
+	}
 	query := uri.Query()
-	query.Set("resource", resourceId)
+	query.Set("resource", resource)
 	if useACIEndpoint {
 		query.Set("principalId", identity.PrincipalId)
 	} else if identity.ClientId != "" {
