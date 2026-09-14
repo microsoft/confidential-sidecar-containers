@@ -41,7 +41,9 @@ const (
 
 // GetToken retrieves an authentication token from IMDS which will be used for
 // authorizing requests sent to Azure services requiring authorization (e.g.,
-// Azure Blob, AKV)
+// Azure Blob, AKV).
+//
+// resourceId can be URL-encoded (or not)
 func GetToken(resourceId string, i Identity) (r TokenResponse, err error) {
 	tries := 0
 	for {
