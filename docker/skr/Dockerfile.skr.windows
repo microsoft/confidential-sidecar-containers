@@ -1,0 +1,15 @@
+# escape=`
+FROM mcr.microsoft.com/oss/go/microsoft/golang:nanoserver-ltsc2025 AS build
+ENV PROJECT_DIR=C:\go\src\github.com\microsoft
+WORKDIR ${PROJECT_DIR}\confidential-sidecar-containers
+COPY . ./
+
+RUN go build -o C:\out\get-snp-report.exe .\cmd\snp-report
+RUN go build -o C:\out\skr.exe -ldflags="-s -w" .\cmd\skr
+
+FROM mcr.microsoft.com/windows/nanoserver:ltsc2025
+
+WORKDIR C:\app
+COPY --from=build C:\out\skr.exe C:\out\get-snp-report.exe C:\app\
+
+ENTRYPOINT ["C:\\app\\skr.exe"]

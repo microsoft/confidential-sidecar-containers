@@ -40,10 +40,11 @@ type AzureInformation struct {
 	// can be retrieved. This is optional only when the container
 	// will expose attest/maa and key/release APIs.
 	CertFetcher attest.CertFetcher `json:"certcache,omitempty"`
-	// Identifier of the managed identity to be used
-	// for authenticating with AKV. This is optional and
-	// useful only when the container group has been assigned
-	// more than one managed identity.
+	// Identifiers of the managed identity used to authenticate with AKV.
+	// For Linux C-ACI, ClientId is optional and useful only when the
+	// container group has been assigned more than one managed identity.
+	// For Confidential Windows container instances, provide PrincipalId for
+	// a user-assigned identity or omit it for a system-assigned identity.
 	Identity common.Identity `json:"identity,omitempty"`
 	// Miscellaneous configuration for attestation
 	MAAConfig MAAConfig `json:"maaconfig,omitempty"`
