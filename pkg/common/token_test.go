@@ -15,7 +15,6 @@ func TestNewTokenRequest(t *testing.T) {
 		expectedQuery    url.Values
 		expectedMetadata string
 		expectedSecret   string
-		expectError      bool
 	}{
 		{
 			name:         "system-assigned identity via IMDS",
@@ -38,7 +37,7 @@ func TestNewTokenRequest(t *testing.T) {
 			expectedMetadata: "true",
 		},
 		{
-			name:         "Windows ACI identity endpoint",
+			name:         "user-assigned identity via Windows ACI",
 			endpoint:     "http://10.0.0.1/token?api-version=2021-02-01",
 			header:       "header-secret",
 			identity:     Identity{ClientId: "ignored-client-id", PrincipalId: "principal-id"},
@@ -63,10 +62,26 @@ func TestNewTokenRequest(t *testing.T) {
 			},
 		},
 		{
-			name:        "Windows ACI requires principal ID",
-			endpoint:    "http://10.0.0.1/token",
-			header:      "header-secret",
-			expectError: true,
+			name:         "system-assigned identity via Windows ACI",
+			endpoint:     "http://10.0.0.1/token?api-version=2021-02-01",
+			header:       "header-secret",
+			expectedHost: "10.0.0.1",
+			expectedQuery: url.Values{
+				"api-version": {"2021-02-01"},
+				"resource":    {"https://vault.azure.net"},
+			},
+			expectedSecret: "header-secret",
+		},
+		{
+			name:         "Windows ACI ignores client ID without principal ID",
+			endpoint:     "http://10.0.0.1/token",
+			header:       "header-secret",
+			identity:     Identity{ClientId: "ignored-client-id"},
+			expectedHost: "10.0.0.1",
+			expectedQuery: url.Values{
+				"resource": {"https://vault.azure.net"},
+			},
+			expectedSecret: "header-secret",
 		},
 	}
 
@@ -76,12 +91,6 @@ func TestNewTokenRequest(t *testing.T) {
 			t.Setenv(identityHeader, testCase.header)
 
 			request, err := newTokenRequest("https://vault.azure.net", testCase.identity)
-			if testCase.expectError {
-				if err == nil {
-					t.Fatal("expected an error")
-				}
-				return
-			}
 			if err != nil {
 				t.Fatalf("did not expect an error: %v", err)
 			}
