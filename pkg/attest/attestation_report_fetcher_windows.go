@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"unsafe"
 
@@ -66,7 +67,15 @@ type snpPspApiGuestRequestResult struct {
 	PspStatus    uint64
 }
 
+// Share one lazily initialized report fetcher globally to avoid repeated DLL loads
+// and leaking native DLL references.
+var getWindowsAttestationReportFetcher = sync.OnceValues(newWindowsAttestationReportFetcher)
+
 func NewAttestationReportFetcher() (AttestationReportFetcher, error) {
+	return getWindowsAttestationReportFetcher()
+}
+
+func newWindowsAttestationReportFetcher() (fetcher AttestationReportFetcher, err error) {
 	securityContextDir, err := common.GetUvmSecurityCtxDir()
 	if err != nil {
 		return nil, fmt.Errorf("error finding security context directory: %w", err)
@@ -83,6 +92,11 @@ func NewAttestationReportFetcher() (AttestationReportFetcher, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error loading %s: %w", dllPath, err)
 	}
+	defer func() {
+		if err != nil {
+			dll.Release()
+		}
+	}()
 
 	isSnpModeProc, err := dll.FindProc("SnpPspIsSnpMode")
 	if err != nil {
