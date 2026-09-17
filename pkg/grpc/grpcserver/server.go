@@ -269,7 +269,7 @@ func (s *Server) UnWrapKey(c context.Context, grpcInput *key_provider.KeyProvide
 	// MHSM has limit on the request size. We do not pass the EncodedSecurityPolicy here so
 	// it is not presented as fine-grained init-time claims in the MAA token, which would
 	// introduce larger MAA tokens that MHSM would accept
-	keyBytes, err := skr.SecureKeyRelease((s.Azure_info).Identity, *(s.ServerCertState), skrKeyBlob, *(s.EncodedUvmInformation))
+	keyBytes, err := skr.SecureObjectRelease((s.Azure_info).Identity, *(s.ServerCertState), skrKeyBlob, *(s.EncodedUvmInformation), false)
 	if err != nil {
 		return nil, errors.Wrapf(err, "SKR failed\n%s", skr.ERROR_STRING)
 	}
