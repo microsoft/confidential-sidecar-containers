@@ -71,8 +71,6 @@ func newTokenRequest(resourceId string, identity Identity) (*http.Request, error
 
 	if !useACIEndpoint {
 		endpoint = TokenURITemplate
-	} else if identity.PrincipalId == "" {
-		return nil, errors.New("identity.principal_id must be provided in the AzureInformation base64 when IDENTITY_ENDPOINT and IDENTITY_HEADER are set (i.e. on Windows)")
 	}
 
 	uri, err := url.Parse(endpoint)
@@ -86,7 +84,9 @@ func newTokenRequest(resourceId string, identity Identity) (*http.Request, error
 	query := uri.Query()
 	query.Set("resource", resource)
 	if useACIEndpoint {
-		query.Set("principalId", identity.PrincipalId)
+		if identity.PrincipalId != "" {
+			query.Set("principalId", identity.PrincipalId)
+		}
 	} else if identity.ClientId != "" {
 		query.Set("client_id", identity.ClientId)
 	}
