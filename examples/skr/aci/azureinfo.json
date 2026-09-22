@@ -1,0 +1,8 @@
+{
+    "identity": {
+        "client_id": "<optional-managed-identity-client-id>"
+    },
+    "maaconfig": {
+        "user_agent": "<optional-custom-user-agent-string>"
+    }
+}

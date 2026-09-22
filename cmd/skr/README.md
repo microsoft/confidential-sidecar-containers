@@ -9,6 +9,39 @@ This script take the environment variables `SkrSideCarArgs`, `Port`, `LogFile`, 
 To use the GRPC server instead of the HTTP server, the tool can be executed using the same script [skr.sh](https://github.com/Microsoft/confidential-sidecar-containers/blob/main//docker/skr/skr.sh).
 But instead expecting the environment variables `Port`, `ServerType`, `LogFile`, and `LogLevel` and passes them into `/bin/skr` with their corresponding flags, where `Port` is specified as `50000`.
 
+## Configuration
+
+The SKR sidecar can be configured using a base64-encoded JSON string passed via the `-base64` flag or through the `SkrSideCarArgs` environment variable. The configuration includes Azure identity and MAA (Microsoft Azure Attestation) settings.
+
+### MAA Configuration
+
+The MAA configuration allows you to customize the User-Agent header sent with attestation requests to the MAA service. This can be useful for tracking and identifying requests from specific container groups or deployments.
+
+Configuration structure:
+```json
+{
+    "identity": {
+        "client_id": "<optional-managed-identity-client-id>"
+    },
+    "maaconfig": {
+        "user_agent": "<custom-user-agent-string>"
+    }
+}
+```
+
+- `maaconfig.user_agent` (optional): A custom User-Agent string to use for MAA attestation requests. If not provided, the sidecar will automatically generate a default User-Agent based on the managed identity's subscription ID or client ID in the format:
+  - For managed identities: `ConfidentialSkrContainer subscription_id=<subscription-id>`
+  - For service principals: `ConfidentialSkrContainer client_id=<client-id>`
+
+Example configuration:
+```json
+{
+    "maaconfig": {
+        "user_agent": "MyApp/1.0"
+    }
+}
+```
+
 ## HTTP API
 
 The `status` GET method returns the status of the server.
