@@ -50,12 +50,12 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: "1.24.x"
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8.0.0
         with:
           version: v2.1
 
@@ -76,12 +76,12 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
     # Initializes the CodeQL tools for scanning.
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
+      uses: github/codeql-action/init@42947a340483f03ba47bb1a039b2c519aab3df85 # v3.37.8
       with:
         languages: ${{ matrix.language }}
         # If you wish to specify custom queries, you can do so here or in a config file.
@@ -107,17 +107,17 @@ jobs:
        bash ./buildall.sh
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
+      uses: github/codeql-action/analyze@42947a340483f03ba47bb1a039b2c519aab3df85 # v3.37.8
 
   build:
     name: Go Build and Test
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
     # Sets up the Golang for running unit tests
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
       with:
         go-version: "1.24.x"
 
@@ -134,7 +134,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install c_aci_testing package
         env:
@@ -150,7 +150,7 @@ jobs:
         run: sudo usermod -aG docker $USER
 
       - name: Log into Azure
-        uses: azure/login@v2
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
         with:
           client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
           tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
@@ -169,7 +169,7 @@ jobs:
             --no-cleanup
 
       - name: Re-Log into Azure
-        uses: azure/login@v2
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
         with:
           client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
           tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
@@ -191,7 +191,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install c_aci_testing package
         env:
@@ -207,7 +207,7 @@ jobs:
         run: sudo usermod -aG docker $USER
 
       - name: Log into Azure
-        uses: azure/login@v2
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
         with:
           client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
           tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
