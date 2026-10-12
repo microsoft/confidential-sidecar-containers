@@ -49,8 +49,8 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           ]
           resources: {
             requests: {
-              memoryInGB: 4
-              cpu: 1
+              memoryInGB: 1
+              cpu: json('0.5')
             }
           }
         }
@@ -67,8 +67,8 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           ]
           resources: {
             requests: {
-              memoryInGB: 4
-              cpu: 1
+              memoryInGB: 1
+              cpu: json('0.5')
             }
           }
         }
@@ -95,8 +95,8 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
           ]
           resources: {
             requests: {
-              memoryInGB: 4
-              cpu: 1
+              memoryInGB: 1
+              cpu: json('0.5')
             }
           }
         }
