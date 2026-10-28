@@ -64,7 +64,7 @@ The ``examples/encfs`` shows an example of how the encrypted filesystem sidecar 
 
 ## Dependencies
 
-- Golang 1.24 or later
+- Golang 1.27.3 or later
 - Docker
 - GCC 9.4.0 or later
 
