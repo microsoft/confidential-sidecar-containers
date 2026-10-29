@@ -62,6 +62,24 @@ func main() {
 
 	flag.Parse()
 
+	// Environment variable fallbacks, matching the original skr.sh behavior.
+	// An explicitly provided command-line flag takes precedence over the
+	// corresponding environment variable.
+	setFlags := make(map[string]bool)
+	flag.Visit(func(f *flag.Flag) { setFlags[f.Name] = true })
+	applyEnvFallback := func(flagName, envName string, target *string) {
+		if !setFlags[flagName] {
+			if v, ok := os.LookupEnv(envName); ok && v != "" {
+				*target = v
+			}
+		}
+	}
+	applyEnvFallback("base64", "SkrSideCarArgs", azureInfoBase64string)
+	applyEnvFallback("port", "Port", port)
+	applyEnvFallback("logfile", "LogFile", logFile)
+	applyEnvFallback("loglevel", "LogLevel", logLevel)
+	applyEnvFallback("server_type", "ServerType", serverType)
+
 	if *logFile != "" {
 		// If the file doesn't exist, create it. If it exists, append to it.
 		file, err := os.OpenFile(*logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
