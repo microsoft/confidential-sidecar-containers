@@ -20,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -42,7 +42,7 @@ jobs:
           GOARCH: amd64
   
       - name: Upload Executables
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: binaries
           path: |
@@ -57,21 +57,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # needed to avoid a bug where imageId and digest output are the same
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
         with:
           version: v0.18.0
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: binaries
 
       - name: Log in to Azure
-        uses: azure/login@v2
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
         with:
           client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
           tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
@@ -84,7 +84,7 @@ jobs:
           az acr login --name $REGISTRY
 
       - name: Publish Secure Key Release Sidecar Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         id: build-skr
         with:
           context: ./
@@ -93,14 +93,14 @@ jobs:
           tags: ${{ env.REGISTRY }}/skr:${{ github.ref_name }}
 
       - name: Generate SKR artifact attestation
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
         with:
           subject-name: ${{ env.REGISTRY }}/skr
           subject-digest: '${{steps.build-skr.outputs.digest}}'
           push-to-registry: true
 
       - name: Publish Encrypted Filesystem Sidecar Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         id: build-encfs
         with:
           context: ./
@@ -109,14 +109,14 @@ jobs:
           tags: ${{ env.REGISTRY }}/encfs:${{ github.ref_name }}
 
       - name: Generate ENCFS artifact attestation
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1.4.4
         with:
           subject-name: ${{ env.REGISTRY }}/encfs
           subject-digest: '${{steps.build-encfs.outputs.digest}}'
           push-to-registry: true
           
       - name: Publish release
-        uses: softprops/action-gh-release@v2.1.0
+        uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974 # v2.1.0
         with:
           tag_name: ${{ github.ref_name }}
           prerelease: ${{ contains(github.ref, 'rc') }}
