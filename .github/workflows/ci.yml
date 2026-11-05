@@ -156,6 +156,33 @@ jobs:
         Start-Service docker
         docker build --pull -t skr-windows -f docker\skr\Dockerfile.skr.windows .
 
+    - name: Log into Azure
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
+
+    - name: Log into Azure Container Registry
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+      shell: bash
+      run: |
+        source cacitesting.env
+        echo "REGISTRY=$REGISTRY" >> "$GITHUB_ENV"
+        az acr login --name "$REGISTRY"
+
+    - name: Push Windows SKR Image
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+      shell: pwsh
+      env:
+        IMAGE_TAG: ci-${{ github.run_id }}-${{ github.run_attempt }}
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        $image = "$env:REGISTRY/skr-windows:$env:IMAGE_TAG"
+        docker tag skr-windows $image
+        docker push $image
+
   test-skr:
     name: Test SKR
     runs-on: ubuntu-latest
