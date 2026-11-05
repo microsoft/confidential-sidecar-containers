@@ -109,7 +109,7 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
 
-  build:
+  build-linux:
     name: Go Build and Test
     runs-on: ubuntu-latest
     steps:
@@ -128,6 +128,33 @@ jobs:
       run: |
         # Can't use `go test -v ./...` because some of the tests depend on SEV-SNP or Confidential ACI features
         go test -v ./... -tags skip_e2e,skip_snp_required
+
+  build-windows:
+    name: Build Windows Binaries and SKR Image
+    runs-on: windows-2025
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.27.x"
+
+    - name: Build Windows Executables
+      shell: pwsh
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        go build ./tools/importkey
+        go build -o get-snp-report.exe ./cmd/snp-report
+        go build -o skr.exe -ldflags="-s -w" ./cmd/skr
+      env:
+        GOOS: windows
+        GOARCH: amd64
+
+    - name: Build Windows SKR Image
+      run: |
+        Start-Service docker
+        docker build --pull -t skr-windows -f docker\skr\Dockerfile.skr.windows .
 
   test-skr:
     name: Test SKR
