@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: proxy.Dockerfile
   sidecar:
-    image: $REGISTRY/skr/sidecar:$TAG
+    image: ${SKR_IMAGE:-${REGISTRY}/skr/sidecar:${TAG}}
     network_mode: "host"
     build:
       context: ../../

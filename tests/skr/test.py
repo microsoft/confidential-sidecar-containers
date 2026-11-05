@@ -91,6 +91,7 @@ class SkrTest(unittest.TestCase):
             deployment_name=cls.id,
             tag=cls.tag,
             cleanup=True,
+            prefer_pull=bool(os.getenv("SKR_IMAGE")),
             **vars(args),
         )
 

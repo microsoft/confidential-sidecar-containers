@@ -132,6 +132,8 @@ jobs:
   build-windows:
     name: Build Windows Binaries and SKR Image
     runs-on: windows-2025
+    outputs:
+      image: ${{ steps.push-skr.outputs.image }}
     steps:
     - uses: actions/checkout@v4
 
@@ -173,19 +175,124 @@ jobs:
         az acr login --name "$REGISTRY"
 
     - name: Push Windows SKR Image
+      id: push-skr
       if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
       shell: pwsh
       env:
-        IMAGE_TAG: ci-${{ github.run_id }}-${{ github.run_attempt }}
+        IMAGE_TAG: ci-${{ github.run_id }}-${{ github.run_attempt }}-windows
       run: |
         $PSNativeCommandUseErrorActionPreference = $true
-        $image = "$env:REGISTRY/skr-windows:$env:IMAGE_TAG"
+        $image = "$env:REGISTRY/skr:$env:IMAGE_TAG"
         docker tag skr-windows $image
         docker push $image
+        $digest = az acr repository show --name $env:REGISTRY --image "skr:$env:IMAGE_TAG" --query digest -o tsv
+        if ($digest -notmatch '^sha256:[0-9a-f]{64}$') {
+          throw 'Cannot retrieve the published Windows SKR digest.'
+        }
+        "image=$env:REGISTRY/skr@$digest" >> $env:GITHUB_OUTPUT
+
+  build-skr:
+    name: Build Linux SKR Images
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.push-skr.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Linux SKR Images
+        shell: bash
+        env:
+          TAG: ${{ env.BASE_ID }}
+        run: |
+          source cacitesting.env
+          docker compose -f tests/skr/docker-compose.yml build
+
+      - name: Log into Azure
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION }}
+
+      - name: Publish Linux SKR Images
+        id: push-skr
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        env:
+          TAG: ${{ env.BASE_ID }}
+          IMAGE_TAG: ci-${{ github.run_id }}-${{ github.run_attempt }}-linux
+        run: |
+          source cacitesting.env
+          az acr login --name "$REGISTRY"
+          docker compose -f tests/skr/docker-compose.yml push
+          image="$REGISTRY/skr:$IMAGE_TAG"
+          docker tag "$REGISTRY/skr/sidecar:$TAG" "$image"
+          docker push "$image"
+          digest="$(az acr repository show --name "$REGISTRY" --image "skr:$IMAGE_TAG" --query digest -o tsv)"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Cannot retrieve the published Linux SKR digest." >&2
+            exit 1
+          fi
+          echo "image=$REGISTRY/skr@$digest" >> "$GITHUB_OUTPUT"
+
+  publish-skr:
+    name: Publish Multi-OS SKR Image
+    needs: [build-skr, build-windows]
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.push-skr.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+          tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION }}
+
+      - name: Publish Multi-OS SKR Image
+        id: push-skr
+        shell: bash
+        env:
+          IMAGE_TAG: ci-${{ github.run_id }}-${{ github.run_attempt }}
+          LINUX_IMAGE: ${{ needs.build-skr.outputs.image }}
+          WINDOWS_IMAGE: ${{ needs.build-windows.outputs.image }}
+        run: |
+          source cacitesting.env
+          image="$REGISTRY/skr:$IMAGE_TAG"
+          az acr login --name "$REGISTRY"
+          docker manifest create "$image" "$LINUX_IMAGE" "$WINDOWS_IMAGE"
+          docker manifest inspect "$image" | python3 -c '
+          import json, sys
+          manifests = json.load(sys.stdin)["manifests"]
+          platforms = [manifest["platform"] for manifest in manifests]
+          if len(platforms) != 2 or {(p["os"], p["architecture"]) for p in platforms} != {("linux", "amd64"), ("windows", "amd64")}:
+              raise SystemExit("SKR manifest must contain exactly Linux/amd64 and Windows/amd64.")
+          if not next(p for p in platforms if p["os"] == "windows").get("os.version"):
+              raise SystemExit("Windows SKR manifest is missing its OS version.")
+          '
+          docker manifest push --purge "$image"
+          digest="$(az acr repository show --name "$REGISTRY" --image "skr:$IMAGE_TAG" --query digest -o tsv)"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Cannot retrieve the published multi-OS SKR digest." >&2
+            exit 1
+          fi
+          image="$REGISTRY/skr@$digest"
+          echo "Multi-OS SKR image: $image"
+          docker manifest inspect "$image"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
 
   test-skr:
     name: Test SKR
+    needs: publish-skr
     runs-on: ubuntu-latest
+    env:
+      SKR_IMAGE: ${{ needs.publish-skr.outputs.image }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -213,13 +320,14 @@ jobs:
       # Deployment is separated from testing to avoid the AZ CLI login timeout
       - name: Deploy the SKR container group
         env:
-          ID: skr-${{ env.BASE_ID }}
+          ID: skr-${{ env.BASE_ID }}-${{ github.run_attempt }}
           TAG: ${{ env.BASE_ID }}
         run: |
           source cacitesting.env
           export LOCATION=${{ env.LOCATION }}
           c-aci-testing target run tests/skr \
             --deployment-name $ID \
+            --prefer-pull \
             --no-cleanup
 
       - name: Re-Log into Azure
@@ -229,9 +337,26 @@ jobs:
           tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
           subscription-id: ${{ vars.SUBSCRIPTION }}
 
+      - name: Verify deployed SKR image
+        shell: bash
+        env:
+          ID: skr-${{ env.BASE_ID }}-${{ github.run_attempt }}
+        run: |
+          source cacitesting.env
+          az container show --resource-group "$RESOURCE_GROUP" --name "$ID" \
+            --query "{osType:osType,images:containers[?name=='http-sidecar' || name=='grpc-sidecar'].image}" -o json \
+            | python3 -c '
+          import json, os, sys
+          deployment = json.load(sys.stdin)
+          image = os.environ["SKR_IMAGE"]
+          if deployment["osType"] != "Linux" or deployment["images"] != [image, image]:
+              raise SystemExit("Both Linux SKR containers must use the published multi-OS digest.")
+          print(json.dumps(deployment, indent=3))
+          '
+
       - name: Test SKR
         env:
-          ID: skr-${{ env.BASE_ID }}
+          ID: skr-${{ env.BASE_ID }}-${{ github.run_attempt }}
           TAG: ${{ env.BASE_ID }}
           ATTESTATION_ENDPOINT: ${{ vars.ATTESTATION_ENDPOINT }}
           HSM_ENDPOINT: ${{ vars.HSM_ENDPOINT }}
