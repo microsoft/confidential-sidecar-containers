@@ -37,6 +37,9 @@ jobs:
       - name: Build Windows Executables
         run: |
           go build ./tools/importkey
+          # Match Dockerfile.skr.windows: name snp-report as get-snp-report.exe and strip skr.exe debug symbols.
+          go build -o get-snp-report.exe ./cmd/snp-report
+          go build -o skr.exe -ldflags="-s -w" ./cmd/skr
         env:
           GOOS: windows
           GOARCH: amd64
@@ -51,6 +54,8 @@ jobs:
             importkey.exe
             importkey
             skr
+            get-snp-report.exe
+            skr.exe
 
   create_release:
     needs: build
@@ -126,3 +131,5 @@ jobs:
             importkey.exe
             importkey
             skr
+            get-snp-report.exe
+            skr.exe
