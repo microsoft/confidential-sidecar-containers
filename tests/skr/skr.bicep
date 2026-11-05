@@ -1,6 +1,7 @@
 param location string
 param registry string
 param tag string
+param skrImage string = ''
 param ccePolicies object
 param managedIDGroup string = resourceGroup().name
 param managedIDName string
@@ -58,7 +59,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'http-sidecar'
         properties: {
-          image: '${registry}/skr/sidecar:${empty(tag) ? 'latest': tag}'
+          image: empty(skrImage) ? '${registry}/skr/sidecar:${empty(tag) ? 'latest': tag}' : skrImage
           ports: [
             {
               protocol: 'TCP'
@@ -76,7 +77,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         name: 'grpc-sidecar'
         properties: {
-          image: '${registry}/skr/sidecar:${empty(tag) ? 'latest': tag}'
+          image: empty(skrImage) ? '${registry}/skr/sidecar:${empty(tag) ? 'latest': tag}' : skrImage
           environmentVariables: [
             {
               name: 'ServerType'

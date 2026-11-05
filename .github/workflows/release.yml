@@ -15,8 +15,8 @@ env:
   GO_VERSION: "1.27.x"
 
 jobs:
-  build:
-    name: Build Binaries
+  build-linux:
+    name: Build Linux Binaries
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -33,10 +33,37 @@ jobs:
           cp -a tools/get-snp-report/bin/* .
           go build ./tools/importkey
           go build ./cmd/skr
-        
+
+      - name: Upload Executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux
+          path: |
+            get-snp-report
+            verbose-report
+            importkey
+            skr
+
+  build-windows:
+    name: Build Windows Binaries
+    runs-on: windows-2025
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
       - name: Build Windows Executables
+        shell: pwsh
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           go build ./tools/importkey
+          # Match Dockerfile.skr.windows: name snp-report as get-snp-report.exe and strip skr.exe debug symbols.
+          go build -o get-snp-report.exe ./cmd/snp-report
+          go build -o skr.exe -ldflags="-s -w" ./cmd/skr
         env:
           GOOS: windows
           GOARCH: amd64
@@ -44,16 +71,14 @@ jobs:
       - name: Upload Executables
         uses: actions/upload-artifact@v4
         with:
-          name: binaries
+          name: binaries-windows
           path: |
-            get-snp-report
-            verbose-report
             importkey.exe
-            importkey
-            skr
+            get-snp-report.exe
+            skr.exe
 
   create_release:
-    needs: build
+    needs: [build-linux, build-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -68,7 +93,8 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: binaries
+          pattern: binaries-*
+          merge-multiple: true
 
       - name: Log in to Azure
         uses: azure/login@v2
@@ -126,3 +152,5 @@ jobs:
             importkey.exe
             importkey
             skr
+            get-snp-report.exe
+            skr.exe
