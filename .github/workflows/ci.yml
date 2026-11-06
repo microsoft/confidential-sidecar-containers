@@ -156,6 +156,8 @@ jobs:
         Start-Service docker
         docker build --pull -t skr-windows -f docker\skr\Dockerfile.skr.windows .
 
+    # Skip login and publishing for fork PRs, which do not receive repository secrets.
+    # This avoids fork build failures; it is not a security check.
     - name: Log into Azure
       if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
       uses: azure/login@v2
