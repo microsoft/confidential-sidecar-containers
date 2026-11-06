@@ -1,5 +1,5 @@
 # escape=`
-FROM mcr.microsoft.com/oss/go/microsoft/golang:nanoserver-ltsc2025 AS build
+FROM mcr.microsoft.com/oss/go/microsoft/golang:1.27.3-nanoserver-ltsc2025 AS build
 ENV PROJECT_DIR=C:\go\src\github.com\microsoft
 WORKDIR ${PROJECT_DIR}\confidential-sidecar-containers
 COPY . ./

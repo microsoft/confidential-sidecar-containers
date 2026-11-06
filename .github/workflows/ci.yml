@@ -109,7 +109,7 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
 
-  build:
+  build-linux:
     name: Go Build and Test
     runs-on: ubuntu-latest
     steps:
@@ -128,6 +128,62 @@ jobs:
       run: |
         # Can't use `go test -v ./...` because some of the tests depend on SEV-SNP or Confidential ACI features
         go test -v ./... -tags skip_e2e,skip_snp_required
+
+  build-windows:
+    name: Build Windows Binaries and SKR Image
+    runs-on: windows-2025
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: "1.27.x"
+
+    - name: Build Windows Executables
+      shell: pwsh
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        go build ./tools/importkey
+        go build -o get-snp-report.exe ./cmd/snp-report
+        go build -o skr.exe -ldflags="-s -w" ./cmd/skr
+      env:
+        GOOS: windows
+        GOARCH: amd64
+
+    - name: Build Windows SKR Image
+      run: |
+        Start-Service docker
+        docker build --pull -t skr-windows -f docker\skr\Dockerfile.skr.windows .
+
+    # Skip login and publishing for fork PRs, which do not receive repository secrets.
+    # This avoids fork build failures; it is not a security check.
+    - name: Log into Azure
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
+
+    - name: Log into Azure Container Registry
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+      shell: bash
+      run: |
+        source cacitesting.env
+        echo "REGISTRY=$REGISTRY" >> "$GITHUB_ENV"
+        az acr login --name "$REGISTRY"
+
+    - name: Push Windows SKR Image
+      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+      shell: pwsh
+      env:
+        IMAGE_TAG: ci-${{ github.run_id }}-${{ github.run_attempt }}
+      run: |
+        $PSNativeCommandUseErrorActionPreference = $true
+        $image = "$env:REGISTRY/skr-windows:$env:IMAGE_TAG"
+        docker tag skr-windows $image
+        docker push $image
 
   test-skr:
     name: Test SKR
