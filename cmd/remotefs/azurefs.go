@@ -212,7 +212,7 @@ func releaseRemoteFilesystemKey(tempDir string, keyDerivationBlob common.KeyDeri
 	//    certfetcher is required for validating the attestation report against the cert
 	//    chain of the chip identified in the attestation report
 	logrus.Info("Performing Secure Key Release...")
-	jwKey, err := skr.SecureKeyRelease(Identity, CertState, keyBlob, EncodedUvmInformation)
+	jwKey, err := skr.SecureObjectRelease(Identity, CertState, keyBlob, EncodedUvmInformation, false)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to release key: %v", keyBlob)
 	}

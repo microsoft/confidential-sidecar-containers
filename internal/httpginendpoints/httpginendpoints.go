@@ -35,7 +35,7 @@ type RawAttestData struct {
 	RuntimeData string `json:"runtime_data" binding:"required"`
 }
 
-type KeyReleaseData struct {
+type ReleaseData struct {
 	// MAA endpoint which acts as authority to the key that needs to be released
 	MAAEndpoint string `json:"maa_endpoint" binding:"required"`
 	// AKV endpoint from which the key is released
@@ -279,9 +279,9 @@ func PostMAAAttest(c *gin.Context) {
 //     SKR policy when the secret was imported to the AKV.
 //   - KID is the key identifier of the secret to be retrieved.
 func PostKeyRelease(c *gin.Context) {
-	var newKeyReleaseData KeyReleaseData
+	var newKeyReleaseData ReleaseData
 
-	// Call BindJSON to bind the received JSON to KeyReleaseData
+	// Call BindJSON to bind the received JSON to releaseData
 	if err := c.ShouldBindJSON(&newKeyReleaseData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format\n%s", skr.ERROR_STRING)})
 		return
@@ -323,7 +323,7 @@ func PostKeyRelease(c *gin.Context) {
 		return
 	}
 
-	jwKey, err := skr.SecureKeyRelease(*identity, *certState, skrKeyBlob, *uvmInfo)
+	jwKey, err := skr.SecureObjectRelease(*identity, *certState, skrKeyBlob, *uvmInfo, false)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": errors.Wrapf(err, "secure key release failed\n%s", skr.ERROR_STRING).Error()})
 		return
@@ -338,6 +338,62 @@ func PostKeyRelease(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"key": string(jwkJSONBytes)})
+}
+
+func PostCertRelease(c *gin.Context) {
+	var newCertReleaseData ReleaseData
+
+	// Call BindJSON to bind the received JSON to releaseData
+	if err := c.ShouldBindJSON(&newCertReleaseData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.Wrapf(err, "invalid request format")})
+		return
+	}
+
+	akv := common.AKV{
+		Endpoint:    newCertReleaseData.AKVEndpoint,
+		APIVersion:  "api-version=7.6-preview.1",
+		BearerToken: newCertReleaseData.AccessToken,
+	}
+
+	logrus.Debugf("Setting AKV API version to 7.6-preview.1")
+
+	maa := common.MAA{
+		Endpoint:   newCertReleaseData.MAAEndpoint,
+		TEEType:    "SevSnpVM",
+		APIVersion: "api-version=2020-10-01",
+	}
+
+	sorBlob := common.KeyBlob{
+		KID:       newCertReleaseData.KID,
+		Authority: maa,
+		AKV:       akv,
+	}
+
+	certState, ok := c.MustGet("certState").(*attest.CertState)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("serverCertState is not set")})
+		return
+	}
+
+	identity, ok := c.MustGet("identity").(*common.Identity)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("workload identity is not set")})
+		return
+	}
+
+	uvmInfo, ok := c.MustGet("uvmInfo").(*common.UvmInformation)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.New("uvmInfo is not set")})
+		return
+	}
+
+	certificate, err := skr.SecureCertificateRelease(*identity, *certState, sorBlob, *uvmInfo, true)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"certificate": string(certificate)})
 }
 
 func RegisterGlobalStates(certState *attest.CertState, identity *common.Identity, uvmInfo *common.UvmInformation) gin.HandlerFunc {
